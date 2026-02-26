@@ -341,12 +341,20 @@ export default function TrainingPlan() {
               {lang === "fr" ? "Séances de la semaine" : "Weekly Sessions"}
             </span>
           </div>
-          <span 
-            className="px-2 py-1 rounded text-xs font-mono font-semibold"
-            style={{ background: "var(--bg-secondary)", color: "var(--text-secondary)" }}
-          >
-            {plan?.plan?.total_tss || 235} TSS
-          </span>
+          <div className="flex items-center gap-2">
+            <span 
+              className="px-2 py-1 rounded text-xs font-mono font-semibold"
+              style={{ background: "#22c55e20", color: "#22c55e" }}
+            >
+              {plan?.plan?.weekly_km || 45} km
+            </span>
+            <span 
+              className="px-2 py-1 rounded text-xs font-mono font-semibold"
+              style={{ background: "var(--bg-secondary)", color: "var(--text-secondary)" }}
+            >
+              {plan?.plan?.total_tss || 235} TSS
+            </span>
+          </div>
         </div>
 
         <div className="space-y-2">
