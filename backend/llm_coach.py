@@ -244,19 +244,6 @@ Répond UNIQUEMENT en JSON valide :
   ],
   "total_tss": 275,
   "advice": "Cette semaine focus sur le volume. Reste en Z2 pour les sorties faciles."
-}}
-      "estimated_tss": 55
-    }},
-    {{
-      "day": "Dimanche",
-      "type": "Sortie longue",
-      "duration": "90min",
-      "details": "Sortie longue progressive, derniers 20min à allure marathon",
-      "intensity": "moderate",
-      "estimated_tss": 100
-    }}
-  ],
-  "advice": "Conseil personnalisé pour la semaine"
 }}"""
 
     start_time = time.time()
