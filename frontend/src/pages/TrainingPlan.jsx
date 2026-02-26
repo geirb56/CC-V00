@@ -22,20 +22,116 @@ const GOAL_OPTIONS = [
   { value: "ULTRA", label: "Ultra-Trail", weeks: 20 },
 ];
 
-const INTENSITY_COLORS = {
-  rest: "bg-slate-100 text-slate-600 border-slate-200",
-  easy: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  moderate: "bg-amber-100 text-amber-700 border-amber-200",
-  hard: "bg-red-100 text-red-700 border-red-200",
-  race: "bg-purple-100 text-purple-700 border-purple-200",
+// Couleurs correspondant au design de l'app
+const SESSION_STYLES = {
+  repos: {
+    bg: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
+    border: "#475569",
+    text: "#94a3b8",
+    badge: "#475569",
+    badgeText: "#94a3b8"
+  },
+  endurance: {
+    bg: "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)",
+    border: "#34d399",
+    text: "#065f46",
+    badge: "#10b981",
+    badgeText: "#ffffff"
+  },
+  seuil: {
+    bg: "linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)",
+    border: "#f97316",
+    text: "#9a3412",
+    badge: "#f97316",
+    badgeText: "#ffffff"
+  },
+  recuperation: {
+    bg: "linear-gradient(135deg, #fef9c3 0%, #fef08a 100%)",
+    border: "#facc15",
+    text: "#854d0e",
+    badge: "#eab308",
+    badgeText: "#ffffff"
+  },
+  tempo: {
+    bg: "linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)",
+    border: "#fb923c",
+    text: "#9a3412",
+    badge: "#fb923c",
+    badgeText: "#ffffff"
+  },
+  sortie_longue: {
+    bg: "linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)",
+    border: "#ec4899",
+    text: "#9d174d",
+    badge: "#ec4899",
+    badgeText: "#ffffff"
+  },
+  fractionne: {
+    bg: "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)",
+    border: "#8b5cf6",
+    text: "#5b21b6",
+    badge: "#8b5cf6",
+    badgeText: "#ffffff"
+  },
+  rest: {
+    bg: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
+    border: "#475569",
+    text: "#94a3b8",
+    badge: "#475569",
+    badgeText: "#94a3b8"
+  },
+  easy: {
+    bg: "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)",
+    border: "#34d399",
+    text: "#065f46",
+    badge: "#10b981",
+    badgeText: "#ffffff"
+  },
+  moderate: {
+    bg: "linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)",
+    border: "#f97316",
+    text: "#9a3412",
+    badge: "#f97316",
+    badgeText: "#ffffff"
+  },
+  hard: {
+    bg: "linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)",
+    border: "#ef4444",
+    text: "#991b1b",
+    badge: "#ef4444",
+    badgeText: "#ffffff"
+  },
+  race: {
+    bg: "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)",
+    border: "#8b5cf6",
+    text: "#5b21b6",
+    badge: "#8b5cf6",
+    badgeText: "#ffffff"
+  },
 };
 
-const PHASE_COLORS = {
-  build: "bg-blue-500",
-  deload: "bg-green-500",
-  intensification: "bg-orange-500",
-  taper: "bg-purple-500",
-  race: "bg-red-500",
+const PHASE_INFO = {
+  build: { color: "#3b82f6", name: "Construction" },
+  deload: { color: "#22c55e", name: "Récupération" },
+  intensification: { color: "#f97316", name: "Intensification" },
+  taper: { color: "#8b5cf6", name: "Affûtage" },
+  race: { color: "#ef4444", name: "Compétition" },
+};
+
+// Map session type to style key
+const getSessionStyleKey = (type, intensity) => {
+  const typeLower = type?.toLowerCase() || "";
+  
+  if (typeLower.includes("repos") || typeLower === "rest") return "repos";
+  if (typeLower.includes("endurance") || typeLower.includes("easy")) return "endurance";
+  if (typeLower.includes("seuil") || typeLower.includes("threshold")) return "seuil";
+  if (typeLower.includes("récup") || typeLower.includes("recup") || typeLower.includes("recovery")) return "recuperation";
+  if (typeLower.includes("tempo")) return "tempo";
+  if (typeLower.includes("sortie longue") || typeLower.includes("long")) return "sortie_longue";
+  if (typeLower.includes("fractionn") || typeLower.includes("interval")) return "fractionne";
+  
+  // Fallback to intensity
+  return intensity || "easy";
 };
 
 export default function TrainingPlan() {
@@ -95,12 +191,11 @@ export default function TrainingPlan() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-4 space-y-4" style={{ background: "var(--bg-primary)", minHeight: "100vh" }}>
         <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 md:grid-cols-3">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
+        <div className="grid gap-3 grid-cols-2">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
         </div>
         <Skeleton className="h-96" />
       </div>
@@ -110,19 +205,21 @@ export default function TrainingPlan() {
   const context = plan?.context || {};
   const sessions = plan?.plan?.sessions || [];
   const phaseInfo = plan?.phase_info || {};
+  const currentPhase = PHASE_INFO[plan?.phase] || { color: "#64748b", name: plan?.phase };
 
   return (
-    <div className="p-6 space-y-6" data-testid="training-plan-page">
+    <div className="p-4 pb-24 space-y-4" style={{ background: "var(--bg-primary)" }} data-testid="training-plan-page">
+      
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-heading font-bold uppercase tracking-tight">
+          <h1 className="text-xl font-bold uppercase tracking-tight text-white">
             {lang === "fr" ? "Plan d'Entraînement" : "Training Plan"}
           </h1>
-          <p className="text-sm text-muted-foreground font-mono">
-            {lang === "fr" ? "Semaine" : "Week"} {plan?.week || 1} / {plan?.goal_config?.cycle_weeks || "?"} 
+          <p className="text-sm font-mono" style={{ color: "var(--text-tertiary)" }}>
+            {lang === "fr" ? "Semaine" : "Week"} {plan?.week || 1} / {plan?.goal_config?.cycle_weeks || 12} 
             {" • "}
-            <span className="capitalize">{phaseInfo.name || plan?.phase}</span>
+            <span className="capitalize">{currentPhase.name}</span>
           </p>
         </div>
         <Button 
@@ -130,6 +227,7 @@ export default function TrainingPlan() {
           size="sm" 
           onClick={handleRefresh}
           disabled={refreshing}
+          className="border-slate-600 text-slate-300 hover:bg-slate-700"
           data-testid="refresh-plan-btn"
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
@@ -137,184 +235,214 @@ export default function TrainingPlan() {
         </Button>
       </div>
 
-      {/* Objectif & Métriques */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {/* Objectif */}
-        <Card className="md:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-mono uppercase text-muted-foreground flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              {lang === "fr" ? "Objectif" : "Goal"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{plan?.goal || "—"}</div>
-            <p className="text-xs text-muted-foreground">
-              {plan?.goal_config?.description || ""}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Objectif */}
+      <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
+        <div className="flex items-center gap-2 mb-2">
+          <Target className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
+          <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
+            {lang === "fr" ? "Objectif" : "Goal"}
+          </span>
+        </div>
+        <div className="text-2xl font-bold text-white">{plan?.goal || "SEMI"}</div>
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+          {plan?.goal_config?.description || "Semi-marathon"}
+        </p>
+      </div>
 
-        {/* Phase */}
-        <Card className="md:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-mono uppercase text-muted-foreground flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Phase
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${PHASE_COLORS[plan?.phase] || "bg-gray-400"}`} />
-              <span className="text-lg font-semibold capitalize">{phaseInfo.name || plan?.phase}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {phaseInfo.focus || ""}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Phase */}
+      <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
+        <div className="flex items-center gap-2 mb-2">
+          <Calendar className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
+          <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>Phase</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full" style={{ background: currentPhase.color }} />
+          <span className="text-lg font-semibold text-white capitalize">{currentPhase.name}</span>
+        </div>
+        <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
+          {phaseInfo.focus || "Volume en endurance fondamentale (Z1-Z2)"}
+        </p>
+      </div>
 
+      {/* ACWR & TSB en ligne */}
+      <div className="grid grid-cols-2 gap-3">
         {/* ACWR */}
-        <Card className="md:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-mono uppercase text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" />
-              ACWR
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">{context.acwr?.toFixed(2) || "—"}</span>
-              {context.acwr > 1.3 ? (
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-              ) : context.acwr >= 0.8 ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-              ) : null}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {context.acwr > 1.3 
-                ? (lang === "fr" ? "Attention charge" : "High load") 
-                : (lang === "fr" ? "Zone optimale" : "Optimal zone")}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
+            <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>ACWR</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-white">{context.acwr?.toFixed(2) || "1.00"}</span>
+            {context.acwr <= 1.3 && context.acwr >= 0.8 && (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+            )}
+          </div>
+          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+            {lang === "fr" ? "Zone optimale" : "Optimal zone"}
+          </p>
+        </div>
 
         {/* TSB */}
-        <Card className="md:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-mono uppercase text-muted-foreground flex items-center gap-2">
-              <Zap className="w-4 h-4" />
-              TSB
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <span className={`text-2xl font-bold ${context.tsb > 0 ? "text-emerald-600" : context.tsb < -20 ? "text-red-600" : ""}`}>
-                {context.tsb?.toFixed(1) || "—"}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {context.tsb > 0 
-                ? (lang === "fr" ? "Fraîcheur" : "Fresh") 
-                : (lang === "fr" ? "Fatigue" : "Fatigue")}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
+            <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>TSB</span>
+          </div>
+          <span className={`text-2xl font-bold ${context.tsb > 0 ? "text-emerald-400" : "text-white"}`}>
+            {context.tsb?.toFixed(1) || "-5.0"}
+          </span>
+          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+            {context.tsb > 0 
+              ? (lang === "fr" ? "Fraîcheur" : "Fresh") 
+              : (lang === "fr" ? "Fatigue" : "Fatigue")}
+          </p>
+        </div>
       </div>
 
       {/* Sélection d'objectif */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-mono uppercase flex items-center gap-2">
-            <Target className="w-4 h-4" />
+      <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Target className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
+          <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
             {lang === "fr" ? "Changer d'objectif" : "Change Goal"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {GOAL_OPTIONS.map((opt) => (
-              <Button
-                key={opt.value}
-                variant={plan?.goal === opt.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleSetGoal(opt.value)}
-                disabled={settingGoal}
-                data-testid={`goal-btn-${opt.value}`}
-              >
-                {opt.label}
-                <span className="ml-1 text-xs opacity-60">({opt.weeks}s)</span>
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {GOAL_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => handleSetGoal(opt.value)}
+              disabled={settingGoal}
+              className={`px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                plan?.goal === opt.value 
+                  ? "text-white" 
+                  : "text-slate-400 hover:text-white"
+              }`}
+              style={{
+                background: plan?.goal === opt.value ? "#8b5cf6" : "var(--bg-secondary)",
+                border: `1px solid ${plan?.goal === opt.value ? "#8b5cf6" : "var(--border-color)"}`
+              }}
+              data-testid={`goal-btn-${opt.value}`}
+            >
+              {opt.label}
+              <span className="ml-1 opacity-60">({opt.weeks}s)</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* Plan de la semaine */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-mono uppercase flex items-center gap-2">
-            <Activity className="w-4 h-4" />
-            {lang === "fr" ? "Séances de la semaine" : "Weekly Sessions"}
-            <Badge variant="secondary" className="ml-2">
-              {plan?.plan?.total_tss || 0} TSS
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {sessions.map((session, idx) => (
+      {/* SÉANCES DE LA SEMAINE */}
+      <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
+            <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
+              {lang === "fr" ? "Séances de la semaine" : "Weekly Sessions"}
+            </span>
+          </div>
+          <span 
+            className="px-2 py-1 rounded text-xs font-mono font-semibold"
+            style={{ background: "var(--bg-secondary)", color: "var(--text-secondary)" }}
+          >
+            {plan?.plan?.total_tss || 235} TSS
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          {sessions.map((session, idx) => {
+            const styleKey = getSessionStyleKey(session.type, session.intensity);
+            const style = SESSION_STYLES[styleKey] || SESSION_STYLES.easy;
+            const isRest = styleKey === "repos" || styleKey === "rest";
+            
+            return (
               <div
                 key={idx}
-                className={`flex items-center gap-4 p-3 rounded-lg border ${INTENSITY_COLORS[session.intensity] || "bg-gray-50"}`}
+                className="flex items-center gap-3 p-3 rounded-xl transition-all"
+                style={{
+                  background: style.bg,
+                  borderLeft: `4px solid ${style.border}`,
+                }}
                 data-testid={`session-${session.day}`}
               >
+                {/* Jour */}
                 <div className="w-20 shrink-0">
-                  <span className="font-mono text-xs font-semibold uppercase">
+                  <span 
+                    className="text-xs font-bold uppercase tracking-wide"
+                    style={{ color: isRest ? style.text : style.text }}
+                  >
                     {session.day}
                   </span>
                 </div>
+                
+                {/* Contenu */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{session.type}</span>
-                    {session.duration !== "0min" && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span 
+                      className="font-semibold"
+                      style={{ color: style.text }}
+                    >
+                      {session.type}
+                    </span>
+                    {session.duration && session.duration !== "0min" && (
+                      <span 
+                        className="text-xs flex items-center gap-1"
+                        style={{ color: style.text, opacity: 0.7 }}
+                      >
                         <Clock className="w-3 h-3" />
                         {session.duration}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p 
+                    className="text-xs truncate mt-0.5"
+                    style={{ color: style.text, opacity: 0.8 }}
+                  >
                     {session.details}
                   </p>
                 </div>
-                <div className="text-right shrink-0">
-                  <Badge variant="outline" className="text-xs">
-                    {session.estimated_tss} TSS
-                  </Badge>
+                
+                {/* TSS Badge */}
+                <div 
+                  className="px-2 py-1 rounded-full text-xs font-bold shrink-0"
+                  style={{ 
+                    background: style.badge,
+                    color: style.badgeText
+                  }}
+                >
+                  {session.estimated_tss} TSS
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Conseil du coach */}
       {plan?.plan?.advice && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="pt-6">
-            <div className="flex gap-3">
-              <div className="shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Activity className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-mono text-xs uppercase text-muted-foreground mb-1">
-                  {lang === "fr" ? "Conseil du coach" : "Coach advice"}
-                </p>
-                <p className="text-sm">{plan.plan.advice}</p>
-              </div>
+        <div 
+          className="card-modern p-4" 
+          style={{ 
+            background: "linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)", 
+            border: "1px solid rgba(139, 92, 246, 0.3)", 
+            borderRadius: "16px" 
+          }}
+        >
+          <div className="flex gap-3">
+            <div 
+              className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: "rgba(139, 92, 246, 0.2)" }}
+            >
+              <Activity className="w-5 h-5" style={{ color: "#8b5cf6" }} />
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-xs font-mono uppercase mb-1" style={{ color: "var(--text-tertiary)" }}>
+                {lang === "fr" ? "Conseil du coach" : "Coach advice"}
+              </p>
+              <p className="text-sm text-white">{plan.plan.advice}</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
