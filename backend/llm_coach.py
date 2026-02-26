@@ -142,6 +142,19 @@ async def generate_cycle_week(
     Returns:
         (plan_dict, success, metadata)
     """
+    # Volume cible selon l'objectif
+    goal_volumes = {
+        "5K": {"km": 30, "long_run": 10, "sessions": 4},
+        "10K": {"km": 40, "long_run": 14, "sessions": 5},
+        "SEMI": {"km": 50, "long_run": 18, "sessions": 5},
+        "MARATHON": {"km": 70, "long_run": 28, "sessions": 5},
+        "ULTRA": {"km": 85, "long_run": 35, "sessions": 5},
+    }
+    goal_config = goal_volumes.get(goal, goal_volumes["SEMI"])
+    target_km = goal_config["km"]
+    target_long_run = goal_config["long_run"]
+    target_sessions = goal_config["sessions"]
+    
     prompt = f"""Tu es un coach running expert élite.
 
 Objectif : {goal}
@@ -155,12 +168,17 @@ TSB: {context.get('tsb', -5)}
 ACWR: {round(context.get('acwr', 1.0), 2)}
 Volume hebdo actuel: {context.get('weekly_km', 30)} km
 
+VOLUME CIBLE POUR {goal} :
+- Volume hebdomadaire: {target_km} km
+- Sortie longue: {target_long_run} km
+- Nombre de séances: {target_sessions} courses + 2 repos
+
 RÈGLES IMPORTANTES :
-1. MAXIMUM 2 jours de repos par semaine (Lundi et Vendredi recommandés)
-2. 4-5 séances de course par semaine
-3. weekly_km = somme exacte de tous les distance_km
-4. Dans "details", TOUJOURS inclure: distance • allure • FC cible
-5. Format: "X km • Y:ZZ/km • FC XXX-YYY bpm • description"
+1. EXACTEMENT 2 jours de repos (Lundi et Vendredi)
+2. {target_sessions} séances de course
+3. weekly_km doit être proche de {target_km} km
+4. Sortie longue dimanche: {target_long_run} km
+5. Dans "details", TOUJOURS inclure: distance • allure • FC cible
 
 Zones d'allure (VMA ~15 km/h) :
 - Z1 Récup: 6:30-7:00/km, FC 120-135
@@ -169,12 +187,12 @@ Zones d'allure (VMA ~15 km/h) :
 - Z4 Seuil: 4:45-5:00/km, FC 165-175
 - Z5 VMA: 4:15-4:30/km, FC 175-185
 
-Répond UNIQUEMENT en JSON valide (exemple avec 40 km/semaine) :
+Répond UNIQUEMENT en JSON valide :
 
 {{
   "focus": "{phase}",
   "planned_load": {target_load},
-  "weekly_km": 40,
+  "weekly_km": {target_km},
   "sessions": [
     {{"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Étirements recommandés", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
     {{"day": "Mardi", "type": "Endurance", "duration": "50min", "details": "8 km • 5:45-6:15/km • FC 135-150 bpm • Zone 2", "intensity": "easy", "estimated_tss": 50, "distance_km": 8}},
@@ -182,10 +200,10 @@ Répond UNIQUEMENT en JSON valide (exemple avec 40 km/semaine) :
     {{"day": "Jeudi", "type": "Récupération", "duration": "30min", "details": "5 km • 6:30-7:00/km • FC <135 bpm • Footing léger", "intensity": "easy", "estimated_tss": 25, "distance_km": 5}},
     {{"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Récupération • Cross-training possible", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
     {{"day": "Samedi", "type": "Tempo", "duration": "45min", "details": "8 km dont 25min à 5:00-5:15/km • FC 150-165 bpm", "intensity": "moderate", "estimated_tss": 60, "distance_km": 8}},
-    {{"day": "Dimanche", "type": "Sortie longue", "duration": "70min", "details": "12 km progressif • 5:45→5:30/km • FC 135-165 bpm", "intensity": "moderate", "estimated_tss": 85, "distance_km": 12}}
+    {{"day": "Dimanche", "type": "Sortie longue", "duration": "90min", "details": "{target_long_run} km progressif • 5:45→5:30/km • FC 135-165 bpm", "intensity": "moderate", "estimated_tss": 100, "distance_km": {target_long_run}}}
   ],
-  "total_tss": 275,
-  "advice": "Focus volume cette semaine. Reste en Z2 pour les sorties faciles."
+  "total_tss": 290,
+  "advice": "Focus volume pour {goal}. Sortie longue prioritaire."
 }}"""
 
     start_time = time.time()
