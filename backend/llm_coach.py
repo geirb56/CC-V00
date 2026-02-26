@@ -155,13 +155,19 @@ TSB: {context.get('tsb', -5)}
 ACWR: {round(context.get('acwr', 1.0), 2)}
 Volume hebdo: {context.get('weekly_km', 30)} km
 
+Zones d'allure de référence (basées sur VMA ~15 km/h) :
+- Z1 Récupération: 6:30-7:00/km, FC 120-135 bpm
+- Z2 Endurance: 5:45-6:15/km, FC 135-150 bpm
+- Z3 Tempo/Marathon: 5:15-5:30/km, FC 150-165 bpm
+- Z4 Seuil: 4:45-5:00/km, FC 165-175 bpm
+- Z5 VMA: 4:15-4:30/km, FC 175-185 bpm
+- Allure Semi: 5:00-5:15/km
+- Allure 10K: 4:40-4:55/km
+
 Règles :
 - Respecte progressivité (max +10% volume/semaine)
-- Ajuste long run selon objectif
-- Marathon = sortie longue prioritaire (30-35% du volume)
-- Semi = tempo et seuil (20-25% intensité)
-- 10K = VMA et seuil (25-30% intensité)
-- 5K = VMA et vitesse (30% intensité)
+- OBLIGATOIRE: Dans "details", inclure TOUJOURS: distance en km • allure en min/km • FC cible
+- Format details: "X km • Y:ZZ/km • FC XXX-YYY bpm • description"
 - Si ACWR > 1.3 : réduire la charge
 - Si TSB < -20 : ajouter repos
 
@@ -170,54 +176,75 @@ Répond UNIQUEMENT en JSON valide :
 {{
   "focus": "{phase}",
   "planned_load": {target_load},
-  "weekly_km": 0,
+  "weekly_km": 45,
   "sessions": [
     {{
       "day": "Lundi",
       "type": "Repos",
       "duration": "0min",
-      "details": "Récupération complète",
+      "details": "Récupération complète • Étirements ou yoga recommandés",
       "intensity": "rest",
-      "estimated_tss": 0
+      "estimated_tss": 0,
+      "distance_km": 0
     }},
     {{
       "day": "Mardi",
       "type": "Endurance",
-      "duration": "45min",
-      "details": "Footing facile en zone 2",
+      "duration": "50min",
+      "details": "8 km • 5:45-6:15/km • FC 135-150 bpm • Zone 2 stricte",
       "intensity": "easy",
-      "estimated_tss": 45
+      "estimated_tss": 50,
+      "distance_km": 8
     }},
     {{
       "day": "Mercredi",
-      "type": "Fractionné",
-      "duration": "50min",
-      "details": "10x400m à allure 5K, récup 1min30",
+      "type": "Seuil",
+      "duration": "40min",
+      "details": "7 km dont 20min à 4:45-5:00/km • FC 165-175 bpm • Récup 2min entre blocs",
       "intensity": "hard",
-      "estimated_tss": 70
+      "estimated_tss": 55,
+      "distance_km": 7
     }},
     {{
       "day": "Jeudi",
       "type": "Récupération",
       "duration": "30min",
-      "details": "Footing très léger",
+      "details": "5 km • 6:30-7:00/km • FC <135 bpm max • Footing léger",
       "intensity": "easy",
-      "estimated_tss": 25
+      "estimated_tss": 25,
+      "distance_km": 5
     }},
     {{
       "day": "Vendredi",
       "type": "Repos",
       "duration": "0min",
-      "details": "Récupération ou cross-training léger",
+      "details": "Récupération • Cross-training possible (vélo, natation)",
       "intensity": "rest",
-      "estimated_tss": 0
+      "estimated_tss": 0,
+      "distance_km": 0
     }},
     {{
       "day": "Samedi",
       "type": "Tempo",
-      "duration": "40min",
-      "details": "20min à allure semi-marathon",
+      "duration": "45min",
+      "details": "8 km dont 25min à 5:00-5:15/km • FC 150-165 bpm • Allure semi-marathon",
       "intensity": "moderate",
+      "estimated_tss": 60,
+      "distance_km": 8
+    }},
+    {{
+      "day": "Dimanche",
+      "type": "Sortie longue",
+      "duration": "70min",
+      "details": "12 km • 5:45/km → 5:30/km progressif • FC 135-165 bpm",
+      "intensity": "moderate",
+      "estimated_tss": 85,
+      "distance_km": 12
+    }}
+  ],
+  "total_tss": 275,
+  "advice": "Cette semaine focus sur le volume. Reste en Z2 pour les sorties faciles."
+}}
       "estimated_tss": 55
     }},
     {{
