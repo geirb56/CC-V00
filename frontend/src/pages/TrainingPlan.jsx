@@ -25,11 +25,11 @@ const GOAL_OPTIONS = [
 // Couleurs correspondant au design de l'app
 const SESSION_STYLES = {
   repos: {
-    bg: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
-    border: "#475569",
-    text: "#94a3b8",
-    badge: "#475569",
-    badgeText: "#94a3b8"
+    bg: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
+    border: "#6366f1",
+    text: "#c7d2fe",
+    badge: "#4f46e5",
+    badgeText: "#ffffff"
   },
   endurance: {
     bg: "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)",
@@ -74,11 +74,11 @@ const SESSION_STYLES = {
     badgeText: "#ffffff"
   },
   rest: {
-    bg: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
-    border: "#475569",
-    text: "#94a3b8",
-    badge: "#475569",
-    badgeText: "#94a3b8"
+    bg: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
+    border: "#6366f1",
+    text: "#c7d2fe",
+    badge: "#4f46e5",
+    badgeText: "#ffffff"
   },
   easy: {
     bg: "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)",
