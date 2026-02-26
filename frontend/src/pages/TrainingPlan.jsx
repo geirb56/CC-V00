@@ -354,63 +354,85 @@ export default function TrainingPlan() {
             const styleKey = getSessionStyleKey(session.type, session.intensity);
             const style = SESSION_STYLES[styleKey] || SESSION_STYLES.easy;
             const isRest = styleKey === "repos" || styleKey === "rest";
+            const distance = session.distance_km || 0;
             
             return (
               <div
                 key={idx}
-                className="flex items-center gap-3 p-3 rounded-xl transition-all"
+                className="flex items-stretch gap-0 rounded-xl overflow-hidden transition-all"
                 style={{
                   background: style.bg,
-                  borderLeft: `4px solid ${style.border}`,
                 }}
                 data-testid={`session-${session.day}`}
               >
+                {/* Barre colorée latérale */}
+                <div 
+                  className="w-1.5 shrink-0"
+                  style={{ background: style.border }}
+                />
+                
                 {/* Jour */}
-                <div className="w-20 shrink-0">
+                <div 
+                  className="w-24 py-3 px-3 flex items-center shrink-0"
+                  style={{ background: "rgba(0,0,0,0.1)" }}
+                >
                   <span 
                     className="text-xs font-bold uppercase tracking-wide"
-                    style={{ color: isRest ? style.text : style.text }}
+                    style={{ color: style.text }}
                   >
                     {session.day}
                   </span>
                 </div>
                 
-                {/* Contenu */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
+                {/* Contenu principal */}
+                <div className="flex-1 py-3 px-3 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span 
-                      className="font-semibold"
+                      className="font-bold text-base"
                       style={{ color: style.text }}
                     >
                       {session.type}
                     </span>
                     {session.duration && session.duration !== "0min" && (
                       <span 
-                        className="text-xs flex items-center gap-1"
-                        style={{ color: style.text, opacity: 0.7 }}
+                        className="text-xs flex items-center gap-1 opacity-80"
+                        style={{ color: style.text }}
                       >
                         <Clock className="w-3 h-3" />
                         {session.duration}
                       </span>
                     )}
+                    {distance > 0 && (
+                      <span 
+                        className="text-xs font-semibold px-1.5 py-0.5 rounded"
+                        style={{ 
+                          background: "rgba(0,0,0,0.15)",
+                          color: style.text 
+                        }}
+                      >
+                        {distance} km
+                      </span>
+                    )}
                   </div>
                   <p 
-                    className="text-xs truncate mt-0.5"
-                    style={{ color: style.text, opacity: 0.8 }}
+                    className="text-xs leading-relaxed"
+                    style={{ color: style.text, opacity: 0.85 }}
                   >
                     {session.details}
                   </p>
                 </div>
                 
                 {/* TSS Badge */}
-                <div 
-                  className="px-2 py-1 rounded-full text-xs font-bold shrink-0"
-                  style={{ 
-                    background: style.badge,
-                    color: style.badgeText
-                  }}
-                >
-                  {session.estimated_tss} TSS
+                <div className="py-3 px-3 flex items-center shrink-0">
+                  <div 
+                    className="px-2.5 py-1.5 rounded-full text-xs font-bold"
+                    style={{ 
+                      background: style.badge,
+                      color: style.badgeText
+                    }}
+                  >
+                    {session.estimated_tss} TSS
+                  </div>
                 </div>
               </div>
             );
