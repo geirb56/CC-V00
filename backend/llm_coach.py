@@ -234,12 +234,16 @@ Répond UNIQUEMENT en JSON valide (exemple avec 40 km/semaine) :
         
         plan = json.loads(response_text)
         
-        # Calculer le volume total
+        # Calculer le volume total TSS
         total_tss = sum(s.get("estimated_tss", 0) for s in plan.get("sessions", []))
         plan["total_tss"] = total_tss
         
+        # Calculer le volume total KM (correction du LLM)
+        total_km = sum(s.get("distance_km", 0) or 0 for s in plan.get("sessions", []))
+        plan["weekly_km"] = round(total_km, 1)
+        
         metadata["success"] = True
-        logger.info(f"[LLM] ✅ Plan semaine généré en {elapsed:.2f}s (TSS: {total_tss})")
+        logger.info(f"[LLM] ✅ Plan semaine généré en {elapsed:.2f}s (TSS: {total_tss}, KM: {total_km})")
         
         return plan, True, metadata
         
