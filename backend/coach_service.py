@@ -307,13 +307,14 @@ async def chat_response(
 # GÉNÉRATION DE PLAN D'ENTRAÎNEMENT DYNAMIQUE
 # ============================================================
 
-async def generate_dynamic_training_plan(db, user_id: str) -> dict:
+async def generate_dynamic_training_plan(db, user_id: str, sessions_override: int = None) -> dict:
     """
     Génère un plan d'entraînement dynamique basé sur les données utilisateur.
     
     Args:
         db: Instance de base de données MongoDB (async)
         user_id: ID utilisateur
+        sessions_override: Nombre de séances forcé (3, 4, 5, 6)
         
     Returns:
         Plan d'entraînement avec semaine, phase, objectif et séances
@@ -321,6 +322,10 @@ async def generate_dynamic_training_plan(db, user_id: str) -> dict:
     start = time.time()
     metrics.total_requests += 1
     metrics.plan_requests += 1
+    
+    # Récupérer les préférences utilisateur (nombre de séances)
+    prefs = await db.training_prefs.find_one({"user_id": user_id})
+    sessions_per_week = sessions_override or (prefs.get("sessions_per_week") if prefs else None)
     
     # 1. Récupérer ou créer le cycle d'entraînement
     cycle = await db.training_cycles.find_one({"user_id": user_id})
