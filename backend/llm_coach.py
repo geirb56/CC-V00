@@ -127,7 +127,8 @@ async def generate_cycle_week(
     phase: str,
     target_load: int,
     goal: str,
-    user_id: str = "unknown"
+    user_id: str = "unknown",
+    sessions_per_week: int = None
 ) -> Tuple[Optional[Dict], bool, Dict]:
     """
     Génère un plan de semaine d'entraînement structuré.
@@ -138,6 +139,7 @@ async def generate_cycle_week(
         target_load: Charge cible en TSS
         goal: Objectif (5K, 10K, SEMI, MARATHON, ULTRA)
         user_id: ID utilisateur
+        sessions_per_week: Nombre de séances par semaine (3, 4, 5, 6)
         
     Returns:
         (plan_dict, success, metadata)
