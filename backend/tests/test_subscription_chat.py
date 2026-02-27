@@ -117,7 +117,7 @@ class TestStripeCheckout:
         response = requests.post(
             f"{BASE_URL}/api/subscription/checkout?user_id=default",
             json={
-                "origin_url": "https://repo-charger.preview.emergentagent.com",
+                "origin_url": "https://cardiocoach-app.preview.emergentagent.com",
                 "tier": "starter",
                 "billing_period": "monthly"
             }
@@ -134,7 +134,7 @@ class TestStripeCheckout:
         response = requests.post(
             f"{BASE_URL}/api/subscription/checkout?user_id=default",
             json={
-                "origin_url": "https://repo-charger.preview.emergentagent.com",
+                "origin_url": "https://cardiocoach-app.preview.emergentagent.com",
                 "tier": "confort",
                 "billing_period": "monthly"
             }
@@ -150,7 +150,7 @@ class TestStripeCheckout:
         response = requests.post(
             f"{BASE_URL}/api/subscription/checkout?user_id=default",
             json={
-                "origin_url": "https://repo-charger.preview.emergentagent.com",
+                "origin_url": "https://cardiocoach-app.preview.emergentagent.com",
                 "tier": "pro",
                 "billing_period": "annual"
             }
@@ -165,7 +165,7 @@ class TestStripeCheckout:
         response = requests.post(
             f"{BASE_URL}/api/subscription/checkout?user_id=default",
             json={
-                "origin_url": "https://repo-charger.preview.emergentagent.com",
+                "origin_url": "https://cardiocoach-app.preview.emergentagent.com",
                 "tier": "invalid_tier",
                 "billing_period": "monthly"
             }
