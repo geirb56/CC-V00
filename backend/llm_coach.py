@@ -155,38 +155,33 @@ async def generate_cycle_week(
     }
     race_km = race_distances.get(goal, 21.1)
     
-    # Calcul du volume MINIMUM recommandé
-    # Règle: minimum = max(volume_actuel, distance_course × ratio)
-    # Ratios basés sur la science de l'entraînement:
-    # - Courses courtes (5K/10K): besoin de 3-4× la distance pour performer
-    # - Demi-marathon: 2-2.5× la distance
-    # - Marathon: 1.5-2× la distance (volume critique pour finir)
-    # - Ultra: 1.2-1.5× la distance
-    min_ratios = {"5K": 4, "10K": 3, "SEMI": 2, "MARATHON": 1.5, "ULTRA": 1.2}
+    # Volumes minimum RECOMMANDÉS (basés sur données réelles d'entraînement)
+    # Source: recommandations coaching pour finir sans souffrir
+    goal_configs = {
+        "5K": {"min": 15, "max": 45, "sessions": 3, "long_min": 8, "long_max": 10},
+        "10K": {"min": 20, "max": 60, "sessions": 3, "long_min": 10, "long_max": 14},
+        "SEMI": {"min": 30, "max": 80, "sessions": 4, "long_min": 16, "long_max": 18},
+        "MARATHON": {"min": 40, "max": 120, "sessions": 4, "long_min": 28, "long_max": 32},
+        "ULTRA": {"min": 50, "max": 150, "sessions": 5, "long_min": 35, "long_max": 45},
+    }
     
-    # Volume minimum = max(volume actuel, distance × ratio)
-    scientific_min = round(race_km * min_ratios.get(goal, 2))
-    volume_min = max(current_weekly_km, scientific_min)
+    config = goal_configs.get(goal, goal_configs["SEMI"])
     
-    # Volume maximum (plafond pour éviter surentraînement)
-    max_ratios = {"5K": 9, "10K": 6, "SEMI": 4, "MARATHON": 3, "ULTRA": 2.5}
-    volume_max = round(race_km * max_ratios.get(goal, 4))
-    
-    # Pourcentage sortie longue
-    long_pcts = {"5K": 0.33, "10K": 0.30, "SEMI": 0.35, "MARATHON": 0.35, "ULTRA": 0.40}
-    long_pct = long_pcts.get(goal, 0.35)
-    
-    # Nombre de séances
-    sessions_by_goal = {"5K": 4, "10K": 5, "SEMI": 5, "MARATHON": 5, "ULTRA": 5}
-    target_sessions = sessions_by_goal.get(goal, 5)
+    # Volume minimum = max(volume actuel, minimum recommandé pour l'objectif)
+    volume_min = max(current_weekly_km, config["min"])
+    volume_max = config["max"]
     
     # Calcul du volume cible: +7% progressif, limité entre min et max
-    progression_factor = 1.07  # +7% par semaine
+    progression_factor = 1.07
     target_km_raw = current_weekly_km * progression_factor
     target_km = max(volume_min, min(volume_max, round(target_km_raw)))
     
-    # Sortie longue = % du volume total
-    target_long_run = round(target_km * long_pct)
+    # Sortie longue = proportionnelle au volume, entre long_min et long_max
+    long_ratio = (target_km - config["min"]) / (config["max"] - config["min"]) if config["max"] > config["min"] else 0.5
+    target_long_run = round(config["long_min"] + long_ratio * (config["long_max"] - config["long_min"]))
+    target_long_run = max(config["long_min"], min(config["long_max"], target_long_run))
+    
+    target_sessions = config["sessions"]
     
     prompt = f"""Tu es un coach running expert élite.
 
@@ -199,20 +194,23 @@ CTL: {context.get('ctl', 40)}
 ATL: {context.get('atl', 45)}
 TSB: {context.get('tsb', -5)}
 ACWR: {round(context.get('acwr', 1.0), 2)}
-Volume hebdo ACTUEL: {current_weekly_km} km (basé sur les 4 dernières semaines)
+Volume hebdo ACTUEL: {current_weekly_km} km
 
-CALCUL DU VOLUME PERSONNALISÉ :
-- Volume minimum scientifique: {scientific_min} km ({race_km} km × {min_ratios.get(goal, 2)})
-- Volume minimum ajusté: {volume_min} km (max entre actuel et scientifique)
-- Volume maximum: {volume_max} km (plafond sécurité)
-- Volume cible: {target_km} km (+7% progressif)
-- Sortie longue: {target_long_run} km ({int(long_pct*100)}% du volume)
+RECOMMANDATIONS POUR {goal} :
+- Volume minimum recommandé: {config["min"]} km/semaine
+- Volume maximum sécurité: {config["max"]} km/semaine
+- Sortie longue: {config["long_min"]}-{config["long_max"]} km
+- Séances minimum: {target_sessions}/semaine
+
+CALCUL PERSONNALISÉ :
+- Volume cible: {target_km} km (min={volume_min}, +7% progressif)
+- Sortie longue: {target_long_run} km
 - Séances: {target_sessions} courses + 2 repos
 
 RÈGLES :
-1. EXACTEMENT 2 jours de repos (Lundi et Vendredi)
+1. 2 jours de repos (Lundi et Vendredi recommandés)
 2. {target_sessions} séances de course
-3. weekly_km = {target_km} km (±5%)
+3. weekly_km = {target_km} km
 4. Sortie longue dimanche: {target_long_run} km
 5. Details: distance • allure • FC cible
 
@@ -239,7 +237,7 @@ JSON uniquement :
     {{"day": "Dimanche", "type": "Sortie longue", "duration": "90min", "details": "{target_long_run} km progressif • 5:45→5:30/km • FC 135-165 bpm", "intensity": "moderate", "estimated_tss": 100, "distance_km": {target_long_run}}}
   ],
   "total_tss": 290,
-  "advice": "Volume adapté: {current_weekly_km} km → {target_km} km. Min scientifique pour {goal}: {scientific_min} km."
+  "advice": "Volume: {current_weekly_km} km → {target_km} km. Min recommandé {goal}: {config['min']} km. Sortie longue: {target_long_run} km."
 }}"""
 
     start_time = time.time()
