@@ -142,34 +142,55 @@ async def generate_cycle_week(
     Returns:
         (plan_dict, success, metadata)
     """
-    # Volume cible selon l'objectif ET le niveau actuel de l'athlète
+    # Volume actuel de l'athlète (basé sur les 4 dernières semaines)
     current_weekly_km = context.get('weekly_km', 30)
     
-    # Volumes minimum/maximum par objectif (pour athlète débutant → confirmé)
-    goal_volume_ranges = {
-        "5K": {"min": 20, "max": 45, "long_pct": 0.33, "sessions": 4},
-        "10K": {"min": 30, "max": 60, "long_pct": 0.30, "sessions": 5},
-        "SEMI": {"min": 40, "max": 80, "long_pct": 0.35, "sessions": 5},
-        "MARATHON": {"min": 50, "max": 120, "long_pct": 0.35, "sessions": 5},
-        "ULTRA": {"min": 60, "max": 150, "long_pct": 0.40, "sessions": 5},
+    # Distance de course par objectif (en km)
+    race_distances = {
+        "5K": 5,
+        "10K": 10,
+        "SEMI": 21.1,
+        "MARATHON": 42.2,
+        "ULTRA": 60,
     }
+    race_km = race_distances.get(goal, 21.1)
     
-    goal_range = goal_volume_ranges.get(goal, goal_volume_ranges["SEMI"])
+    # Calcul du volume MINIMUM recommandé
+    # Règle: minimum = max(volume_actuel, distance_course × ratio)
+    # Ratios basés sur la science de l'entraînement:
+    # - Courses courtes (5K/10K): besoin de 3-4× la distance pour performer
+    # - Demi-marathon: 2-2.5× la distance
+    # - Marathon: 1.5-2× la distance (volume critique pour finir)
+    # - Ultra: 1.2-1.5× la distance
+    min_ratios = {"5K": 4, "10K": 3, "SEMI": 2, "MARATHON": 1.5, "ULTRA": 1.2}
     
-    # Calcul du volume cible basé sur le niveau actuel + progressivité (+5-10%)
-    progression_factor = 1.07  # +7% par semaine (max recommandé: 10%)
+    # Volume minimum = max(volume actuel, distance × ratio)
+    scientific_min = round(race_km * min_ratios.get(goal, 2))
+    volume_min = max(current_weekly_km, scientific_min)
+    
+    # Volume maximum (plafond pour éviter surentraînement)
+    max_ratios = {"5K": 9, "10K": 6, "SEMI": 4, "MARATHON": 3, "ULTRA": 2.5}
+    volume_max = round(race_km * max_ratios.get(goal, 4))
+    
+    # Pourcentage sortie longue
+    long_pcts = {"5K": 0.33, "10K": 0.30, "SEMI": 0.35, "MARATHON": 0.35, "ULTRA": 0.40}
+    long_pct = long_pcts.get(goal, 0.35)
+    
+    # Nombre de séances
+    sessions_by_goal = {"5K": 4, "10K": 5, "SEMI": 5, "MARATHON": 5, "ULTRA": 5}
+    target_sessions = sessions_by_goal.get(goal, 5)
+    
+    # Calcul du volume cible: +7% progressif, limité entre min et max
+    progression_factor = 1.07  # +7% par semaine
     target_km_raw = current_weekly_km * progression_factor
-    
-    # Limiter entre min et max selon l'objectif
-    target_km = max(goal_range["min"], min(goal_range["max"], round(target_km_raw)))
+    target_km = max(volume_min, min(volume_max, round(target_km_raw)))
     
     # Sortie longue = % du volume total
-    target_long_run = round(target_km * goal_range["long_pct"])
-    target_sessions = goal_range["sessions"]
+    target_long_run = round(target_km * long_pct)
     
     prompt = f"""Tu es un coach running expert élite.
 
-Objectif : {goal}
+Objectif : {goal} ({race_km} km)
 Phase : {phase}
 Charge cible : {target_load}
 
@@ -180,42 +201,45 @@ TSB: {context.get('tsb', -5)}
 ACWR: {round(context.get('acwr', 1.0), 2)}
 Volume hebdo ACTUEL: {current_weekly_km} km (basé sur les 4 dernières semaines)
 
-VOLUME CIBLE PERSONNALISÉ POUR {goal} :
-- Volume cible: {target_km} km (+7% progressif, limité entre {goal_range["min"]}-{goal_range["max"]} km)
-- Sortie longue: {target_long_run} km ({int(goal_range["long_pct"]*100)}% du volume)
-- Nombre de séances: {target_sessions} courses + 2 repos
+CALCUL DU VOLUME PERSONNALISÉ :
+- Volume minimum scientifique: {scientific_min} km ({race_km} km × {min_ratios.get(goal, 2)})
+- Volume minimum ajusté: {volume_min} km (max entre actuel et scientifique)
+- Volume maximum: {volume_max} km (plafond sécurité)
+- Volume cible: {target_km} km (+7% progressif)
+- Sortie longue: {target_long_run} km ({int(long_pct*100)}% du volume)
+- Séances: {target_sessions} courses + 2 repos
 
-RÈGLES IMPORTANTES :
+RÈGLES :
 1. EXACTEMENT 2 jours de repos (Lundi et Vendredi)
 2. {target_sessions} séances de course
-3. weekly_km doit être {target_km} km (±5%)
+3. weekly_km = {target_km} km (±5%)
 4. Sortie longue dimanche: {target_long_run} km
-5. Dans "details", TOUJOURS inclure: distance • allure • FC cible
+5. Details: distance • allure • FC cible
 
-Zones d'allure (VMA ~15 km/h) :
-- Z1 Récup: 6:30-7:00/km, FC 120-135
-- Z2 Endurance: 5:45-6:15/km, FC 135-150
-- Z3 Tempo: 5:15-5:30/km, FC 150-165
-- Z4 Seuil: 4:45-5:00/km, FC 165-175
-- Z5 VMA: 4:15-4:30/km, FC 175-185
+Zones d'allure :
+- Z1: 6:30-7:00/km, FC 120-135
+- Z2: 5:45-6:15/km, FC 135-150
+- Z3: 5:15-5:30/km, FC 150-165
+- Z4: 4:45-5:00/km, FC 165-175
+- Z5: 4:15-4:30/km, FC 175-185
 
-Répond UNIQUEMENT en JSON valide :
+JSON uniquement :
 
 {{
   "focus": "{phase}",
   "planned_load": {target_load},
   "weekly_km": {target_km},
   "sessions": [
-    {{"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Étirements recommandés", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
+    {{"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération complète", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
     {{"day": "Mardi", "type": "Endurance", "duration": "50min", "details": "8 km • 5:45-6:15/km • FC 135-150 bpm • Zone 2", "intensity": "easy", "estimated_tss": 50, "distance_km": 8}},
     {{"day": "Mercredi", "type": "Seuil", "duration": "40min", "details": "7 km dont 20min à 4:45-5:00/km • FC 165-175 bpm", "intensity": "hard", "estimated_tss": 55, "distance_km": 7}},
-    {{"day": "Jeudi", "type": "Récupération", "duration": "30min", "details": "5 km • 6:30-7:00/km • FC <135 bpm • Footing léger", "intensity": "easy", "estimated_tss": 25, "distance_km": 5}},
-    {{"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Récupération • Cross-training possible", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
+    {{"day": "Jeudi", "type": "Récupération", "duration": "30min", "details": "5 km • 6:30-7:00/km • FC <135 bpm", "intensity": "easy", "estimated_tss": 25, "distance_km": 5}},
+    {{"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Récupération", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
     {{"day": "Samedi", "type": "Tempo", "duration": "45min", "details": "8 km dont 25min à 5:00-5:15/km • FC 150-165 bpm", "intensity": "moderate", "estimated_tss": 60, "distance_km": 8}},
     {{"day": "Dimanche", "type": "Sortie longue", "duration": "90min", "details": "{target_long_run} km progressif • 5:45→5:30/km • FC 135-165 bpm", "intensity": "moderate", "estimated_tss": 100, "distance_km": {target_long_run}}}
   ],
   "total_tss": 290,
-  "advice": "Volume adapté à ton niveau ({current_weekly_km} km → {target_km} km). Sortie longue prioritaire pour {goal}."
+  "advice": "Volume adapté: {current_weekly_km} km → {target_km} km. Min scientifique pour {goal}: {scientific_min} km."
 }}"""
 
     start_time = time.time()
