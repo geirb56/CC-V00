@@ -169,6 +169,10 @@ async def generate_cycle_week(
     
     config = goal_configs.get(goal, goal_configs["SEMI"])
     
+    # Nombre de séances (utilisateur ou défaut)
+    target_sessions = sessions_per_week if sessions_per_week in [3, 4, 5, 6] else config["sessions"]
+    num_rest_days = 7 - target_sessions
+    
     # Volume minimum = max(volume actuel, minimum recommandé pour l'objectif)
     volume_min = max(current_weekly_km, config["min"])
     volume_max = config["max"]
@@ -183,7 +187,41 @@ async def generate_cycle_week(
     target_long_run = round(config["long_min"] + long_ratio * (config["long_max"] - config["long_min"]))
     target_long_run = max(config["long_min"], min(config["long_max"], target_long_run))
     
-    target_sessions = config["sessions"]
+    # Générer les jours de repos et course selon le nombre de séances
+    if target_sessions == 3:
+        rest_days = ["Lundi", "Mercredi", "Vendredi", "Samedi"]
+        run_days_config = [
+            ("Mardi", "Endurance", "easy"),
+            ("Jeudi", "Seuil", "hard"),
+            ("Dimanche", "Sortie longue", "moderate")
+        ]
+    elif target_sessions == 4:
+        rest_days = ["Lundi", "Mercredi", "Vendredi"]
+        run_days_config = [
+            ("Mardi", "Endurance", "easy"),
+            ("Jeudi", "Seuil", "hard"),
+            ("Samedi", "Tempo", "moderate"),
+            ("Dimanche", "Sortie longue", "moderate")
+        ]
+    elif target_sessions == 5:
+        rest_days = ["Lundi", "Vendredi"]
+        run_days_config = [
+            ("Mardi", "Endurance", "easy"),
+            ("Mercredi", "Seuil", "hard"),
+            ("Jeudi", "Récupération", "easy"),
+            ("Samedi", "Tempo", "moderate"),
+            ("Dimanche", "Sortie longue", "moderate")
+        ]
+    else:  # 6 séances
+        rest_days = ["Vendredi"]
+        run_days_config = [
+            ("Lundi", "Récupération", "easy"),
+            ("Mardi", "Endurance", "easy"),
+            ("Mercredi", "Seuil", "hard"),
+            ("Jeudi", "Récupération", "easy"),
+            ("Samedi", "Tempo", "moderate"),
+            ("Dimanche", "Sortie longue", "moderate")
+        ]
     
     prompt = f"""Tu es un coach running expert élite.
 
@@ -198,16 +236,11 @@ TSB: {context.get('tsb', -5)}
 ACWR: {round(context.get('acwr', 1.0), 2)}
 Volume hebdo ACTUEL: {current_weekly_km} km
 
-RECOMMANDATIONS POUR {goal} :
-- Volume minimum recommandé: {config["min"]} km/semaine
-- Volume maximum sécurité: {config["max"]} km/semaine
-- Sortie longue: {config["long_min"]}-{config["long_max"]} km
-- Séances minimum: {target_sessions}/semaine
-
-CALCUL PERSONNALISÉ :
-- Volume cible: {target_km} km (min={volume_min}, +7% progressif)
+PARAMÈTRES DU PLAN :
+- Nombre de séances demandé: {target_sessions} courses + {num_rest_days} repos
+- Volume cible: {target_km} km
 - Sortie longue: {target_long_run} km
-- Séances: {target_sessions} courses + 2 repos
+- Jours de repos: {', '.join(rest_days)}
 
 RÈGLES :
 1. 2 jours de repos (Lundi et Vendredi recommandés)
