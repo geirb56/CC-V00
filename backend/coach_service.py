@@ -442,6 +442,7 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         "goal_config": config,
         "context": context,
         "plan": week_plan,
+        "sessions_per_week": sessions_per_week,
         "generated_at": datetime.now(timezone.utc).isoformat()
     }
     
