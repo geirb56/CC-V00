@@ -4634,10 +4634,11 @@ async def get_training_plan_v2(user: dict = Depends(auth_user)):
 
 
 @api_router.post("/training/refresh")
-async def refresh_training_plan(user: dict = Depends(auth_user)):
+async def refresh_training_plan(sessions: int = None, user: dict = Depends(auth_user)):
     """
     Force le recalcul complet du plan
     (après sync Strava par exemple).
+    sessions: nombre de séances souhaitées (3, 4, 5, 6)
     """
     # Vider le cache pour cet utilisateur
     from coach_service import _plan_cache
@@ -4645,7 +4646,15 @@ async def refresh_training_plan(user: dict = Depends(auth_user)):
     for k in keys_to_remove:
         del _plan_cache[k]
     
-    return await generate_dynamic_training_plan(db, user["id"])
+    # Sauvegarder le nombre de séances si spécifié
+    if sessions and sessions in [3, 4, 5, 6]:
+        await db.training_prefs.update_one(
+            {"user_id": user["id"]},
+            {"$set": {"sessions_per_week": sessions}},
+            upsert=True
+        )
+    
+    return await generate_dynamic_training_plan(db, user["id"], sessions_override=sessions)
 
 
 @api_router.delete("/training/goal")
