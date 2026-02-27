@@ -166,10 +166,17 @@ function MiniLineChart({ data = [] }) {
 export default function Dashboard() {
   const [insight, setInsight] = useState(null);
   const [workouts, setWorkouts] = useState([]);
+  const [todaySession, setTodaySession] = useState(null);
   const [loading, setLoading] = useState(true);
   const { t, lang } = useLanguage();
   const fetchedRef = useRef(false);
   const lastLangRef = useRef(lang);
+
+  // Mapping des jours FR vers index
+  const dayMapping = {
+    "Lundi": 1, "Mardi": 2, "Mercredi": 3, "Jeudi": 4,
+    "Vendredi": 5, "Samedi": 6, "Dimanche": 0
+  };
 
   useEffect(() => {
     if (fetchedRef.current && lastLangRef.current === lang) {
@@ -183,15 +190,24 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [insightRes, workoutsRes, ragRes] = await Promise.all([
+      const [insightRes, workoutsRes, ragRes, planRes] = await Promise.all([
         axios.get(`${API}/dashboard/insight?language=${lang}`),
         axios.get(`${API}/workouts`),
-        axios.get(`${API}/rag/dashboard`).catch(() => ({ data: null }))
+        axios.get(`${API}/rag/dashboard`).catch(() => ({ data: null })),
+        axios.get(`${API}/training/plan`, { headers: { "X-User-Id": "default" } }).catch(() => ({ data: null }))
       ]);
       setInsight(insightRes.data);
       setWorkouts(workoutsRes.data);
       if (ragRes.data) {
         setInsight(prev => ({ ...prev, rag: ragRes.data }));
+      }
+      
+      // Trouver la séance du jour
+      if (planRes.data?.plan?.sessions) {
+        const todayIndex = new Date().getDay(); // 0=Dimanche, 1=Lundi...
+        const sessions = planRes.data.plan.sessions;
+        const todayPlan = sessions.find(s => dayMapping[s.day] === todayIndex);
+        setTodaySession(todayPlan);
       }
     } catch (error) {
       console.error("Failed to fetch data:", error);
