@@ -466,7 +466,7 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     return result
 
 
-def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str) -> dict:
+def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str, sessions_per_week: int = None) -> dict:
     """Génère un plan déterministe de secours avec des détails enrichis, adapté au niveau de l'athlète."""
     
     # Volume actuel de l'athlète (basé sur les 4 dernières semaines)
@@ -482,6 +482,10 @@ def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str) 
     }
     
     config = goal_configs.get(goal, goal_configs["SEMI"])
+    
+    # Utiliser le nombre de séances spécifié ou celui par défaut
+    num_sessions = sessions_per_week if sessions_per_week in [3, 4, 5, 6] else config["sessions"]
+    num_rest_days = 7 - num_sessions
     
     # Volume minimum = max(volume actuel, minimum recommandé)
     volume_min = max(current_weekly_km, config["min"])
