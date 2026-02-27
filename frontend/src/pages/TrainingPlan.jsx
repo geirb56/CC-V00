@@ -140,6 +140,7 @@ export default function TrainingPlan() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [settingGoal, setSettingGoal] = useState(false);
+  const [sessionsPerWeek, setSessionsPerWeek] = useState(null); // null = auto
 
   const fetchPlan = async () => {
     try {
@@ -147,6 +148,10 @@ export default function TrainingPlan() {
         headers: { "X-User-Id": USER_ID }
       });
       setPlan(res.data);
+      // Initialiser le nombre de séances depuis le plan
+      if (res.data?.sessions_per_week) {
+        setSessionsPerWeek(res.data.sessions_per_week);
+      }
     } catch (err) {
       console.error("Error fetching plan:", err);
       toast.error(lang === "fr" ? "Erreur de chargement" : "Loading error");
@@ -159,10 +164,11 @@ export default function TrainingPlan() {
     fetchPlan();
   }, []);
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (newSessionCount = sessionsPerWeek) => {
     setRefreshing(true);
     try {
-      const res = await axios.post(`${API}/training/refresh`, {}, {
+      const params = newSessionCount ? `?sessions=${newSessionCount}` : "";
+      const res = await axios.post(`${API}/training/refresh${params}`, {}, {
         headers: { "X-User-Id": USER_ID }
       });
       setPlan(res.data);
