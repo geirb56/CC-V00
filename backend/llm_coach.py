@@ -142,18 +142,30 @@ async def generate_cycle_week(
     Returns:
         (plan_dict, success, metadata)
     """
-    # Volume cible selon l'objectif
-    goal_volumes = {
-        "5K": {"km": 30, "long_run": 10, "sessions": 4},
-        "10K": {"km": 40, "long_run": 14, "sessions": 5},
-        "SEMI": {"km": 50, "long_run": 18, "sessions": 5},
-        "MARATHON": {"km": 70, "long_run": 28, "sessions": 5},
-        "ULTRA": {"km": 85, "long_run": 35, "sessions": 5},
+    # Volume cible selon l'objectif ET le niveau actuel de l'athlète
+    current_weekly_km = context.get('weekly_km', 30)
+    
+    # Volumes minimum/maximum par objectif (pour athlète débutant → confirmé)
+    goal_volume_ranges = {
+        "5K": {"min": 20, "max": 45, "long_pct": 0.33, "sessions": 4},
+        "10K": {"min": 30, "max": 60, "long_pct": 0.30, "sessions": 5},
+        "SEMI": {"min": 40, "max": 80, "long_pct": 0.35, "sessions": 5},
+        "MARATHON": {"min": 50, "max": 120, "long_pct": 0.35, "sessions": 5},
+        "ULTRA": {"min": 60, "max": 150, "long_pct": 0.40, "sessions": 5},
     }
-    goal_config = goal_volumes.get(goal, goal_volumes["SEMI"])
-    target_km = goal_config["km"]
-    target_long_run = goal_config["long_run"]
-    target_sessions = goal_config["sessions"]
+    
+    goal_range = goal_volume_ranges.get(goal, goal_volume_ranges["SEMI"])
+    
+    # Calcul du volume cible basé sur le niveau actuel + progressivité (+5-10%)
+    progression_factor = 1.07  # +7% par semaine (max recommandé: 10%)
+    target_km_raw = current_weekly_km * progression_factor
+    
+    # Limiter entre min et max selon l'objectif
+    target_km = max(goal_range["min"], min(goal_range["max"], round(target_km_raw)))
+    
+    # Sortie longue = % du volume total
+    target_long_run = round(target_km * goal_range["long_pct"])
+    target_sessions = goal_range["sessions"]
     
     prompt = f"""Tu es un coach running expert élite.
 
@@ -166,17 +178,17 @@ CTL: {context.get('ctl', 40)}
 ATL: {context.get('atl', 45)}
 TSB: {context.get('tsb', -5)}
 ACWR: {round(context.get('acwr', 1.0), 2)}
-Volume hebdo actuel: {context.get('weekly_km', 30)} km
+Volume hebdo ACTUEL: {current_weekly_km} km (basé sur les 4 dernières semaines)
 
-VOLUME CIBLE POUR {goal} :
-- Volume hebdomadaire: {target_km} km
-- Sortie longue: {target_long_run} km
+VOLUME CIBLE PERSONNALISÉ POUR {goal} :
+- Volume cible: {target_km} km (+7% progressif, limité entre {goal_range["min"]}-{goal_range["max"]} km)
+- Sortie longue: {target_long_run} km ({int(goal_range["long_pct"]*100)}% du volume)
 - Nombre de séances: {target_sessions} courses + 2 repos
 
 RÈGLES IMPORTANTES :
 1. EXACTEMENT 2 jours de repos (Lundi et Vendredi)
 2. {target_sessions} séances de course
-3. weekly_km doit être proche de {target_km} km
+3. weekly_km doit être {target_km} km (±5%)
 4. Sortie longue dimanche: {target_long_run} km
 5. Dans "details", TOUJOURS inclure: distance • allure • FC cible
 
@@ -203,7 +215,7 @@ Répond UNIQUEMENT en JSON valide :
     {{"day": "Dimanche", "type": "Sortie longue", "duration": "90min", "details": "{target_long_run} km progressif • 5:45→5:30/km • FC 135-165 bpm", "intensity": "moderate", "estimated_tss": 100, "distance_km": {target_long_run}}}
   ],
   "total_tss": 290,
-  "advice": "Focus volume pour {goal}. Sortie longue prioritaire."
+  "advice": "Volume adapté à ton niveau ({current_weekly_km} km → {target_km} km). Sortie longue prioritaire pour {goal}."
 }}"""
 
     start_time = time.time()
