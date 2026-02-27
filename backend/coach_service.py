@@ -416,7 +416,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
             phase=phase,
             target_load=target_load,
             goal=goal,
-            user_id=user_id
+            user_id=user_id,
+            sessions_per_week=sessions_per_week
         )
         
         if success and week_plan:
@@ -430,7 +431,7 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     except Exception as e:
         logger.warning(f"[Coach] Plan fallback: {e}")
         metrics.llm_fallback += 1
-        week_plan = _deterministic_plan(context, phase, target_load, goal)
+        week_plan = _deterministic_plan(context, phase, target_load, goal, sessions_per_week)
     
     # 9. Construire le résultat
     result = {
