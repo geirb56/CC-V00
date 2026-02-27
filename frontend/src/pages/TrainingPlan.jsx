@@ -338,6 +338,46 @@ export default function TrainingPlan() {
         </div>
       </div>
 
+      {/* Sélection nombre de séances */}
+      <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
+          <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
+            {lang === "fr" ? "Séances par semaine" : "Sessions per week"}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[3, 4, 5, 6].map((num) => {
+            const isSelected = sessionsPerWeek === num;
+            return (
+              <button
+                key={num}
+                onClick={() => {
+                  setSessionsPerWeek(num);
+                  handleRefresh(num);
+                }}
+                disabled={refreshing}
+                className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                  isSelected ? "text-white" : "text-slate-400 hover:text-white"
+                }`}
+                style={{
+                  background: isSelected ? "#22c55e" : "var(--bg-secondary)",
+                  border: `1px solid ${isSelected ? "#22c55e" : "var(--border-color)"}`
+                }}
+                data-testid={`sessions-btn-${num}`}
+              >
+                {num} {lang === "fr" ? "séances" : "sessions"}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs mt-2" style={{ color: "var(--text-tertiary)" }}>
+          {lang === "fr" 
+            ? "Le plan sera recalculé avec ce nombre de séances de course" 
+            : "Plan will be recalculated with this number of running sessions"}
+        </p>
+      </div>
+
       {/* SÉANCES DE LA SEMAINE */}
       <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
         <div className="flex items-center justify-between mb-4">
