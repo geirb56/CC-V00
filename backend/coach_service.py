@@ -465,41 +465,38 @@ def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str) 
     # Volume actuel de l'athlète (basé sur les 4 dernières semaines)
     current_weekly_km = context.get("weekly_km", 30)
     
-    # Distance de course par objectif (en km)
-    race_distances = {"5K": 5, "10K": 10, "SEMI": 21.1, "MARATHON": 42.2, "ULTRA": 60}
-    race_km = race_distances.get(goal, 21.1)
+    # Volumes minimum RECOMMANDÉS (basés sur données réelles d'entraînement)
+    goal_configs = {
+        "5K": {"min": 15, "max": 45, "sessions": 3, "long_min": 8, "long_max": 10},
+        "10K": {"min": 20, "max": 60, "sessions": 3, "long_min": 10, "long_max": 14},
+        "SEMI": {"min": 30, "max": 80, "sessions": 4, "long_min": 16, "long_max": 18},
+        "MARATHON": {"min": 40, "max": 120, "sessions": 4, "long_min": 28, "long_max": 32},
+        "ULTRA": {"min": 50, "max": 150, "sessions": 5, "long_min": 35, "long_max": 45},
+    }
     
-    # Calcul du volume MINIMUM recommandé (basé sur la science)
-    # Ratios: courses courtes = plus de volume relatif, longues = moins
-    min_ratios = {"5K": 4, "10K": 3, "SEMI": 2, "MARATHON": 1.5, "ULTRA": 1.2}
-    scientific_min = round(race_km * min_ratios.get(goal, 2))
-    volume_min = max(current_weekly_km, scientific_min)
+    config = goal_configs.get(goal, goal_configs["SEMI"])
     
-    # Volume maximum (plafond sécurité)
-    max_ratios = {"5K": 9, "10K": 6, "SEMI": 4, "MARATHON": 3, "ULTRA": 2.5}
-    volume_max = round(race_km * max_ratios.get(goal, 4))
+    # Volume minimum = max(volume actuel, minimum recommandé)
+    volume_min = max(current_weekly_km, config["min"])
     
     # Calcul du volume cible: +7% progressif
-    target_km = max(volume_min, min(volume_max, round(current_weekly_km * 1.07)))
+    target_km = max(volume_min, min(config["max"], round(current_weekly_km * 1.07)))
     
     # Multiplicateur de phase
     phase_multipliers = {"build": 1.0, "deload": 0.7, "intensification": 1.05, "taper": 0.5, "race": 0.3}
     target_km = round(target_km * phase_multipliers.get(phase, 1.0))
     
-    # Pourcentages de répartition
-    long_pcts = {"5K": 0.33, "10K": 0.30, "SEMI": 0.35, "MARATHON": 0.35, "ULTRA": 0.40}
-    long_pct = long_pcts.get(goal, 0.35)
+    # Sortie longue proportionnelle
+    long_ratio = (target_km - config["min"]) / (config["max"] - config["min"]) if config["max"] > config["min"] else 0.5
+    long_run = round(config["long_min"] + long_ratio * (config["long_max"] - config["long_min"]))
+    long_run = max(config["long_min"], min(config["long_max"], long_run))
     
-    # Répartition du volume
-    long_run = round(target_km * long_pct)
-    easy_km = round(target_km * 0.20)
-    tempo_km = round(target_km * 0.16)
-    seuil_km = round(target_km * 0.14)
-    recup_km = round(target_km * 0.12)
-    
-    # Ajuster pour que le total corresponde
-    remaining = target_km - (long_run + easy_km + tempo_km + seuil_km + recup_km)
-    easy_km += remaining
+    # Répartition du reste du volume
+    remaining = target_km - long_run
+    easy_km = round(remaining * 0.35)
+    tempo_km = round(remaining * 0.25)
+    seuil_km = round(remaining * 0.22)
+    recup_km = remaining - easy_km - tempo_km - seuil_km
     
     # Allures de référence
     paces = {"z1": "6:30-7:00", "z2": "5:45-6:15", "z3": "5:15-5:30", "z4": "4:45-5:00", "z5": "4:15-4:30", "semi": "5:00-5:15"}
