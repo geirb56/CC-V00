@@ -460,19 +460,27 @@ async def generate_dynamic_training_plan(db, user_id: str) -> dict:
 
 
 def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str) -> dict:
-    """Génère un plan déterministe de secours avec des détails enrichis, adapté à l'objectif."""
+    """Génère un plan déterministe de secours avec des détails enrichis, adapté au niveau de l'athlète."""
     
-    # Volume cible selon l'objectif
-    goal_configs = {
-        "5K": {"km": 30, "long_run": 10, "easy": 6, "tempo": 5, "seuil": 5, "recup": 4},
-        "10K": {"km": 40, "long_run": 14, "easy": 8, "tempo": 7, "seuil": 6, "recup": 5},
-        "SEMI": {"km": 50, "long_run": 18, "easy": 10, "tempo": 8, "seuil": 7, "recup": 6},
-        "MARATHON": {"km": 70, "long_run": 28, "easy": 12, "tempo": 10, "seuil": 8, "recup": 8},
-        "ULTRA": {"km": 85, "long_run": 35, "easy": 15, "tempo": 12, "seuil": 8, "recup": 10},
+    # Volume actuel de l'athlète (basé sur les 4 dernières semaines)
+    current_weekly_km = context.get("weekly_km", 30)
+    
+    # Volumes min/max par objectif
+    goal_volume_ranges = {
+        "5K": {"min": 20, "max": 45, "long_pct": 0.33, "sessions": 4},
+        "10K": {"min": 30, "max": 60, "long_pct": 0.30, "sessions": 5},
+        "SEMI": {"min": 40, "max": 80, "long_pct": 0.35, "sessions": 5},
+        "MARATHON": {"min": 50, "max": 120, "long_pct": 0.35, "sessions": 5},
+        "ULTRA": {"min": 60, "max": 150, "long_pct": 0.40, "sessions": 5},
     }
     
-    config = goal_configs.get(goal, goal_configs["SEMI"])
+    goal_range = goal_volume_ranges.get(goal, goal_volume_ranges["SEMI"])
     
+    # Calcul du volume cible: +7% progressif, limité par min/max
+    target_km_raw = current_weekly_km * 1.07
+    target_km = max(goal_range["min"], min(goal_range["max"], round(target_km_raw)))
+    
+    # Multiplicateur de phase
     phase_multipliers = {
         "build": 1.0,
         "deload": 0.7,
@@ -481,13 +489,18 @@ def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str) 
         "race": 0.3
     }
     multiplier = phase_multipliers.get(phase, 1.0)
+    target_km = round(target_km * multiplier)
     
-    # Ajuster les distances selon la phase
-    long_run = round(config["long_run"] * multiplier)
-    easy_km = round(config["easy"] * multiplier)
-    tempo_km = round(config["tempo"] * multiplier)
-    seuil_km = round(config["seuil"] * multiplier)
-    recup_km = round(config["recup"] * multiplier)
+    # Répartition du volume
+    long_run = round(target_km * goal_range["long_pct"])
+    easy_km = round(target_km * 0.20)
+    tempo_km = round(target_km * 0.16)
+    seuil_km = round(target_km * 0.14)
+    recup_km = round(target_km * 0.12)
+    
+    # Ajuster pour que le total corresponde
+    remaining = target_km - (long_run + easy_km + tempo_km + seuil_km + recup_km)
+    easy_km += remaining  # Ajouter le reste à l'endurance
     
     # Allures de référence
     paces = {
