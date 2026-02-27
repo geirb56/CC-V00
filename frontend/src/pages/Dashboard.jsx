@@ -301,20 +301,56 @@ export default function Dashboard() {
       </div>
 
       {/* TODAY'S WORKOUT */}
-      {workouts.length > 0 && (
-        <div className="today-workout-card animate-in" style={{ animationDelay: "150ms" }}>
-          <p className="today-label">{lang === "fr" ? "AUJOURD'HUI" : "TODAY"}</p>
-          <h3 className="today-title">Fractionné Progressif</h3>
-          <p className="today-meta">45 min • Cible: 4:30/km</p>
-          <div className="today-details">
-            <span>Échauffement 10min</span>
-            <span>5× 3min</span>
-          </div>
-          <div className="play-button">
-            <Play className="w-5 h-5" fill="white" />
-          </div>
-        </div>
-      )}
+      <div className="today-workout-card animate-in" style={{ animationDelay: "150ms" }} data-testid="today-workout-card">
+        <p className="today-label">{lang === "fr" ? "AUJOURD'HUI" : "TODAY"}</p>
+        {todaySession ? (
+          todaySession.type?.toLowerCase().includes("repos") || todaySession.type?.toLowerCase() === "rest" ? (
+            // Jour de repos
+            <>
+              <h3 className="today-title" style={{ color: "var(--text-secondary)" }}>
+                {lang === "fr" ? "Jour de repos" : "Rest Day"}
+              </h3>
+              <p className="today-meta" style={{ opacity: 0.7 }}>
+                {todaySession.details || (lang === "fr" ? "Récupération active ou repos complet" : "Active recovery or complete rest")}
+              </p>
+              <div className="today-details">
+                <span style={{ color: "var(--accent-teal)" }}>
+                  {lang === "fr" ? "Profite de ta récup' 💪" : "Enjoy your recovery 💪"}
+                </span>
+              </div>
+            </>
+          ) : (
+            // Séance d'entraînement
+            <>
+              <h3 className="today-title">{todaySession.type}</h3>
+              <p className="today-meta">
+                {todaySession.duration && todaySession.duration !== "0min" && `${todaySession.duration}`}
+                {todaySession.distance_km > 0 && ` • ${todaySession.distance_km} km`}
+                {todaySession.target_pace && ` • Cible: ${todaySession.target_pace}`}
+              </p>
+              <div className="today-details">
+                <span>{todaySession.details}</span>
+              </div>
+              <div className="play-button">
+                <Play className="w-5 h-5" fill="white" />
+              </div>
+            </>
+          )
+        ) : (
+          // Aucun plan disponible
+          <>
+            <h3 className="today-title" style={{ color: "var(--text-secondary)" }}>
+              {lang === "fr" ? "Pas de séance planifiée" : "No session planned"}
+            </h3>
+            <p className="today-meta" style={{ opacity: 0.7 }}>
+              {lang === "fr" ? "Génère ton plan dans l'onglet Plan" : "Generate your plan in the Plan tab"}
+            </p>
+            <Link to="/plan" className="play-button" style={{ textDecoration: "none" }}>
+              <ChevronRight className="w-5 h-5" />
+            </Link>
+          </>
+        )}
+      </div>
 
       {/* DERNIÈRES SORTIES */}
       <div className="animate-in" style={{ animationDelay: "200ms" }}>
