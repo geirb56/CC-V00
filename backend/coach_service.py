@@ -465,34 +465,33 @@ def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str) 
     # Volume actuel de l'athlète (basé sur les 4 dernières semaines)
     current_weekly_km = context.get("weekly_km", 30)
     
-    # Volumes min/max par objectif
-    goal_volume_ranges = {
-        "5K": {"min": 20, "max": 45, "long_pct": 0.33, "sessions": 4},
-        "10K": {"min": 30, "max": 60, "long_pct": 0.30, "sessions": 5},
-        "SEMI": {"min": 40, "max": 80, "long_pct": 0.35, "sessions": 5},
-        "MARATHON": {"min": 50, "max": 120, "long_pct": 0.35, "sessions": 5},
-        "ULTRA": {"min": 60, "max": 150, "long_pct": 0.40, "sessions": 5},
-    }
+    # Distance de course par objectif (en km)
+    race_distances = {"5K": 5, "10K": 10, "SEMI": 21.1, "MARATHON": 42.2, "ULTRA": 60}
+    race_km = race_distances.get(goal, 21.1)
     
-    goal_range = goal_volume_ranges.get(goal, goal_volume_ranges["SEMI"])
+    # Calcul du volume MINIMUM recommandé (basé sur la science)
+    # Ratios: courses courtes = plus de volume relatif, longues = moins
+    min_ratios = {"5K": 4, "10K": 3, "SEMI": 2, "MARATHON": 1.5, "ULTRA": 1.2}
+    scientific_min = round(race_km * min_ratios.get(goal, 2))
+    volume_min = max(current_weekly_km, scientific_min)
     
-    # Calcul du volume cible: +7% progressif, limité par min/max
-    target_km_raw = current_weekly_km * 1.07
-    target_km = max(goal_range["min"], min(goal_range["max"], round(target_km_raw)))
+    # Volume maximum (plafond sécurité)
+    max_ratios = {"5K": 9, "10K": 6, "SEMI": 4, "MARATHON": 3, "ULTRA": 2.5}
+    volume_max = round(race_km * max_ratios.get(goal, 4))
+    
+    # Calcul du volume cible: +7% progressif
+    target_km = max(volume_min, min(volume_max, round(current_weekly_km * 1.07)))
     
     # Multiplicateur de phase
-    phase_multipliers = {
-        "build": 1.0,
-        "deload": 0.7,
-        "intensification": 1.05,
-        "taper": 0.5,
-        "race": 0.3
-    }
-    multiplier = phase_multipliers.get(phase, 1.0)
-    target_km = round(target_km * multiplier)
+    phase_multipliers = {"build": 1.0, "deload": 0.7, "intensification": 1.05, "taper": 0.5, "race": 0.3}
+    target_km = round(target_km * phase_multipliers.get(phase, 1.0))
+    
+    # Pourcentages de répartition
+    long_pcts = {"5K": 0.33, "10K": 0.30, "SEMI": 0.35, "MARATHON": 0.35, "ULTRA": 0.40}
+    long_pct = long_pcts.get(goal, 0.35)
     
     # Répartition du volume
-    long_run = round(target_km * goal_range["long_pct"])
+    long_run = round(target_km * long_pct)
     easy_km = round(target_km * 0.20)
     tempo_km = round(target_km * 0.16)
     seuil_km = round(target_km * 0.14)
@@ -500,13 +499,10 @@ def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str) 
     
     # Ajuster pour que le total corresponde
     remaining = target_km - (long_run + easy_km + tempo_km + seuil_km + recup_km)
-    easy_km += remaining  # Ajouter le reste à l'endurance
+    easy_km += remaining
     
     # Allures de référence
-    paces = {
-        "z1": "6:30-7:00", "z2": "5:45-6:15", "z3": "5:15-5:30",
-        "z4": "4:45-5:00", "z5": "4:15-4:30", "semi": "5:00-5:15"
-    }
+    paces = {"z1": "6:30-7:00", "z2": "5:45-6:15", "z3": "5:15-5:30", "z4": "4:45-5:00", "z5": "4:15-4:30", "semi": "5:00-5:15"}
     hr = {"z1": "120-135", "z2": "135-150", "z3": "150-165", "z4": "165-175", "z5": "175-185"}
     
     # Templates par phase - adapté à l'objectif
