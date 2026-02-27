@@ -469,7 +469,7 @@ def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str) 
     goal_configs = {
         "5K": {"min": 15, "max": 45, "sessions": 3, "long_min": 8, "long_max": 10},
         "10K": {"min": 20, "max": 60, "sessions": 3, "long_min": 10, "long_max": 14},
-        "SEMI": {"min": 30, "max": 80, "sessions": 4, "long_min": 16, "long_max": 18},
+        "SEMI": {"min": 30, "max": 80, "sessions": 3, "long_min": 16, "long_max": 18},
         "MARATHON": {"min": 40, "max": 120, "sessions": 4, "long_min": 28, "long_max": 32},
         "ULTRA": {"min": 50, "max": 150, "sessions": 5, "long_min": 35, "long_max": 45},
     }
