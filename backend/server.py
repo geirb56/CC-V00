@@ -4734,6 +4734,124 @@ async def get_available_goals():
     }
 
 
+@api_router.get("/training/full-cycle")
+async def get_full_training_cycle(user: dict = Depends(auth_user)):
+    """
+    Retourne l'aperçu complet du cycle d'entraînement avec toutes les semaines.
+    Chaque semaine inclut: numéro, phase, volume cible, type de séances.
+    """
+    # Récupérer le cycle utilisateur
+    cycle = await db.training_cycles.find_one({"user_id": user["id"]})
+    
+    if not cycle:
+        # Créer un cycle par défaut
+        default_cycle = {
+            "user_id": user["id"],
+            "goal": "SEMI",
+            "start_date": datetime.now(timezone.utc),
+            "created_at": datetime.now(timezone.utc)
+        }
+        await db.training_cycles.insert_one(default_cycle)
+        cycle = await db.training_cycles.find_one({"user_id": user["id"]})
+    
+    goal = cycle.get("goal", "SEMI")
+    config = GOAL_CONFIG.get(goal, GOAL_CONFIG["SEMI"])
+    total_weeks = config["cycle_weeks"]
+    
+    # Récupérer les préférences de séances
+    prefs = await db.training_prefs.find_one({"user_id": user["id"]})
+    sessions_per_week = prefs.get("sessions_per_week", 4) if prefs else 4
+    
+    # Calculer la semaine actuelle
+    start_date = cycle.get("start_date")
+    if isinstance(start_date, str):
+        start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+    current_week = compute_week_number(start_date.date() if isinstance(start_date, datetime) else start_date)
+    
+    # Récupérer le volume actuel de l'athlète (basé sur les 28 derniers jours)
+    today = datetime.now(timezone.utc)
+    twenty_eight_days_ago = today - timedelta(days=28)
+    
+    workouts_28 = await db.strava_activities.find({
+        "user_id": user["id"],
+        "start_date_local": {"$gte": twenty_eight_days_ago.isoformat()}
+    }).to_list(200)
+    
+    # Si pas de données Strava, essayer les workouts manuels
+    if not workouts_28:
+        workouts_28 = await db.workouts.find({
+            "date": {"$gte": twenty_eight_days_ago.isoformat()}
+        }).to_list(200)
+    
+    km_28 = sum(w.get("distance", w.get("distance_km", 0) * 1000) / 1000 for w in workouts_28)
+    base_weekly_km = km_28 / 4 if km_28 > 0 else 25  # Volume hebdo de base
+    
+    # Générer l'aperçu de toutes les semaines
+    weeks_overview = []
+    
+    for week_num in range(1, total_weeks + 1):
+        phase = determine_phase(week_num, total_weeks)
+        phase_info = get_phase_description(phase, "fr")
+        
+        # Calculer le volume cible selon la phase et la progression
+        progression_factor = 1 + (week_num / total_weeks) * 0.3  # +30% max sur le cycle
+        
+        if phase == "build":
+            volume_factor = 1.0 * progression_factor
+        elif phase == "deload":
+            volume_factor = 0.7  # -30% en décharge
+        elif phase == "intensification":
+            volume_factor = 1.1 * progression_factor
+        elif phase == "taper":
+            # Réduction progressive: -40% à -60%
+            weeks_to_race = total_weeks - week_num
+            volume_factor = 0.6 - (0.1 * (2 - weeks_to_race))
+        elif phase == "race":
+            volume_factor = 0.3  # Très peu de volume
+        else:
+            volume_factor = 1.0
+        
+        target_km = round(base_weekly_km * volume_factor)
+        
+        # Types de séances selon la phase
+        if phase == "build":
+            session_types = ["Endurance", "Endurance", "Sortie longue"] if sessions_per_week <= 3 else ["Endurance", "Endurance", "Fartlek", "Sortie longue"]
+        elif phase == "deload":
+            session_types = ["Récupération", "Endurance facile", "Endurance courte"]
+        elif phase == "intensification":
+            session_types = ["Endurance", "Seuil/Tempo", "Fractionné", "Sortie longue"]
+        elif phase == "taper":
+            session_types = ["Endurance facile", "Rappel vitesse", "Footing"]
+        elif phase == "race":
+            session_types = ["Activation", "COURSE"]
+        else:
+            session_types = ["Endurance", "Sortie longue"]
+        
+        weeks_overview.append({
+            "week": week_num,
+            "phase": phase,
+            "phase_name": phase_info.get("name", phase),
+            "phase_focus": phase_info.get("focus", ""),
+            "target_km": target_km,
+            "sessions": sessions_per_week if phase not in ["taper", "race"] else min(3, sessions_per_week),
+            "session_types": session_types[:sessions_per_week],
+            "is_current": week_num == current_week,
+            "is_completed": week_num < current_week,
+            "intensity_pct": phase_info.get("intensity_pct", 15)
+        })
+    
+    return {
+        "goal": goal,
+        "goal_description": config["description"],
+        "total_weeks": total_weeks,
+        "current_week": current_week,
+        "start_date": start_date.isoformat() if start_date else None,
+        "sessions_per_week": sessions_per_week,
+        "base_weekly_km": round(base_weekly_km),
+        "weeks": weeks_overview
+    }
+
+
 @api_router.get("/training/week-plan")
 async def get_week_plan(user_id: str = "default"):
     """
