@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Target, Calendar, TrendingUp, RefreshCw, CheckCircle2, 
-  AlertTriangle, Zap, Clock, Activity, ChevronRight
+  Zap, Clock, Activity, ChevronDown, ChevronUp, Play,
+  Trophy, Mountain, Timer
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -22,7 +21,16 @@ const GOAL_OPTIONS = [
   { value: "ULTRA", label: "Ultra-Trail", weeks: 20 },
 ];
 
-// Couleurs correspondant au design de l'app
+// Couleurs par phase
+const PHASE_COLORS = {
+  build: { bg: "#3b82f620", border: "#3b82f6", text: "#3b82f6", name: "Construction" },
+  deload: { bg: "#22c55e20", border: "#22c55e", text: "#22c55e", name: "Récupération" },
+  intensification: { bg: "#f9731620", border: "#f97316", text: "#f97316", name: "Intensification" },
+  taper: { bg: "#8b5cf620", border: "#8b5cf6", text: "#8b5cf6", name: "Affûtage" },
+  race: { bg: "#ef444420", border: "#ef4444", text: "#ef4444", name: "Course" },
+};
+
+// Couleurs correspondant au design de l'app pour les séances
 const SESSION_STYLES = {
   repos: {
     bg: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
@@ -52,13 +60,6 @@ const SESSION_STYLES = {
     badge: "#eab308",
     badgeText: "#ffffff"
   },
-  tempo: {
-    bg: "linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%)",
-    border: "#fb923c",
-    text: "#9a3412",
-    badge: "#fb923c",
-    badgeText: "#ffffff"
-  },
   sortie_longue: {
     bg: "linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)",
     border: "#ec4899",
@@ -73,84 +74,46 @@ const SESSION_STYLES = {
     badge: "#8b5cf6",
     badgeText: "#ffffff"
   },
-  rest: {
-    bg: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
-    border: "#6366f1",
-    text: "#c7d2fe",
-    badge: "#4f46e5",
-    badgeText: "#ffffff"
-  },
-  easy: {
-    bg: "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)",
-    border: "#34d399",
-    text: "#065f46",
-    badge: "#10b981",
-    badgeText: "#ffffff"
-  },
-  moderate: {
-    bg: "linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)",
-    border: "#f97316",
-    text: "#9a3412",
-    badge: "#f97316",
-    badgeText: "#ffffff"
-  },
-  hard: {
-    bg: "linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)",
-    border: "#ef4444",
-    text: "#991b1b",
-    badge: "#ef4444",
-    badgeText: "#ffffff"
-  },
-  race: {
-    bg: "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)",
-    border: "#8b5cf6",
-    text: "#5b21b6",
-    badge: "#8b5cf6",
-    badgeText: "#ffffff"
-  },
 };
 
-const PHASE_INFO = {
-  build: { color: "#3b82f6", name: "Construction" },
-  deload: { color: "#22c55e", name: "Récupération" },
-  intensification: { color: "#f97316", name: "Intensification" },
-  taper: { color: "#8b5cf6", name: "Affûtage" },
-  race: { color: "#ef4444", name: "Compétition" },
-};
-
-// Map session type to style key
 const getSessionStyleKey = (type, intensity) => {
   const typeLower = type?.toLowerCase() || "";
   
   if (typeLower.includes("repos") || typeLower === "rest") return "repos";
   if (typeLower.includes("endurance") || typeLower.includes("easy")) return "endurance";
-  if (typeLower.includes("seuil") || typeLower.includes("threshold")) return "seuil";
+  if (typeLower.includes("seuil") || typeLower.includes("threshold") || typeLower.includes("tempo")) return "seuil";
   if (typeLower.includes("récup") || typeLower.includes("recup") || typeLower.includes("recovery")) return "recuperation";
-  if (typeLower.includes("tempo")) return "tempo";
   if (typeLower.includes("sortie longue") || typeLower.includes("long")) return "sortie_longue";
-  if (typeLower.includes("fractionn") || typeLower.includes("interval")) return "fractionne";
+  if (typeLower.includes("fractionn") || typeLower.includes("interval") || typeLower.includes("fartlek")) return "fractionne";
   
-  // Fallback to intensity
-  return intensity || "easy";
+  return intensity || "endurance";
 };
 
 export default function TrainingPlan() {
   const { t, lang } = useLanguage();
   const [plan, setPlan] = useState(null);
+  const [fullCycle, setFullCycle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [settingGoal, setSettingGoal] = useState(false);
-  const [sessionsPerWeek, setSessionsPerWeek] = useState(null); // null = auto
+  const [sessionsPerWeek, setSessionsPerWeek] = useState(null);
+  const [expandedWeek, setExpandedWeek] = useState(null);
+  const [showAllWeeks, setShowAllWeeks] = useState(true);
 
-  const fetchPlan = async () => {
+  const fetchData = async () => {
     try {
-      const res = await axios.get(`${API}/training/plan`, {
-        headers: { "X-User-Id": USER_ID }
-      });
-      setPlan(res.data);
-      // Initialiser le nombre de séances depuis le plan
-      if (res.data?.sessions_per_week) {
-        setSessionsPerWeek(res.data.sessions_per_week);
+      const [planRes, cycleRes] = await Promise.all([
+        axios.get(`${API}/training/plan`, { headers: { "X-User-Id": USER_ID } }),
+        axios.get(`${API}/training/full-cycle`, { headers: { "X-User-Id": USER_ID } })
+      ]);
+      setPlan(planRes.data);
+      setFullCycle(cycleRes.data);
+      if (planRes.data?.sessions_per_week) {
+        setSessionsPerWeek(planRes.data.sessions_per_week);
+      }
+      // Expand current week by default
+      if (cycleRes.data?.current_week) {
+        setExpandedWeek(cycleRes.data.current_week);
       }
     } catch (err) {
       console.error("Error fetching plan:", err);
@@ -161,7 +124,7 @@ export default function TrainingPlan() {
   };
 
   useEffect(() => {
-    fetchPlan();
+    fetchData();
   }, []);
 
   const handleRefresh = async (newSessionCount = sessionsPerWeek) => {
@@ -172,6 +135,9 @@ export default function TrainingPlan() {
         headers: { "X-User-Id": USER_ID }
       });
       setPlan(res.data);
+      // Refresh full cycle too
+      const cycleRes = await axios.get(`${API}/training/full-cycle`, { headers: { "X-User-Id": USER_ID } });
+      setFullCycle(cycleRes.data);
       toast.success(lang === "fr" ? "Plan mis à jour" : "Plan updated");
     } catch (err) {
       toast.error(lang === "fr" ? "Erreur" : "Error");
@@ -187,7 +153,7 @@ export default function TrainingPlan() {
         headers: { "X-User-Id": USER_ID }
       });
       toast.success(lang === "fr" ? `Objectif ${goal} défini` : `Goal ${goal} set`);
-      fetchPlan();
+      fetchData();
     } catch (err) {
       toast.error(lang === "fr" ? "Erreur" : "Error");
     } finally {
@@ -210,8 +176,9 @@ export default function TrainingPlan() {
 
   const context = plan?.context || {};
   const sessions = plan?.plan?.sessions || [];
-  const phaseInfo = plan?.phase_info || {};
-  const currentPhase = PHASE_INFO[plan?.phase] || { color: "#64748b", name: plan?.phase };
+  const weeks = fullCycle?.weeks || [];
+  const currentWeek = fullCycle?.current_week || 1;
+  const totalWeeks = fullCycle?.total_weeks || 12;
 
   return (
     <div className="p-4 pb-24 space-y-4" style={{ background: "var(--bg-primary)" }} data-testid="training-plan-page">
@@ -223,15 +190,15 @@ export default function TrainingPlan() {
             {lang === "fr" ? "Plan d'Entraînement" : "Training Plan"}
           </h1>
           <p className="text-sm font-mono" style={{ color: "var(--text-tertiary)" }}>
-            {lang === "fr" ? "Semaine" : "Week"} {plan?.week || 1} / {plan?.goal_config?.cycle_weeks || 12} 
+            {lang === "fr" ? "Semaine" : "Week"} {currentWeek} / {totalWeeks}
             {" • "}
-            <span className="capitalize">{currentPhase.name}</span>
+            <span className="capitalize">{fullCycle?.goal_description || "Semi-marathon"}</span>
           </p>
         </div>
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={handleRefresh}
+          onClick={() => handleRefresh()}
           disabled={refreshing}
           className="border-slate-600 text-slate-300 hover:bg-slate-700"
           data-testid="refresh-plan-btn"
@@ -241,115 +208,71 @@ export default function TrainingPlan() {
         </Button>
       </div>
 
-      {/* Objectif */}
+      {/* Progress Bar */}
       <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
-        <div className="flex items-center gap-2 mb-2">
-          <Target className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
-          <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
-            {lang === "fr" ? "Objectif" : "Goal"}
-          </span>
-        </div>
-        <div className="text-2xl font-bold text-white">{plan?.goal || "SEMI"}</div>
-        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-          {plan?.goal_config?.description || "Semi-marathon"}
-        </p>
-      </div>
-
-      {/* Phase */}
-      <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
-        <div className="flex items-center gap-2 mb-2">
-          <Calendar className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
-          <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>Phase</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ background: currentPhase.color }} />
-          <span className="text-lg font-semibold text-white capitalize">{currentPhase.name}</span>
-        </div>
-        <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          {phaseInfo.focus || "Volume en endurance fondamentale (Z1-Z2)"}
-        </p>
-      </div>
-
-      {/* ACWR & TSB en ligne */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* ACWR */}
-        <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
-            <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>ACWR</span>
-          </div>
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-white">{context.acwr?.toFixed(2) || "1.00"}</span>
-            {context.acwr <= 1.3 && context.acwr >= 0.8 && (
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            )}
+            <Trophy className="w-4 h-4" style={{ color: "#f59e0b" }} />
+            <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
+              {lang === "fr" ? "Progression du cycle" : "Cycle Progress"}
+            </span>
           </div>
-          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-            {lang === "fr" ? "Zone optimale" : "Optimal zone"}
-          </p>
+          <span className="text-sm font-bold text-white">
+            {Math.round((currentWeek / totalWeeks) * 100)}%
+          </span>
         </div>
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
+          <div 
+            className="h-full rounded-full transition-all duration-500"
+            style={{ 
+              width: `${(currentWeek / totalWeeks) * 100}%`,
+              background: "linear-gradient(90deg, #8b5cf6 0%, #ec4899 100%)"
+            }}
+          />
+        </div>
+        <div className="flex justify-between mt-2 text-xs" style={{ color: "var(--text-tertiary)" }}>
+          <span>{lang === "fr" ? "Début" : "Start"}</span>
+          <span>{fullCycle?.goal || "SEMI"}</span>
+        </div>
+      </div>
 
-        {/* TSB */}
-        <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
+      {/* Objectif & Séances selection */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Objectif */}
+        <div className="card-modern p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px" }}>
           <div className="flex items-center gap-2 mb-2">
-            <Zap className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
-            <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>TSB</span>
+            <Target className="w-3 h-3" style={{ color: "var(--text-tertiary)" }} />
+            <span className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>Objectif</span>
           </div>
-          <span className={`text-2xl font-bold ${context.tsb > 0 ? "text-emerald-400" : "text-white"}`}>
-            {context.tsb?.toFixed(1) || "-5.0"}
-          </span>
-          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-            {context.tsb > 0 
-              ? (lang === "fr" ? "Fraîcheur" : "Fresh") 
-              : (lang === "fr" ? "Fatigue" : "Fatigue")}
-          </p>
+          <div className="flex flex-wrap gap-1">
+            {GOAL_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleSetGoal(opt.value)}
+                disabled={settingGoal}
+                className={`px-2 py-1 rounded-full text-[10px] font-medium transition-all ${
+                  fullCycle?.goal === opt.value ? "text-white" : "text-slate-400 hover:text-white"
+                }`}
+                style={{
+                  background: fullCycle?.goal === opt.value ? "#8b5cf6" : "var(--bg-secondary)",
+                  border: `1px solid ${fullCycle?.goal === opt.value ? "#8b5cf6" : "var(--border-color)"}`
+                }}
+                data-testid={`goal-btn-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Sélection d'objectif */}
-      <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Target className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
-          <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
-            {lang === "fr" ? "Changer d'objectif" : "Change Goal"}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {GOAL_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => handleSetGoal(opt.value)}
-              disabled={settingGoal}
-              className={`px-3 py-2 rounded-full text-sm font-medium transition-all ${
-                plan?.goal === opt.value 
-                  ? "text-white" 
-                  : "text-slate-400 hover:text-white"
-              }`}
-              style={{
-                background: plan?.goal === opt.value ? "#8b5cf6" : "var(--bg-secondary)",
-                border: `1px solid ${plan?.goal === opt.value ? "#8b5cf6" : "var(--border-color)"}`
-              }}
-              data-testid={`goal-btn-${opt.value}`}
-            >
-              {opt.label}
-              <span className="ml-1 opacity-60">({opt.weeks}s)</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Sélection nombre de séances */}
-      <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Calendar className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
-          <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
-            {lang === "fr" ? "Séances par semaine" : "Sessions per week"}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {[3, 4, 5, 6].map((num) => {
-            const isSelected = sessionsPerWeek === num;
-            return (
+        {/* Séances par semaine */}
+        <div className="card-modern p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="w-3 h-3" style={{ color: "var(--text-tertiary)" }} />
+            <span className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>Séances/sem</span>
+          </div>
+          <div className="flex gap-1">
+            {[3, 4, 5, 6].map((num) => (
               <button
                 key={num}
                 onClick={() => {
@@ -357,137 +280,222 @@ export default function TrainingPlan() {
                   handleRefresh(num);
                 }}
                 disabled={refreshing}
-                className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                  isSelected ? "text-white" : "text-slate-400 hover:text-white"
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                  sessionsPerWeek === num ? "text-white" : "text-slate-400 hover:text-white"
                 }`}
                 style={{
-                  background: isSelected ? "#22c55e" : "var(--bg-secondary)",
-                  border: `1px solid ${isSelected ? "#22c55e" : "var(--border-color)"}`
+                  background: sessionsPerWeek === num ? "#22c55e" : "var(--bg-secondary)",
+                  border: `1px solid ${sessionsPerWeek === num ? "#22c55e" : "var(--border-color)"}`
                 }}
                 data-testid={`sessions-btn-${num}`}
               >
-                {num} {lang === "fr" ? "séances" : "sessions"}
+                {num}
               </button>
-            );
-          })}
+            ))}
+          </div>
         </div>
-        <p className="text-xs mt-2" style={{ color: "var(--text-tertiary)" }}>
-          {lang === "fr" 
-            ? "Le plan sera recalculé avec ce nombre de séances de course" 
-            : "Plan will be recalculated with this number of running sessions"}
-        </p>
       </div>
 
-      {/* SÉANCES DE LA SEMAINE */}
+      {/* ACWR & TSB */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="card-modern p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="w-3 h-3" style={{ color: "var(--text-tertiary)" }} />
+            <span className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>ACWR</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold text-white">{context.acwr?.toFixed(2) || "1.00"}</span>
+            {context.acwr <= 1.3 && context.acwr >= 0.8 && (
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            )}
+          </div>
+        </div>
+
+        <div className="card-modern p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px" }}>
+          <div className="flex items-center gap-2 mb-1">
+            <Zap className="w-3 h-3" style={{ color: "var(--text-tertiary)" }} />
+            <span className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>TSB</span>
+          </div>
+          <span className={`text-xl font-bold ${context.tsb > 0 ? "text-emerald-400" : "text-white"}`}>
+            {context.tsb?.toFixed(1) || "-5.0"}
+          </span>
+        </div>
+      </div>
+
+      {/* TOUTES LES SEMAINES DU CYCLE */}
       <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
+            <Calendar className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
             <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
-              {lang === "fr" ? "Séances de la semaine" : "Weekly Sessions"}
+              {lang === "fr" ? "Cycle complet" : "Full Cycle"} • {totalWeeks} {lang === "fr" ? "semaines" : "weeks"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span 
-              className="px-2 py-1 rounded text-xs font-mono font-semibold"
-              style={{ background: "#22c55e20", color: "#22c55e" }}
-            >
-              {plan?.plan?.weekly_km || 45} km
-            </span>
-            <span 
-              className="px-2 py-1 rounded text-xs font-mono font-semibold"
-              style={{ background: "var(--bg-secondary)", color: "var(--text-secondary)" }}
-            >
-              {plan?.plan?.total_tss || 235} TSS
-            </span>
-          </div>
+          <button
+            onClick={() => setShowAllWeeks(!showAllWeeks)}
+            className="text-xs flex items-center gap-1 px-2 py-1 rounded"
+            style={{ color: "var(--text-secondary)", background: "var(--bg-secondary)" }}
+          >
+            {showAllWeeks ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {showAllWeeks ? (lang === "fr" ? "Réduire" : "Collapse") : (lang === "fr" ? "Voir tout" : "Show all")}
+          </button>
         </div>
 
         <div className="space-y-2">
-          {sessions.map((session, idx) => {
-            const styleKey = getSessionStyleKey(session.type, session.intensity);
-            const style = SESSION_STYLES[styleKey] || SESSION_STYLES.easy;
-            const isRest = styleKey === "repos" || styleKey === "rest";
-            const distance = session.distance_km || 0;
+          {weeks.map((week, idx) => {
+            const phaseStyle = PHASE_COLORS[week.phase] || PHASE_COLORS.build;
+            const isExpanded = expandedWeek === week.week;
+            const isCurrent = week.is_current;
+            const isCompleted = week.is_completed;
             
+            // Only show: current week, 2 before, 2 after, and first/last if not showing all
+            const shouldShow = showAllWeeks || 
+              isCurrent || 
+              Math.abs(week.week - currentWeek) <= 2 ||
+              week.week === 1 ||
+              week.week === totalWeeks;
+            
+            if (!shouldShow) return null;
+
             return (
               <div
-                key={idx}
-                className="flex items-stretch gap-0 rounded-xl overflow-hidden transition-all"
+                key={week.week}
+                className={`rounded-xl overflow-hidden transition-all ${isCurrent ? "ring-2 ring-violet-500" : ""}`}
                 style={{
-                  background: style.bg,
+                  background: isCompleted ? "var(--bg-secondary)" : phaseStyle.bg,
+                  border: `1px solid ${isCompleted ? "var(--border-color)" : phaseStyle.border}`,
+                  opacity: isCompleted ? 0.6 : 1
                 }}
-                data-testid={`session-${session.day}`}
+                data-testid={`week-${week.week}`}
               >
-                {/* Barre colorée latérale */}
-                <div 
-                  className="w-1.5 shrink-0"
-                  style={{ background: style.border }}
-                />
-                
-                {/* Jour */}
-                <div 
-                  className="w-24 py-3 px-3 flex items-center shrink-0"
-                  style={{ background: "rgba(0,0,0,0.1)" }}
+                {/* Week Header */}
+                <button
+                  onClick={() => setExpandedWeek(isExpanded ? null : week.week)}
+                  className="w-full p-3 flex items-center justify-between text-left"
                 >
-                  <span 
-                    className="text-xs font-bold uppercase tracking-wide"
-                    style={{ color: style.text }}
-                  >
-                    {session.day}
-                  </span>
-                </div>
-                
-                {/* Contenu principal */}
-                <div className="flex-1 py-3 px-3 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span 
-                      className="font-bold text-base"
-                      style={{ color: style.text }}
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm"
+                      style={{ 
+                        background: isCurrent ? "#8b5cf6" : isCompleted ? "var(--bg-tertiary)" : phaseStyle.border + "30",
+                        color: isCurrent ? "white" : isCompleted ? "var(--text-tertiary)" : phaseStyle.text
+                      }}
                     >
-                      {session.type}
-                    </span>
-                    {session.duration && session.duration !== "0min" && (
-                      <span 
-                        className="text-xs flex items-center gap-1 opacity-80"
-                        style={{ color: style.text }}
-                      >
-                        <Clock className="w-3 h-3" />
-                        {session.duration}
-                      </span>
-                    )}
-                    {distance > 0 && (
-                      <span 
-                        className="text-xs font-semibold px-1.5 py-0.5 rounded"
-                        style={{ 
-                          background: "rgba(0,0,0,0.15)",
-                          color: style.text 
-                        }}
-                      >
-                        {distance} km
-                      </span>
+                      {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : week.week}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-semibold text-sm ${isCompleted ? "line-through" : ""}`} style={{ color: isCompleted ? "var(--text-tertiary)" : "white" }}>
+                          {lang === "fr" ? "Semaine" : "Week"} {week.week}
+                        </span>
+                        {isCurrent && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500 text-white">
+                            {lang === "fr" ? "EN COURS" : "CURRENT"}
+                          </span>
+                        )}
+                        {week.phase === "race" && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500 text-white flex items-center gap-1">
+                            <Trophy className="w-3 h-3" /> COURSE
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span 
+                          className="text-[10px] font-mono uppercase"
+                          style={{ color: isCompleted ? "var(--text-tertiary)" : phaseStyle.text }}
+                        >
+                          {week.phase_name}
+                        </span>
+                        <span className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>•</span>
+                        <span className="text-[10px] font-mono" style={{ color: "var(--text-tertiary)" }}>
+                          ~{week.target_km} km
+                        </span>
+                        <span className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>•</span>
+                        <span className="text-[10px] font-mono" style={{ color: "var(--text-tertiary)" }}>
+                          {week.sessions} séances
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronDown 
+                    className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                    style={{ color: "var(--text-tertiary)" }}
+                  />
+                </button>
+
+                {/* Expanded Content */}
+                {isExpanded && (
+                  <div className="px-3 pb-3 space-y-2">
+                    <div className="text-xs p-2 rounded-lg" style={{ background: "rgba(0,0,0,0.2)", color: "var(--text-secondary)" }}>
+                      <strong>{lang === "fr" ? "Focus:" : "Focus:"}</strong> {week.phase_focus}
+                    </div>
+                    
+                    {/* Session types for this week */}
+                    <div className="flex flex-wrap gap-1">
+                      {week.session_types?.map((type, i) => {
+                        const styleKey = getSessionStyleKey(type);
+                        const style = SESSION_STYLES[styleKey] || SESSION_STYLES.endurance;
+                        return (
+                          <span 
+                            key={i}
+                            className="px-2 py-1 rounded-full text-[10px] font-medium"
+                            style={{ background: style.badge, color: style.badgeText }}
+                          >
+                            {type}
+                          </span>
+                        );
+                      })}
+                    </div>
+
+                    {/* If current week, show detailed sessions */}
+                    {isCurrent && sessions.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                        <span className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
+                          {lang === "fr" ? "Détail de la semaine" : "Week Details"}
+                        </span>
+                        {sessions.map((session, sidx) => {
+                          const styleKey = getSessionStyleKey(session.type, session.intensity);
+                          const style = SESSION_STYLES[styleKey] || SESSION_STYLES.endurance;
+                          const isRest = styleKey === "repos";
+                          
+                          return (
+                            <div
+                              key={sidx}
+                              className="flex items-center gap-2 p-2 rounded-lg"
+                              style={{ background: style.bg }}
+                            >
+                              <div 
+                                className="w-1 h-8 rounded-full shrink-0"
+                                style={{ background: style.border }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold" style={{ color: style.text }}>
+                                    {session.day}
+                                  </span>
+                                  <span className="text-[10px]" style={{ color: style.text, opacity: 0.8 }}>
+                                    {session.type}
+                                  </span>
+                                </div>
+                                {!isRest && session.distance_km > 0 && (
+                                  <span className="text-[10px]" style={{ color: style.text, opacity: 0.7 }}>
+                                    {session.distance_km} km
+                                  </span>
+                                )}
+                              </div>
+                              <span 
+                                className="px-2 py-0.5 rounded-full text-[9px] font-bold shrink-0"
+                                style={{ background: style.badge, color: style.badgeText }}
+                              >
+                                {session.estimated_tss || 0} TSS
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
-                  <p 
-                    className="text-xs leading-relaxed"
-                    style={{ color: style.text, opacity: 0.85 }}
-                  >
-                    {session.details}
-                  </p>
-                </div>
-                
-                {/* TSS Badge */}
-                <div className="py-3 px-3 flex items-center shrink-0">
-                  <div 
-                    className="px-2.5 py-1.5 rounded-full text-xs font-bold"
-                    style={{ 
-                      background: style.badge,
-                      color: style.badgeText
-                    }}
-                  >
-                    {session.estimated_tss} TSS
-                  </div>
-                </div>
+                )}
               </div>
             );
           })}
