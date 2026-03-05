@@ -4734,6 +4734,364 @@ async def get_available_goals():
     }
 
 
+@api_router.get("/training/metrics")
+async def get_training_metrics(user: dict = Depends(auth_user)):
+    """
+    Retourne les métriques d'entraînement: ACWR, TSB, charge, monotonie.
+    Utilisé par le Dashboard pour afficher l'état de forme.
+    """
+    today = datetime.now(timezone.utc)
+    seven_days_ago = today - timedelta(days=7)
+    twenty_eight_days_ago = today - timedelta(days=28)
+    
+    # Récupérer les activités Strava
+    activities_7 = await db.strava_activities.find({
+        "user_id": user["id"],
+        "start_date_local": {"$gte": seven_days_ago.isoformat()}
+    }).to_list(100)
+    
+    activities_28 = await db.strava_activities.find({
+        "user_id": user["id"],
+        "start_date_local": {"$gte": twenty_eight_days_ago.isoformat()}
+    }).to_list(300)
+    
+    # Fallback sur workouts manuels si pas de Strava
+    if not activities_28:
+        activities_7 = await db.workouts.find({
+            "date": {"$gte": seven_days_ago.isoformat()}
+        }).to_list(100)
+        activities_28 = await db.workouts.find({
+            "date": {"$gte": twenty_eight_days_ago.isoformat()}
+        }).to_list(300)
+    
+    # Calculer les charges (en km, simplifié)
+    def get_distance(a):
+        dist = a.get("distance", 0)
+        if dist > 1000:  # Strava retourne en mètres
+            return dist / 1000
+        return a.get("distance_km", dist)
+    
+    load_7 = sum(get_distance(a) for a in activities_7)
+    load_28 = sum(get_distance(a) for a in activities_28)
+    
+    # ACWR
+    chronic_avg = load_28 / 4 if load_28 > 0 else 1
+    acwr = round(load_7 / chronic_avg, 2) if chronic_avg > 0 else 1.0
+    
+    # TSB simplifié (basé sur la différence entre charge récente et moyenne)
+    # CTL = moyenne mobile sur 42 jours (approximé par 28j/4*6)
+    # ATL = moyenne mobile sur 7 jours
+    ctl = load_28 / 4  # Approximation fitness
+    atl = load_7  # Fatigue récente
+    tsb = round(ctl - atl, 1)
+    
+    # Calculer la monotonie (7 derniers jours)
+    daily_loads = []
+    for i in range(7):
+        day = (today - timedelta(days=i)).date()
+        day_load = 0
+        for a in activities_7:
+            try:
+                a_date_str = a.get("start_date_local", a.get("date", ""))
+                if a_date_str:
+                    a_date = datetime.fromisoformat(a_date_str.replace("Z", "+00:00")).date()
+                    if a_date == day:
+                        day_load += get_distance(a)
+            except:
+                pass
+        daily_loads.append(day_load)
+    
+    # Monotonie = moyenne / écart-type
+    if daily_loads and len(daily_loads) >= 2:
+        avg_load = sum(daily_loads) / len(daily_loads)
+        variance = sum((x - avg_load) ** 2 for x in daily_loads) / len(daily_loads)
+        std = variance ** 0.5
+        monotony = round(avg_load / std, 2) if std > 0 else 0
+    else:
+        monotony = 0
+    
+    # Strain = Load * Monotony
+    strain = round(load_7 * monotony, 0) if monotony > 0 else 0
+    
+    # Interpréter ACWR
+    if acwr < 0.8:
+        acwr_status = "low"
+        acwr_label = "Sous-entraînement"
+    elif acwr <= 1.3:
+        acwr_status = "optimal"
+        acwr_label = "Zone optimale"
+    elif acwr <= 1.5:
+        acwr_status = "warning"
+        acwr_label = "Zone à risque"
+    else:
+        acwr_status = "danger"
+        acwr_label = "Danger"
+    
+    # Interpréter TSB
+    if tsb > 10:
+        tsb_status = "fresh"
+        tsb_label = "Très frais"
+    elif tsb > 0:
+        tsb_status = "ready"
+        tsb_label = "Prêt"
+    elif tsb > -10:
+        tsb_status = "training"
+        tsb_label = "En charge"
+    else:
+        tsb_status = "fatigued"
+        tsb_label = "Fatigué"
+    
+    return {
+        "acwr": acwr,
+        "acwr_status": acwr_status,
+        "acwr_label": acwr_label,
+        "tsb": tsb,
+        "tsb_status": tsb_status,
+        "tsb_label": tsb_label,
+        "load_7": round(load_7, 1),
+        "load_28": round(load_28, 1),
+        "monotony": monotony,
+        "strain": strain,
+        "ctl": round(ctl, 1),
+        "atl": round(atl, 1)
+    }
+
+
+@api_router.get("/training/race-predictions")
+async def get_race_predictions(user: dict = Depends(auth_user)):
+    """
+    Prédit les temps de course pour 5K, 10K, Semi, Marathon, Ultra
+    basé sur le profil d'entraînement de l'athlète.
+    """
+    today = datetime.now(timezone.utc)
+    sixty_days_ago = today - timedelta(days=60)
+    
+    # Récupérer les activités des 60 derniers jours
+    activities = await db.strava_activities.find({
+        "user_id": user["id"],
+        "start_date_local": {"$gte": sixty_days_ago.isoformat()}
+    }).to_list(500)
+    
+    if not activities:
+        activities = await db.workouts.find({
+            "date": {"$gte": sixty_days_ago.isoformat()}
+        }).to_list(500)
+    
+    if not activities:
+        return {
+            "has_data": False,
+            "message": "Pas assez de données pour prédire. Continue à t'entraîner !",
+            "predictions": []
+        }
+    
+    # Extraire les métriques clés
+    def get_distance(a):
+        dist = a.get("distance", 0)
+        if dist > 1000:
+            return dist / 1000
+        return a.get("distance_km", dist)
+    
+    def get_pace(a):
+        # Pace en min/km
+        pace = a.get("avg_pace_min_km")
+        if pace:
+            return pace
+        # Calculer depuis vitesse moyenne (m/s)
+        speed = a.get("average_speed", 0)
+        if speed > 0:
+            return (1000 / speed) / 60
+        # Calculer depuis distance/durée
+        dist = get_distance(a)
+        duration = a.get("moving_time", a.get("duration_minutes", 0) * 60)
+        if isinstance(duration, int) and duration < 1000:
+            duration = duration * 60  # Convertir minutes en secondes
+        if dist > 0 and duration > 0:
+            return (duration / 60) / dist
+        return None
+    
+    # Collecter les données
+    total_km = 0
+    total_sessions = 0
+    paces = []
+    long_runs = []  # Sorties > 15km
+    fast_runs = []  # Séances rapides (< 5:30/km)
+    distances = []
+    
+    for a in activities:
+        dist = get_distance(a)
+        pace = get_pace(a)
+        
+        if dist > 0:
+            total_km += dist
+            total_sessions += 1
+            distances.append(dist)
+            
+            if pace and 3 < pace < 10:  # Pace réaliste
+                paces.append(pace)
+                
+                if pace < 5.5:  # Rapide
+                    fast_runs.append({"distance": dist, "pace": pace})
+                
+                if dist >= 15:  # Sortie longue
+                    long_runs.append({"distance": dist, "pace": pace})
+    
+    if not paces:
+        return {
+            "has_data": False,
+            "message": "Pas assez de données d'allure. Assure-toi que tes séances ont des données GPS.",
+            "predictions": []
+        }
+    
+    # Calculer les métriques de base
+    weekly_km = total_km / 8.5  # ~60 jours = 8.5 semaines
+    avg_pace = sum(paces) / len(paces)
+    best_pace = min(paces) if paces else avg_pace
+    max_long_run = max(distances) if distances else 0
+    
+    # Estimer la VMA (Vitesse Maximale Aérobie)
+    # VMA ≈ vitesse sur séance la plus rapide + 15-20%
+    if fast_runs:
+        best_fast_pace = min(r["pace"] for r in fast_runs)
+        # Convertir pace en km/h puis estimer VMA
+        best_speed_kmh = 60 / best_fast_pace
+        estimated_vma = best_speed_kmh * 1.15  # +15% approximation
+    else:
+        # Estimation grossière depuis allure moyenne
+        avg_speed_kmh = 60 / avg_pace
+        estimated_vma = avg_speed_kmh * 1.25
+    
+    # Prédictions basées sur VMA et volume
+    predictions = []
+    
+    # Facteurs de prédiction par distance
+    race_configs = [
+        {
+            "distance": "5K",
+            "km": 5,
+            "vma_pct": 0.95,  # 5K = ~95% VMA
+            "min_weekly_km": 15,
+            "min_long_run": 8,
+            "description": "5 kilomètres"
+        },
+        {
+            "distance": "10K",
+            "km": 10,
+            "vma_pct": 0.90,  # 10K = ~90% VMA
+            "min_weekly_km": 25,
+            "min_long_run": 12,
+            "description": "10 kilomètres"
+        },
+        {
+            "distance": "Semi",
+            "km": 21.1,
+            "vma_pct": 0.82,  # Semi = ~82% VMA
+            "min_weekly_km": 35,
+            "min_long_run": 18,
+            "description": "Semi-marathon"
+        },
+        {
+            "distance": "Marathon",
+            "km": 42.195,
+            "vma_pct": 0.75,  # Marathon = ~75% VMA
+            "min_weekly_km": 50,
+            "min_long_run": 30,
+            "description": "Marathon"
+        },
+        {
+            "distance": "Ultra",
+            "km": 50,
+            "vma_pct": 0.65,  # Ultra = ~65% VMA
+            "min_weekly_km": 70,
+            "min_long_run": 35,
+            "description": "Ultra-trail (50km)"
+        }
+    ]
+    
+    for config in race_configs:
+        # Vitesse de course prédite
+        race_speed = estimated_vma * config["vma_pct"]
+        race_pace = 60 / race_speed  # min/km
+        
+        # Temps prédit
+        predicted_minutes = config["km"] * race_pace
+        
+        # Ajuster selon le volume d'entraînement
+        volume_factor = min(1.0, weekly_km / config["min_weekly_km"])
+        if volume_factor < 0.7:
+            # Volume insuffisant = temps plus lent
+            predicted_minutes *= (1 + (1 - volume_factor) * 0.15)
+        
+        # Ajuster selon sortie longue max
+        endurance_factor = min(1.0, max_long_run / config["min_long_run"])
+        if endurance_factor < 0.8 and config["km"] > 10:
+            predicted_minutes *= (1 + (1 - endurance_factor) * 0.10)
+        
+        # Formater le temps
+        hours = int(predicted_minutes // 60)
+        mins = int(predicted_minutes % 60)
+        secs = int((predicted_minutes % 1) * 60)
+        
+        if hours > 0:
+            time_str = f"{hours}h{mins:02d}"
+            time_range = f"{hours}h{max(0,mins-3):02d} - {hours}h{mins+5:02d}"
+        else:
+            time_str = f"{mins}:{secs:02d}"
+            time_range = f"{max(0,mins-2)}:{secs:02d} - {mins+3}:{secs:02d}"
+        
+        # Évaluer la capacité
+        readiness_score = (volume_factor * 0.5 + endurance_factor * 0.5) * 100
+        
+        if readiness_score >= 80:
+            readiness = "ready"
+            readiness_label = "Prêt"
+            readiness_color = "#22c55e"
+        elif readiness_score >= 60:
+            readiness = "possible"
+            readiness_label = "Possible"
+            readiness_color = "#f59e0b"
+        elif readiness_score >= 40:
+            readiness = "challenging"
+            readiness_label = "Ambitieux"
+            readiness_color = "#f97316"
+        else:
+            readiness = "not_ready"
+            readiness_label = "Pas prêt"
+            readiness_color = "#ef4444"
+        
+        # Allure prédite formatée
+        pace_mins = int(race_pace)
+        pace_secs = int((race_pace % 1) * 60)
+        pace_str = f"{pace_mins}:{pace_secs:02d}/km"
+        
+        predictions.append({
+            "distance": config["distance"],
+            "distance_km": config["km"],
+            "description": config["description"],
+            "predicted_time": time_str,
+            "predicted_range": time_range,
+            "predicted_pace": pace_str,
+            "readiness": readiness,
+            "readiness_label": readiness_label,
+            "readiness_color": readiness_color,
+            "readiness_score": round(readiness_score),
+            "volume_factor": round(volume_factor * 100),
+            "endurance_factor": round(endurance_factor * 100)
+        })
+    
+    return {
+        "has_data": True,
+        "athlete_profile": {
+            "weekly_km": round(weekly_km, 1),
+            "avg_pace": f"{int(avg_pace)}:{int((avg_pace % 1) * 60):02d}/km",
+            "best_pace": f"{int(best_pace)}:{int((best_pace % 1) * 60):02d}/km",
+            "max_long_run": round(max_long_run, 1),
+            "estimated_vma": round(estimated_vma, 1),
+            "total_sessions_60d": total_sessions
+        },
+        "predictions": predictions
+    }
+
+
 @api_router.get("/training/full-cycle")
 async def get_full_training_cycle(user: dict = Depends(auth_user)):
     """
