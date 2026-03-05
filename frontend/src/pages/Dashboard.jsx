@@ -262,12 +262,8 @@ export default function Dashboard() {
   const chartData = [45, 48, 42, 50, 55, 58, 62, 68];
   
   // Calculate weekly progress
-  const weeklyKmTarget = 80;
+  const weeklyKmTarget = trainingMetrics?.load_28 ? Math.round(trainingMetrics.load_28 / 4 * 1.1) : 80;
   const weeklyProgress = Math.min(100, Math.round((weekStats.volume_km / weeklyKmTarget) * 100));
-  
-  // Calories (mock - would come from real data)
-  const calories = Math.round(weekStats.volume_km * 65);
-  const caloriesTarget = 5000;
 
   return (
     <div className="p-4 pb-24 space-y-4" style={{ background: "var(--bg-primary)" }}>
