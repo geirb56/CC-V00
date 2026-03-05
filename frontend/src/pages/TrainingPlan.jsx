@@ -328,6 +328,109 @@ export default function TrainingPlan() {
         </div>
       </div>
 
+      {/* PRÉDICTIONS DE COURSE */}
+      {predictions?.has_data && (
+        <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Timer className="w-4 h-4" style={{ color: "#f59e0b" }} />
+              <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
+                {lang === "fr" ? "Prédictions de course" : "Race Predictions"}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowPredictions(!showPredictions)}
+              className="text-xs flex items-center gap-1 px-2 py-1 rounded"
+              style={{ color: "var(--text-secondary)", background: "var(--bg-secondary)" }}
+            >
+              {showPredictions ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {showPredictions ? (lang === "fr" ? "Réduire" : "Collapse") : (lang === "fr" ? "Voir" : "Show")}
+            </button>
+          </div>
+
+          {showPredictions && (
+            <>
+              {/* Profil athlète */}
+              <div className="grid grid-cols-3 gap-2 mb-4 p-3 rounded-lg" style={{ background: "var(--bg-secondary)" }}>
+                <div className="text-center">
+                  <p className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>VMA est.</p>
+                  <p className="text-sm font-bold text-white">{predictions.athlete_profile?.estimated_vma || "--"} km/h</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>Vol./sem</p>
+                  <p className="text-sm font-bold text-white">{predictions.athlete_profile?.weekly_km || "--"} km</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>Sortie max</p>
+                  <p className="text-sm font-bold text-white">{predictions.athlete_profile?.max_long_run || "--"} km</p>
+                </div>
+              </div>
+
+              {/* Prédictions par distance */}
+              <div className="space-y-2">
+                {predictions.predictions?.map((pred, idx) => (
+                  <div 
+                    key={pred.distance}
+                    className="flex items-center gap-3 p-3 rounded-xl transition-all"
+                    style={{ 
+                      background: pred.distance === fullCycle?.goal ? `${pred.readiness_color}15` : "var(--bg-secondary)",
+                      border: pred.distance === fullCycle?.goal ? `2px solid ${pred.readiness_color}` : "1px solid transparent"
+                    }}
+                  >
+                    {/* Distance badge */}
+                    <div 
+                      className="shrink-0 w-12 h-12 rounded-xl flex flex-col items-center justify-center"
+                      style={{ background: `${pred.readiness_color}20` }}
+                    >
+                      <span className="text-xs font-bold" style={{ color: pred.readiness_color }}>
+                        {pred.distance}
+                      </span>
+                    </div>
+
+                    {/* Temps prédit */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold text-white">{pred.predicted_time}</span>
+                        {pred.distance === fullCycle?.goal && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold" style={{ background: "#8b5cf6", color: "white" }}>
+                            OBJECTIF
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>
+                        {pred.predicted_pace} • {pred.predicted_range}
+                      </p>
+                    </div>
+
+                    {/* Readiness */}
+                    <div className="shrink-0 text-right">
+                      <div 
+                        className="px-2 py-1 rounded-full text-[10px] font-bold mb-1"
+                        style={{ background: `${pred.readiness_color}20`, color: pred.readiness_color }}
+                      >
+                        {pred.readiness_label}
+                      </div>
+                      <p className="text-[9px]" style={{ color: "var(--text-tertiary)" }}>
+                        {pred.readiness_score}% prêt
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Légende */}
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <p className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>
+                  {lang === "fr" 
+                    ? "Estimations basées sur VMA, volume d'entraînement et sortie longue max des 60 derniers jours."
+                    : "Estimates based on VMA, training volume and max long run from the last 60 days."}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* TOUTES LES SEMAINES DU CYCLE */}
       <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
         <div className="flex items-center justify-between mb-4">
