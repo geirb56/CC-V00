@@ -167,6 +167,7 @@ export default function Dashboard() {
   const [insight, setInsight] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [todaySession, setTodaySession] = useState(null);
+  const [trainingMetrics, setTrainingMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const { t, lang } = useLanguage();
   const fetchedRef = useRef(false);
@@ -190,16 +191,20 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [insightRes, workoutsRes, ragRes, planRes] = await Promise.all([
+      const [insightRes, workoutsRes, ragRes, planRes, metricsRes] = await Promise.all([
         axios.get(`${API}/dashboard/insight?language=${lang}`),
         axios.get(`${API}/workouts`),
         axios.get(`${API}/rag/dashboard`).catch(() => ({ data: null })),
-        axios.get(`${API}/training/plan`, { headers: { "X-User-Id": "default" } }).catch(() => ({ data: null }))
+        axios.get(`${API}/training/plan`, { headers: { "X-User-Id": "default" } }).catch(() => ({ data: null })),
+        axios.get(`${API}/training/metrics`, { headers: { "X-User-Id": "default" } }).catch(() => ({ data: null }))
       ]);
       setInsight(insightRes.data);
       setWorkouts(workoutsRes.data);
       if (ragRes.data) {
         setInsight(prev => ({ ...prev, rag: ragRes.data }));
+      }
+      if (metricsRes.data) {
+        setTrainingMetrics(metricsRes.data);
       }
       
       // Trouver la séance du jour
@@ -213,6 +218,28 @@ export default function Dashboard() {
       console.error("Failed to fetch data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ACWR color helper
+  const getAcwrColor = (status) => {
+    switch(status) {
+      case "optimal": return "#22c55e";
+      case "low": return "#3b82f6";
+      case "warning": return "#f59e0b";
+      case "danger": return "#ef4444";
+      default: return "#22c55e";
+    }
+  };
+
+  // TSB color helper
+  const getTsbColor = (status) => {
+    switch(status) {
+      case "fresh": return "#22c55e";
+      case "ready": return "#3b82f6";
+      case "training": return "#f59e0b";
+      case "fatigued": return "#ef4444";
+      default: return "#3b82f6";
     }
   };
 
