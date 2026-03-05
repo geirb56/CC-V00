@@ -93,21 +93,27 @@ export default function TrainingPlan() {
   const { t, lang } = useLanguage();
   const [plan, setPlan] = useState(null);
   const [fullCycle, setFullCycle] = useState(null);
+  const [predictions, setPredictions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [settingGoal, setSettingGoal] = useState(false);
   const [sessionsPerWeek, setSessionsPerWeek] = useState(null);
   const [expandedWeek, setExpandedWeek] = useState(null);
   const [showAllWeeks, setShowAllWeeks] = useState(true);
+  const [showPredictions, setShowPredictions] = useState(true);
 
   const fetchData = async () => {
     try {
-      const [planRes, cycleRes] = await Promise.all([
+      const [planRes, cycleRes, predictionsRes] = await Promise.all([
         axios.get(`${API}/training/plan`, { headers: { "X-User-Id": USER_ID } }),
-        axios.get(`${API}/training/full-cycle`, { headers: { "X-User-Id": USER_ID } })
+        axios.get(`${API}/training/full-cycle`, { headers: { "X-User-Id": USER_ID } }),
+        axios.get(`${API}/training/race-predictions`, { headers: { "X-User-Id": USER_ID } }).catch(() => ({ data: null }))
       ]);
       setPlan(planRes.data);
       setFullCycle(cycleRes.data);
+      if (predictionsRes.data) {
+        setPredictions(predictionsRes.data);
+      }
       if (planRes.data?.sessions_per_week) {
         setSessionsPerWeek(planRes.data.sessions_per_week);
       }
