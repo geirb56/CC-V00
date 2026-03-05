@@ -292,7 +292,7 @@ export default function Dashboard() {
         <MiniLineChart data={chartData} />
       </div>
 
-      {/* METRICS ROW - Cette semaine & Calories */}
+      {/* METRICS ROW - Cette semaine & ACWR/TSB */}
       <div className="grid grid-cols-2 gap-3">
         {/* Cette semaine */}
         <div className="metric-card-modern animate-in" style={{ animationDelay: "50ms" }}>
@@ -312,17 +312,56 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Calories */}
+        {/* Charge 28j */}
         <div className="metric-card-modern animate-in" style={{ animationDelay: "100ms" }}>
           <div className="metric-label">
-            <Flame className="w-4 h-4" style={{ color: "var(--accent-pink)" }} />
-            <span>Calories</span>
+            <TrendingUp className="w-4 h-4" style={{ color: "var(--accent-pink)" }} />
+            <span>{lang === "fr" ? "Charge 28j" : "28d Load"}</span>
           </div>
           <div className="flex items-baseline">
-            <span className="metric-value">{calories.toLocaleString()}</span>
+            <span className="metric-value">{trainingMetrics?.load_28 || 0}</span>
+            <span className="metric-unit">km</span>
           </div>
           <p className="metric-objective">
-            Objectif: {caloriesTarget.toLocaleString()}
+            {lang === "fr" ? "Base chronique" : "Chronic base"}
+          </p>
+        </div>
+      </div>
+
+      {/* ACWR & TSB ROW */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* ACWR */}
+        <div className="metric-card-modern animate-in" style={{ animationDelay: "120ms" }}>
+          <div className="metric-label">
+            <Activity className="w-4 h-4" style={{ color: getAcwrColor(trainingMetrics?.acwr_status) }} />
+            <span>ACWR</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="metric-value" style={{ color: getAcwrColor(trainingMetrics?.acwr_status) }}>
+              {trainingMetrics?.acwr?.toFixed(2) || "1.00"}
+            </span>
+            {trainingMetrics?.acwr_status === "optimal" && (
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#22c55e20", color: "#22c55e" }}>✓</span>
+            )}
+          </div>
+          <p className="metric-objective" style={{ color: getAcwrColor(trainingMetrics?.acwr_status) }}>
+            {trainingMetrics?.acwr_label || "Zone optimale"}
+          </p>
+        </div>
+
+        {/* TSB */}
+        <div className="metric-card-modern animate-in" style={{ animationDelay: "140ms" }}>
+          <div className="metric-label">
+            <Heart className="w-4 h-4" style={{ color: getTsbColor(trainingMetrics?.tsb_status) }} />
+            <span>TSB</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="metric-value" style={{ color: getTsbColor(trainingMetrics?.tsb_status) }}>
+              {trainingMetrics?.tsb?.toFixed(1) || "0.0"}
+            </span>
+          </div>
+          <p className="metric-objective" style={{ color: getTsbColor(trainingMetrics?.tsb_status) }}>
+            {trainingMetrics?.tsb_label || "En charge"}
           </p>
         </div>
       </div>
