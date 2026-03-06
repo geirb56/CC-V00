@@ -9,7 +9,6 @@ import {
   Heart, 
   TrendingUp,
   TrendingDown,
-  Minus,
   Zap,
   Scale,
   Activity,
@@ -21,8 +20,12 @@ import {
   Sparkles,
   Target,
   AlertTriangle,
+  AlertCircle,
+  Lightbulb,
   History,
-  Clock
+  Clock,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -44,7 +47,6 @@ const formatDuration = (minutes) => {
 const HRZonesChart = ({ zones, t }) => {
   if (!zones) return null;
   
-  // Zone configuration with colors and labels
   const zoneConfig = [
     { key: "z1", color: "#3B82F6", label: "Z1", desc: "recovery" },
     { key: "z2", color: "#22C55E", label: "Z2", desc: "endurance" },
@@ -53,7 +55,6 @@ const HRZonesChart = ({ zones, t }) => {
     { key: "z5", color: "#EF4444", label: "Z5", desc: "max" },
   ];
   
-  // Find max percentage for scaling
   const maxPct = Math.max(...zoneConfig.map(z => zones[z.key] || 0), 1);
   
   return (
@@ -101,7 +102,6 @@ const ZoneSummary = ({ zones, t }) => {
   const moderatePct = zones.z3 || 0;
   const hardPct = (zones.z4 || 0) + (zones.z5 || 0);
   
-  // Determine dominant zone type
   let dominant = "balanced";
   let dominantColor = "text-chart-3";
   
@@ -144,8 +144,10 @@ export default function WorkoutDetail() {
   const { t, lang } = useLanguage();
   const [workout, setWorkout] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [detailedAnalysis, setDetailedAnalysis] = useState(null);
   const [ragAnalysis, setRagAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     loadWorkout();
@@ -154,13 +156,15 @@ export default function WorkoutDetail() {
   const loadWorkout = async () => {
     setLoading(true);
     try {
-      const [workoutRes, analysisRes, ragRes] = await Promise.all([
+      const [workoutRes, analysisRes, detailedRes, ragRes] = await Promise.all([
         axios.get(`${API}/workouts/${id}`),
         axios.get(`${API}/coach/workout-analysis/${id}?language=${lang}`),
+        axios.get(`${API}/coach/detailed-analysis/${id}?language=${lang}`).catch(() => ({ data: null })),
         axios.get(`${API}/rag/workout/${id}`).catch(() => ({ data: null }))
       ]);
       setWorkout(workoutRes.data);
       setAnalysis(analysisRes.data);
+      setDetailedAnalysis(detailedRes.data);
       setRagAnalysis(ragRes.data);
     } catch (error) {
       console.error("Failed to load workout:", error);
@@ -175,10 +179,6 @@ export default function WorkoutDetail() {
     }
   };
 
-  const goToDeepAnalysis = () => {
-    navigate(`/workout/${id}/analysis`);
-  };
-
   const goToAskCoach = () => {
     navigate("/coach");
   };
@@ -186,7 +186,12 @@ export default function WorkoutDetail() {
   if (loading) {
     return (
       <div className="p-4 pb-24 flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            {lang === "fr" ? "Analyse en cours..." : "Analyzing..."}
+          </span>
+        </div>
       </div>
     );
   }
@@ -210,10 +215,20 @@ export default function WorkoutDetail() {
     { weekday: "short", month: "short", day: "numeric" }
   );
 
-  // Session type styling
   const getSessionTypeStyle = (label) => {
     if (label === "hard") return "text-chart-1 bg-chart-1/10";
     if (label === "easy") return "text-chart-2 bg-chart-2/10";
+    return "text-chart-3 bg-chart-3/10";
+  };
+
+  const getIntensityColor = (intensity) => {
+    const lower = intensity?.toLowerCase();
+    if (lower?.includes("soutenu") || lower?.includes("sustain") || lower?.includes("hard") || lower?.includes("haute")) {
+      return "text-chart-1 bg-chart-1/10";
+    }
+    if (lower?.includes("facile") || lower?.includes("easy") || lower?.includes("basse")) {
+      return "text-chart-2 bg-chart-2/10";
+    }
     return "text-chart-3 bg-chart-3/10";
   };
 
@@ -221,7 +236,7 @@ export default function WorkoutDetail() {
     <div className="p-4 pb-24" data-testid="workout-detail">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <Link to="/" className="text-muted-foreground hover:text-foreground">
+        <Link to="/progress" className="text-muted-foreground hover:text-foreground">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div className="flex items-center gap-2">
@@ -236,7 +251,7 @@ export default function WorkoutDetail() {
         {workout.name}
       </h1>
 
-      {/* 1) Coach Summary - Top */}
+      {/* 1) RÉSUMÉ COACH - Premier élément visible */}
       {analysis?.coach_summary && (
         <Card className="bg-card border-border mb-3">
           <CardContent className="p-3">
@@ -247,10 +262,10 @@ export default function WorkoutDetail() {
         </Card>
       )}
 
-      {/* 2) Session Snapshot - 3 Cards */}
+      {/* 2) SNAPSHOT - 3 Cards: Intensité, Charge, Type */}
       <div className="grid grid-cols-3 gap-2 mb-3">
-        {/* Card A - Intensity */}
-        {analysis?.intensity && (
+        {/* Intensité */}
+        {(analysis?.intensity || detailedAnalysis?.execution) && (
           <Card className="bg-card border-border">
             <CardContent className="p-2">
               <div className="flex items-center gap-1 mb-1">
@@ -259,28 +274,29 @@ export default function WorkoutDetail() {
                   {t("analysis.intensity")}
                 </span>
               </div>
-              <p className="font-mono text-xs font-semibold leading-tight">
-                {analysis.intensity.pace || "--"}
-              </p>
-              {analysis.intensity.avg_hr && (
-                <p className="font-mono text-[10px] text-muted-foreground flex items-center gap-1">
-                  <Heart className="w-2.5 h-2.5" />
-                  {analysis.intensity.avg_hr}
-                </p>
-              )}
-              {analysis.intensity.label !== "normal" && (
-                <p className={`font-mono text-[9px] mt-1 ${
-                  analysis.intensity.label === "above_usual" ? "text-chart-1" : "text-chart-2"
-                }`}>
-                  {t(`analysis.labels.${analysis.intensity.label}`)}
-                </p>
+              {detailedAnalysis?.execution?.intensity ? (
+                <span className={`inline-block px-2 py-0.5 rounded-sm font-mono text-xs ${getIntensityColor(detailedAnalysis.execution.intensity)}`}>
+                  {detailedAnalysis.execution.intensity}
+                </span>
+              ) : (
+                <>
+                  <p className="font-mono text-xs font-semibold leading-tight">
+                    {analysis?.intensity?.pace || "--"}
+                  </p>
+                  {analysis?.intensity?.avg_hr && (
+                    <p className="font-mono text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Heart className="w-2.5 h-2.5" />
+                      {analysis.intensity.avg_hr}
+                    </p>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
         )}
 
-        {/* Card B - Load */}
-        {analysis?.load && (
+        {/* Charge/Volume */}
+        {(analysis?.load || detailedAnalysis?.execution) && (
           <Card className="bg-card border-border">
             <CardContent className="p-2">
               <div className="flex items-center gap-1 mb-1">
@@ -290,12 +306,14 @@ export default function WorkoutDetail() {
                 </span>
               </div>
               <p className="font-mono text-xs font-semibold leading-tight">
-                {analysis.load.distance_km} km
+                {analysis?.load?.distance_km || detailedAnalysis?.execution?.volume || "--"} {analysis?.load?.distance_km ? "km" : ""}
               </p>
-              <p className="font-mono text-[10px] text-muted-foreground">
-                {formatDuration(analysis.load.duration_min)}
-              </p>
-              {analysis.load.direction !== "stable" && (
+              {analysis?.load?.duration_min && (
+                <p className="font-mono text-[10px] text-muted-foreground">
+                  {formatDuration(analysis.load.duration_min)}
+                </p>
+              )}
+              {analysis?.load?.direction && analysis.load.direction !== "stable" && (
                 <p className={`font-mono text-[9px] mt-1 flex items-center gap-0.5 ${
                   analysis.load.direction === "up" ? "text-chart-1" : "text-chart-4"
                 }`}>
@@ -311,8 +329,8 @@ export default function WorkoutDetail() {
           </Card>
         )}
 
-        {/* Card C - Type */}
-        {analysis?.session_type && (
+        {/* Type/Régularité */}
+        {(analysis?.session_type || detailedAnalysis?.execution) && (
           <Card className="bg-card border-border">
             <CardContent className="p-2">
               <div className="flex items-center gap-1 mb-1">
@@ -321,17 +339,21 @@ export default function WorkoutDetail() {
                   {t("analysis.type")}
                 </span>
               </div>
-              <div className={`inline-block px-2 py-1 rounded-sm ${getSessionTypeStyle(analysis.session_type.label)}`}>
-                <p className="font-mono text-xs font-semibold">
-                  {t(`analysis.session_types.${analysis.session_type.label}`)}
-                </p>
-              </div>
+              {analysis?.session_type ? (
+                <div className={`inline-block px-2 py-1 rounded-sm ${getSessionTypeStyle(analysis.session_type.label)}`}>
+                  <p className="font-mono text-xs font-semibold">
+                    {t(`analysis.session_types.${analysis.session_type.label}`)}
+                  </p>
+                </div>
+              ) : detailedAnalysis?.execution?.regularity ? (
+                <p className="font-mono text-xs">{detailedAnalysis.execution.regularity}</p>
+              ) : null}
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* 3) Heart Rate Zones Distribution */}
+      {/* 3) ZONES CARDIAQUES */}
       {workout.effort_zone_distribution && (
         <Card className="bg-card border-border mb-3" data-testid="hr-zones-card">
           <CardContent className="p-3">
@@ -353,48 +375,74 @@ export default function WorkoutDetail() {
         </Card>
       )}
 
-      {/* 4) Coach Insight */}
-      {analysis?.insight && (
+      {/* 4) CE QUE ÇA SIGNIFIE - Fusionné */}
+      {(analysis?.insight || detailedAnalysis?.meaning?.text) && (
         <Card className="bg-card border-border mb-3">
           <CardContent className="p-3">
-            <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mb-1.5">
-              {t("analysis.coachInsight")}
-            </p>
-            <p className="font-mono text-xs text-muted-foreground leading-relaxed" data-testid="coach-insight">
-              {analysis.insight}
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="w-4 h-4 text-muted-foreground" />
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                {lang === "fr" ? "Ce que ça signifie" : "What it means"}
+              </span>
+            </div>
+            <p className="font-mono text-xs text-muted-foreground leading-relaxed" data-testid="meaning-text">
+              {detailedAnalysis?.meaning?.text || analysis?.insight}
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* 5) Guidance (Optional) */}
-      {analysis?.guidance && (
+      {/* 5) RÉCUPÉRATION */}
+      {detailedAnalysis?.recovery?.text && (
+        <Card className="bg-orange-500/5 border-orange-500/20 mb-3">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-orange-400" />
+              <span className="font-mono text-[10px] uppercase tracking-widest text-orange-400">
+                {lang === "fr" ? "Récupération" : "Recovery"}
+              </span>
+            </div>
+            <p className="font-mono text-xs text-orange-300 leading-relaxed" data-testid="recovery-text">
+              {detailedAnalysis.recovery.text}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 6) CONSEIL COACH */}
+      {(analysis?.guidance || detailedAnalysis?.advice?.text) && (
         <Card className="bg-primary/5 border-primary/20 mb-3">
           <CardContent className="p-3">
-            <p className="font-mono text-xs text-primary leading-relaxed" data-testid="guidance">
-              {analysis.guidance}
+            <div className="flex items-center gap-2 mb-2">
+              <Lightbulb className="w-4 h-4 text-primary" />
+              <span className="font-mono text-[10px] uppercase tracking-widest text-primary">
+                {lang === "fr" ? "Conseil coach" : "Coach advice"}
+              </span>
+            </div>
+            <p className="font-mono text-xs text-primary leading-relaxed" data-testid="advice-text">
+              {detailedAnalysis?.advice?.text || analysis?.guidance}
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* RAG ENRICHED ANALYSIS - NEW */}
+      {/* 7) ANALYSE RAG ENRICHIE */}
       {ragAnalysis && (
         <Card className="bg-card border-border mb-3" data-testid="rag-workout-card">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-4 h-4 text-amber-400" />
               <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-                {lang === "fr" ? "Analyse RAG" : "RAG Analysis"}
+                {lang === "fr" ? "Analyse enrichie" : "Enhanced Analysis"}
               </p>
             </div>
             
-            {/* RAG Summary - first few lines */}
+            {/* RAG Summary */}
             <p className="font-mono text-xs text-muted-foreground leading-relaxed mb-3 whitespace-pre-line" data-testid="rag-workout-summary">
               {ragAnalysis.rag_summary?.split('\n').slice(0, 4).join('\n')}
             </p>
 
-            {/* Split Analysis - NEW */}
+            {/* Split Analysis */}
             {ragAnalysis.workout?.split_analysis && Object.keys(ragAnalysis.workout.split_analysis).length > 0 && (
               <div className="p-2 bg-blue-500/10 rounded-sm mb-3" data-testid="split-analysis-card">
                 <div className="flex items-center gap-2 mb-2">
@@ -456,7 +504,7 @@ export default function WorkoutDetail() {
               </div>
             )}
 
-            {/* HR Analysis - NEW */}
+            {/* HR Analysis */}
             {ragAnalysis.workout?.hr_analysis && Object.keys(ragAnalysis.workout.hr_analysis).length > 0 && (
               <div className="p-2 bg-red-500/10 rounded-sm mb-3" data-testid="hr-analysis-card">
                 <div className="flex items-center gap-2 mb-2">
@@ -525,11 +573,6 @@ export default function WorkoutDetail() {
                     {ragAnalysis.comparison.progression}
                   </p>
                 )}
-                {ragAnalysis.comparison.splits_comparison && (
-                  <p className="font-mono text-[10px] text-muted-foreground mt-1">
-                    {ragAnalysis.comparison.splits_comparison}
-                  </p>
-                )}
                 {ragAnalysis.comparison.date_precedente && (
                   <p className="font-mono text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
@@ -560,23 +603,44 @@ export default function WorkoutDetail() {
         </Card>
       )}
 
-      {/* 6) Actions */}
-      <div className="space-y-2 mt-4">
+      {/* 8) POUR ALLER PLUS LOIN - Accordion (from detailed analysis) */}
+      {detailedAnalysis?.advanced?.comparisons && (
+        <Card className="bg-card border-border mb-3">
+          <CardContent className="p-0">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full p-3 flex items-center justify-between text-left"
+              data-testid="advanced-toggle"
+            >
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                {lang === "fr" ? "Pour aller plus loin" : "Go further"}
+              </span>
+              {showAdvanced ? (
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              )}
+            </button>
+            {showAdvanced && (
+              <div className="px-3 pb-3 border-t border-border pt-3">
+                <p className="font-mono text-[11px] text-muted-foreground leading-relaxed whitespace-pre-line" data-testid="advanced-text">
+                  {detailedAnalysis.advanced.comparisons}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 9) ACTION - Poser une question */}
+      <div className="mt-4">
         <Button
-          onClick={goToDeepAnalysis}
-          data-testid="deep-analysis-btn"
+          onClick={goToAskCoach}
+          data-testid="ask-coach-btn"
           className="w-full bg-primary text-white hover:bg-primary/90 rounded-none h-10 font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2"
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          {t("analysis.viewDetailedAnalysis")}
-        </Button>
-        <Button
-          onClick={goToAskCoach}
-          variant="ghost"
-          data-testid="ask-coach-btn"
-          className="w-full text-muted-foreground hover:text-foreground rounded-none h-9 font-mono text-[11px] uppercase tracking-wider"
-        >
-          {t("analysis.askCoach")}
+          {lang === "fr" ? "Poser une question au coach" : "Ask the coach"}
         </Button>
       </div>
     </div>
