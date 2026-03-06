@@ -419,11 +419,21 @@ export default function TrainingPlan() {
               </div>
 
               {/* Légende */}
-              <div className="mt-3 pt-3 border-t border-white/10">
+              <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: "var(--bg-tertiary)", color: "var(--text-secondary)" }}>
+                    VMA: {predictions.athlete_profile?.estimated_vma} km/h
+                  </span>
+                  <span className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>
+                    {predictions.athlete_profile?.vma_efforts_count > 0 
+                      ? `(${predictions.athlete_profile.vma_efforts_count} effort(s) ≥ 6 min)`
+                      : "(estimée depuis allure moyenne)"}
+                  </span>
+                </div>
                 <p className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>
-                  {lang === "fr" 
-                    ? "Estimations basées sur VMA, volume d'entraînement et sortie longue max des 60 derniers jours."
-                    : "Estimates based on VMA, training volume and max long run from the last 60 days."}
+                  {predictions.methodology?.vma_calculation || (lang === "fr" 
+                    ? "VMA basée sur efforts ≥ 6 min. Prédictions ajustées selon volume et endurance."
+                    : "VMA based on efforts ≥ 6 min. Predictions adjusted by volume and endurance.")}
                 </p>
               </div>
             </>
