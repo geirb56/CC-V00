@@ -406,16 +406,27 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     km_28 = sum(get_distance_km(w) for w in workouts_28)
     weekly_km = km_28 / 4 if km_28 > 0 else 20
     
-    # Estimation des charges (TSS simplifié: 10 pts/km)
+    # Calcul identique à /api/training/metrics pour cohérence
+    # ACWR = charge 7j / (charge 28j / 4)
+    chronic_avg = km_28 / 4 if km_28 > 0 else 1
+    acwr = round(km_7 / chronic_avg, 2) if chronic_avg > 0 else 1.0
+    
+    # TSB = CTL - ATL (en km pour simplifier)
+    ctl = km_28 / 4  # Fitness (moyenne 28j)
+    atl = km_7       # Fatigue (7j)
+    tsb = round(ctl - atl, 1)
+    
+    # Charges pour le contexte (en points TSS: 10 pts/km)
     load_7 = km_7 * 10
     load_28 = km_28 * 10
     
     fitness_data = {
-        "ctl": load_28 / 4 if load_28 > 0 else 40,
-        "atl": load_7 if load_7 > 0 else 45,
-        "tsb": (load_28 / 4 - load_7) if load_28 > 0 else -5,
+        "ctl": ctl,
+        "atl": atl,
+        "tsb": tsb,
         "load_7": load_7,
-        "load_28": load_28
+        "load_28": load_28,
+        "acwr": acwr
     }
     
     # 5. Construire le contexte
