@@ -365,28 +365,34 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     seven_days_ago = today - timedelta(days=7)
     twenty_eight_days_ago = today - timedelta(days=28)
     
-    # Essayer d'abord les activités Strava
+    # Essayer d'abord les activités Strava (avec ou sans user_id car certaines sont globales)
     workouts_7 = await db.strava_activities.find({
-        "user_id": user_id,
+        "$or": [
+            {"user_id": user_id},
+            {"user_id": None},
+            {"user_id": {"$exists": False}}
+        ],
         "start_date_local": {"$gte": seven_days_ago.isoformat()}
     }).to_list(100)
     
     workouts_28 = await db.strava_activities.find({
-        "user_id": user_id,
+        "$or": [
+            {"user_id": user_id},
+            {"user_id": None},
+            {"user_id": {"$exists": False}}
+        ],
         "start_date_local": {"$gte": twenty_eight_days_ago.isoformat()}
     }).to_list(300)
     
     # Fallback sur workouts locaux si pas de données Strava
     if not workouts_28:
         workouts_7 = await db.workouts.find({
-            "user_id": user_id,
             "date": {"$gte": seven_days_ago.isoformat()}
         }).to_list(100)
         
         workouts_28 = await db.workouts.find({
-            "user_id": user_id,
             "date": {"$gte": twenty_eight_days_ago.isoformat()}
-        }).to_list(100)
+        }).to_list(300)
     
     # 4. Calculer les métriques
     def get_distance_km(w):
