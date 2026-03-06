@@ -11,6 +11,7 @@ import Digest from "@/pages/Digest";
 import Settings from "@/pages/Settings";
 import Subscription from "@/pages/Subscription";
 import TrainingPlan from "@/pages/TrainingPlan";
+import Coach from "@/pages/Coach";
 import Layout from "@/components/Layout";
 import IOSPWAHint from "@/components/IOSPWAHint";
 
@@ -26,6 +27,7 @@ function App() {
               <Route path="workout/:id" element={<WorkoutDetail />} />
               <Route path="workout/:id/analysis" element={<DetailedAnalysis />} />
               <Route path="progress" element={<Progress />} />
+              <Route path="coach" element={<Coach />} />
               <Route path="guidance" element={<Guidance />} />
               <Route path="digest" element={<Digest />} />
               <Route path="training" element={<TrainingPlan />} />
