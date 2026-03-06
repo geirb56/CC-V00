@@ -2692,67 +2692,196 @@ async def get_stats():
 
 @api_router.post("/coach/analyze", response_model=CoachResponse)
 async def analyze_with_coach(request: CoachRequest):
-    """Get analysis from CardioCoach - 100% LOCAL ENGINE, NO LLM
+    """Chat Coach conversationnel avec GPT-4o-mini
     
-    Note: Conversational Q&A is disabled. Use specific workout analysis instead.
+    Le coach a accès à:
+    - L'historique des conversations
+    - Les données d'entraînement (séances, stats)
+    - Le contexte fitness (ACWR, TSB, volume)
+    
+    Il peut répondre à des questions ouvertes sur l'entraînement.
     """
+    from llm_coach import enrich_chat_response
+    
     user_id = request.user_id or "default"
     language = request.language or "fr"
+    user_message = request.message or ""
     
-    # If workout is specified, generate analysis using local engine
-    if request.workout_id:
-        # Get all workouts for baseline
-        all_workouts = await db.workouts.find({}, {"_id": 0}).sort("date", -1).to_list(100)
-        if not all_workouts:
-            all_workouts = get_mock_workouts()
+    # 1. Récupérer l'historique des conversations (5 derniers messages)
+    conversation_history = await db.conversations.find(
+        {"user_id": user_id}
+    ).sort("timestamp", -1).limit(5).to_list(5)
+    conversation_history = list(reversed(conversation_history))  # Ordre chronologique
+    
+    # 2. Récupérer les données d'entraînement
+    today = datetime.now(timezone.utc)
+    seven_days_ago = today - timedelta(days=7)
+    twenty_eight_days_ago = today - timedelta(days=28)
+    
+    # Activités Strava
+    recent_activities = await db.strava_activities.find({
+        "$or": [{"user_id": user_id}, {"user_id": None}, {"user_id": {"$exists": False}}],
+        "start_date_local": {"$gte": seven_days_ago.isoformat()}
+    }).sort("start_date_local", -1).to_list(20)
+    
+    all_activities = await db.strava_activities.find({
+        "$or": [{"user_id": user_id}, {"user_id": None}, {"user_id": {"$exists": False}}],
+        "start_date_local": {"$gte": twenty_eight_days_ago.isoformat()}
+    }).sort("start_date_local", -1).to_list(100)
+    
+    # Fallback sur workouts locaux
+    if not all_activities:
+        recent_activities = await db.workouts.find({
+            "date": {"$gte": seven_days_ago.isoformat()}
+        }).sort("date", -1).to_list(20)
+        all_activities = await db.workouts.find({
+            "date": {"$gte": twenty_eight_days_ago.isoformat()}
+        }).sort("date", -1).to_list(100)
+    
+    # 3. Calculer les métriques de contexte
+    def get_distance_km(w):
+        dist = w.get("distance", 0)
+        if dist > 1000:
+            return dist / 1000
+        return w.get("distance_km", dist) or 0
+    
+    km_7 = sum(get_distance_km(w) for w in recent_activities)
+    km_28 = sum(get_distance_km(w) for w in all_activities)
+    
+    # ACWR & TSB
+    chronic_avg = km_28 / 4 if km_28 > 0 else 1
+    acwr = round(km_7 / chronic_avg, 2) if chronic_avg > 0 else 1.0
+    ctl = km_28 / 4
+    atl = km_7
+    tsb = round(ctl - atl, 1)
+    
+    # 4. Préparer le contexte pour le LLM
+    recent_sessions_summary = []
+    for act in recent_activities[:5]:
+        name = act.get("name", "Séance")
+        dist = get_distance_km(act)
+        duration = act.get("moving_time", act.get("duration_minutes", 0) * 60)
+        if duration > 100:
+            duration = duration / 60  # Convertir secondes en minutes
+        avg_hr = act.get("average_heartrate", act.get("avg_heart_rate"))
+        date_str = act.get("start_date_local", act.get("date", ""))[:10]
         
-        workout = await db.workouts.find_one({"id": request.workout_id}, {"_id": 0})
+        session_info = f"- {date_str}: {name}, {dist:.1f}km"
+        if duration:
+            session_info += f", {int(duration)}min"
+        if avg_hr:
+            session_info += f", FC moy {int(avg_hr)}bpm"
+        recent_sessions_summary.append(session_info)
+    
+    context = {
+        "language": language,
+        "stats_7j": {
+            "km": round(km_7, 1),
+            "sessions": len(recent_activities)
+        },
+        "stats_28j": {
+            "km": round(km_28, 1),
+            "sessions": len(all_activities)
+        },
+        "fitness": {
+            "acwr": acwr,
+            "acwr_status": "optimal" if 0.8 <= acwr <= 1.3 else "attention",
+            "tsb": tsb,
+            "tsb_status": "frais" if tsb > 0 else "fatigué" if tsb < -10 else "en charge"
+        },
+        "recent_sessions": "\n".join(recent_sessions_summary) if recent_sessions_summary else "Aucune séance récente"
+    }
+    
+    # 5. Si workout_id spécifié, enrichir le contexte avec les détails de la séance
+    if request.workout_id:
+        workout = await db.strava_activities.find_one({"id": request.workout_id})
         if not workout:
-            workout = next((w for w in all_workouts if w["id"] == request.workout_id), None)
+            workout = await db.workouts.find_one({"id": request.workout_id})
         
         if workout:
-            baseline = calculate_baseline_metrics(all_workouts, workout, days=14)
-            analysis = generate_session_analysis(workout, baseline, language)
-            
-            response_text = f"{analysis['summary']}\n\n{analysis['execution']}\n\n{analysis['meaning']}\n\n{analysis['advice']}"
-            
-            # Store in conversation history
-            msg_id = str(uuid.uuid4())
-            await db.conversations.insert_one({
-                "id": msg_id,
-                "user_id": user_id,
-                "role": "assistant",
-                "content": response_text,
-                "workout_id": request.workout_id,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            })
-            
-            return CoachResponse(response=response_text, message_id=msg_id)
+            context["workout_detail"] = {
+                "name": workout.get("name"),
+                "distance_km": get_distance_km(workout),
+                "duration_min": workout.get("moving_time", workout.get("duration_minutes", 0) * 60) / 60 if workout.get("moving_time", 0) > 100 else workout.get("duration_minutes", 0),
+                "avg_hr": workout.get("average_heartrate", workout.get("avg_heart_rate")),
+                "max_hr": workout.get("max_heartrate", workout.get("max_heart_rate")),
+                "zones": workout.get("effort_zone_distribution"),
+                "km_splits": workout.get("km_splits", [])[:5]  # 5 premiers km
+            }
     
-    # No workout specified - provide general guidance
-    all_workouts = await db.workouts.find({}, {"_id": 0}).sort("date", -1).to_list(50)
-    if not all_workouts:
-        all_workouts = get_mock_workouts()
+    # 6. Stocker le message utilisateur
+    user_msg_id = str(uuid.uuid4())
+    await db.conversations.insert_one({
+        "id": user_msg_id,
+        "user_id": user_id,
+        "role": "user",
+        "content": user_message,
+        "workout_id": request.workout_id,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
     
-    # Get week stats for context
-    week_stats = calculate_week_stats(all_workouts)
-    month_stats = calculate_month_stats(all_workouts)
-    recovery = calculate_recovery_score(all_workouts, language)
+    # 7. Appeler GPT-4o-mini pour générer la réponse
+    try:
+        llm_response, success, meta = await enrich_chat_response(
+            user_message=user_message,
+            context=context,
+            conversation_history=[{"role": m.get("role"), "content": m.get("content")} for m in conversation_history],
+            user_id=user_id
+        )
+        
+        if success and llm_response:
+            response_text = llm_response
+        else:
+            # Fallback sur réponse locale si LLM échoue
+            logger.warning(f"LLM chat failed, using fallback: {meta}")
+            response_text = _generate_fallback_chat_response(user_message, context, language)
+    except Exception as e:
+        logger.error(f"LLM chat error: {e}")
+        response_text = _generate_fallback_chat_response(user_message, context, language)
     
-    # Generate dashboard-style insight
-    insight = generate_dashboard_insight(
-        week_stats=week_stats,
-        month_stats=month_stats,
-        recovery_score=recovery.get("score") if recovery else None,
-        language=language
-    )
-    
-    response_text = insight
-    if recovery:
-        response_text += f"\n\n{recovery.get('phrase', '')}"
-    
+    # 8. Stocker la réponse assistant
     msg_id = str(uuid.uuid4())
+    await db.conversations.insert_one({
+        "id": msg_id,
+        "user_id": user_id,
+        "role": "assistant",
+        "content": response_text,
+        "workout_id": request.workout_id,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
     return CoachResponse(response=response_text, message_id=msg_id)
+
+
+def _generate_fallback_chat_response(message: str, context: dict, language: str) -> str:
+    """Génère une réponse de fallback si le LLM échoue."""
+    stats_7 = context.get("stats_7j", {})
+    fitness = context.get("fitness", {})
+    
+    if language == "fr":
+        return f"""Voici un résumé de ta situation :
+
+📊 **Cette semaine** : {stats_7.get('km', 0)} km en {stats_7.get('sessions', 0)} séances
+
+💪 **État de forme** :
+- ACWR : {fitness.get('acwr', 1.0)} ({fitness.get('acwr_status', 'ok')})
+- TSB : {fitness.get('tsb', 0)} ({fitness.get('tsb_status', 'normal')})
+
+{context.get('recent_sessions', '')}
+
+Pour une analyse plus détaillée, sélectionne une séance spécifique."""
+    else:
+        return f"""Here's a summary of your situation:
+
+📊 **This week**: {stats_7.get('km', 0)} km in {stats_7.get('sessions', 0)} sessions
+
+💪 **Fitness status**:
+- ACWR: {fitness.get('acwr', 1.0)} ({fitness.get('acwr_status', 'ok')})
+- TSB: {fitness.get('tsb', 0)} ({fitness.get('tsb_status', 'normal')})
+
+{context.get('recent_sessions', '')}
+
+For a more detailed analysis, select a specific workout."""
 
 
 @api_router.get("/coach/history")
