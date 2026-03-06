@@ -518,6 +518,24 @@ export default function WorkoutDetail() {
         </Card>
       )}
 
+      {/* 3.5) GRAPHIQUE DES ALLURES PAR KM */}
+      {workout.km_splits && workout.km_splits.length > 0 && (
+        <Card className="bg-card border-border mb-3" data-testid="splits-chart-card">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-3">
+              <Activity className="w-4 h-4 text-violet-400" />
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                {lang === "fr" ? "Allure par kilomètre" : "Pace per kilometer"}
+              </span>
+              <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+                {workout.km_splits.length} km
+              </span>
+            </div>
+            <SplitsChart splits={workout.km_splits} lang={lang} />
+          </CardContent>
+        </Card>
+      )}
+
       {/* 4) CE QUE ÇA SIGNIFIE - Fusionné */}
       {(analysis?.insight || detailedAnalysis?.meaning?.text) && (
         <Card className="bg-card border-border mb-3">
