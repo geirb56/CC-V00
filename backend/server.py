@@ -5124,9 +5124,16 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
             "best_pace": f"{int(best_pace)}:{int((best_pace % 1) * 60):02d}/km",
             "max_long_run": round(max_long_run, 1),
             "estimated_vma": round(estimated_vma, 1),
+            "vma_method": vma_method,
+            "vma_efforts_count": len(vma_efforts),
             "total_sessions_60d": total_sessions
         },
-        "predictions": predictions
+        "predictions": predictions,
+        "methodology": {
+            "vma_min_duration": f"{MIN_VMA_DURATION} min",
+            "vma_calculation": "Basé sur le meilleur effort ≥ 6 min. Effort 6-12min = ~95% VMA, 12-20min = ~90% VMA, 20+min = ~85% VMA.",
+            "note": "Les prédictions sont des estimations. Un test VMA réel ou des temps de course donnent des prédictions plus précises."
+        }
     }
 
 
