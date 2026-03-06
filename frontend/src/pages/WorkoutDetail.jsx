@@ -43,7 +43,7 @@ const formatDuration = (minutes) => {
   return `${mins}m`;
 };
 
-// Splits Chart Component - Graphique des allures par km (barres verticales)
+// Splits Chart Component - Graphique des allures par km (barres horizontales)
 const SplitsChart = ({ splits, lang }) => {
   if (!splits || splits.length === 0) return null;
   
@@ -54,17 +54,16 @@ const SplitsChart = ({ splits, lang }) => {
   const avgPace = paces.reduce((a, b) => a + b, 0) / paces.length;
   
   // Add padding for visual clarity
-  const chartMin = Math.max(0, minPace - 0.3);
-  const chartMax = maxPace + 0.3;
+  const chartMin = Math.max(0, minPace - 0.2);
+  const chartMax = maxPace + 0.2;
   const range = chartMax - chartMin;
   
   // Find fastest and slowest km
   const fastestIdx = paces.indexOf(minPace);
   const slowestIdx = paces.indexOf(maxPace);
   
-  // Calculate bar height percentage (inverted: lower pace = taller bar = faster)
-  const getBarHeight = (pace) => {
-    // Invert: fastest (low pace) should have tallest bar
+  // Calculate bar width percentage (inverted: lower pace = wider bar = faster)
+  const getBarWidth = (pace) => {
     return ((chartMax - pace) / range) * 100;
   };
   
@@ -83,6 +82,10 @@ const SplitsChart = ({ splits, lang }) => {
     const secs = Math.round((pace % 1) * 60);
     return `${mins}:${String(secs).padStart(2, '0')}`;
   };
+
+  // Limit display if too many splits
+  const displaySplits = splits.length > 25 ? splits.filter((_, i) => i % 2 === 0 || i === splits.length - 1) : splits;
+  const showAllKm = splits.length <= 25;
 
   return (
     <div className="space-y-3">
@@ -116,105 +119,95 @@ const SplitsChart = ({ splits, lang }) => {
         </div>
       </div>
 
-      {/* Vertical Bar chart */}
-      <div className="relative bg-muted/20 rounded-lg p-3 pt-2">
-        {/* Y-axis labels (pace) - on the left */}
-        <div className="absolute left-1 top-2 bottom-8 flex flex-col justify-between text-[8px] font-mono text-muted-foreground w-8 text-right pr-1">
-          <span>{formatPace(chartMin)}</span>
-          <span>{formatPace((chartMin + chartMax) / 2)}</span>
-          <span>{formatPace(chartMax)}</span>
-        </div>
-        
-        {/* Chart area */}
-        <div className="ml-9 mr-1">
-          {/* Average line */}
-          <div 
-            className="absolute left-10 right-3 border-t border-dashed border-white/30 z-10"
-            style={{ 
-              top: `calc(${100 - getBarHeight(avgPace)}% + 8px)`,
-            }}
-          >
-            <span className="absolute right-0 -top-3 text-[8px] font-mono text-white/50 bg-background/80 px-1 rounded">
-              {lang === "fr" ? "moy" : "avg"}
-            </span>
-          </div>
-
-          {/* Bars container */}
-          <div className="flex items-end gap-[2px] h-36">
-            {splits.map((split, idx) => {
-              const height = getBarHeight(split.pace_min_km);
-              const color = getBarColor(split.pace_min_km, idx);
-              const isSpecial = idx === fastestIdx || idx === slowestIdx;
+      {/* Horizontal Bar chart - 1 bar per km */}
+      <div className="bg-muted/20 rounded-lg p-3 space-y-1">
+        {(showAllKm ? splits : displaySplits).map((split, idx) => {
+          const actualIdx = showAllKm ? idx : splits.findIndex(s => s.km === split.km);
+          const width = getBarWidth(split.pace_min_km);
+          const color = getBarColor(split.pace_min_km, actualIdx);
+          const isFastest = actualIdx === fastestIdx;
+          const isSlowest = actualIdx === slowestIdx;
+          
+          return (
+            <div key={split.km} className="flex items-center gap-2 group">
+              {/* Km number */}
+              <div className="w-8 text-right shrink-0">
+                <span className={`font-mono text-[10px] ${isFastest ? 'text-emerald-400 font-bold' : isSlowest ? 'text-orange-400 font-bold' : 'text-muted-foreground'}`}>
+                  {split.km}
+                </span>
+              </div>
               
-              return (
-                <div
-                  key={split.km}
-                  className="flex-1 flex flex-col items-center group relative"
-                  style={{ minWidth: splits.length > 20 ? '6px' : '12px' }}
-                >
-                  {/* Tooltip on hover */}
-                  <div className="absolute bottom-full mb-2 hidden group-hover:block z-20 bg-black/95 px-2 py-1.5 rounded shadow-lg text-[10px] font-mono whitespace-nowrap pointer-events-none">
-                    <p className="text-white font-bold mb-0.5">Km {split.km}</p>
-                    <p className="text-emerald-400">{split.pace_str}/km</p>
-                    {split.avg_hr && <p className="text-red-400">{split.avg_hr} bpm</p>}
-                    {split.avg_cadence && <p className="text-blue-400">{split.avg_cadence} spm</p>}
-                  </div>
-                  
-                  {/* Bar */}
-                  <div
-                    className={`w-full rounded-t-sm transition-all duration-300 cursor-pointer ${isSpecial ? 'ring-1 ring-white/30' : ''}`}
-                    style={{
-                      height: `${Math.max(height, 8)}%`,
-                      backgroundColor: color,
-                      minHeight: '6px'
-                    }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          {/* X-axis labels (km numbers) */}
-          <div className="flex mt-1.5 gap-[2px]">
-            {splits.map((split, idx) => {
-              // Show label every N km depending on total splits
-              const showLabel = splits.length <= 15 || 
-                split.km === 1 || 
-                split.km % 5 === 0 || 
-                split.km === splits.length;
-              
-              return (
+              {/* Bar container */}
+              <div className="flex-1 h-5 bg-muted/30 rounded-sm relative overflow-hidden">
+                {/* Average line */}
                 <div 
-                  key={split.km} 
-                  className="flex-1 text-center"
-                  style={{ minWidth: splits.length > 20 ? '6px' : '12px' }}
+                  className="absolute top-0 bottom-0 w-px bg-white/40 z-10"
+                  style={{ left: `${getBarWidth(avgPace)}%` }}
+                />
+                
+                {/* Bar */}
+                <div
+                  className={`h-full rounded-sm transition-all duration-300 flex items-center ${isFastest || isSlowest ? 'ring-1 ring-white/20' : ''}`}
+                  style={{
+                    width: `${Math.max(width, 5)}%`,
+                    backgroundColor: color,
+                    minWidth: '20px'
+                  }}
                 >
-                  {showLabel && (
-                    <span className="font-mono text-[8px] text-muted-foreground">
-                      {split.km}
+                  {/* Pace inside bar if wide enough */}
+                  {width > 25 && (
+                    <span className="font-mono text-[9px] text-white font-semibold px-1.5 drop-shadow-sm">
+                      {split.pace_str}
                     </span>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
+              
+              {/* Pace on the right if bar is narrow */}
+              <div className="w-12 shrink-0">
+                <span className={`font-mono text-[10px] ${isFastest ? 'text-emerald-400 font-bold' : isSlowest ? 'text-orange-400 font-bold' : 'text-muted-foreground'}`}>
+                  {split.pace_str}
+                </span>
+              </div>
+              
+              {/* HR if available (on hover) */}
+              {split.avg_hr && (
+                <div className="w-14 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="font-mono text-[9px] text-red-400">
+                    {split.avg_hr} bpm
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        
+        {!showAllKm && (
+          <p className="text-center font-mono text-[9px] text-muted-foreground pt-2">
+            {lang === "fr" ? `Affichage simplifié (${splits.length} km total)` : `Simplified view (${splits.length} km total)`}
+          </p>
+        )}
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
-          <span>{lang === "fr" ? "Rapide" : "Fast"}</span>
+      {/* Legend & Scale */}
+      <div className="flex items-center justify-between text-[9px] font-mono text-muted-foreground">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-2 rounded-sm bg-emerald-500" />
+            <span>{lang === "fr" ? "Rapide" : "Fast"}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-2 rounded-sm bg-violet-500" />
+            <span>{lang === "fr" ? "Normal" : "Normal"}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-2 rounded-sm bg-orange-500" />
+            <span>{lang === "fr" ? "Lent" : "Slow"}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-sm bg-violet-500" />
-          <span>{lang === "fr" ? "Normal" : "Normal"}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-sm bg-orange-500" />
-          <span>{lang === "fr" ? "Lent" : "Slow"}</span>
-        </div>
+        <span className="text-muted-foreground/60">
+          | = {lang === "fr" ? "moy" : "avg"} ({formatPace(avgPace)})
+        </span>
       </div>
     </div>
   );
