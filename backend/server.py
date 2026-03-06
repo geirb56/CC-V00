@@ -4891,6 +4891,19 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
             return dist / 1000
         return a.get("distance_km", dist)
     
+    def get_duration_minutes(a):
+        """Retourne la durée en minutes"""
+        # Strava: moving_time en secondes
+        moving_time = a.get("moving_time", 0)
+        if moving_time > 0:
+            return moving_time / 60
+        # Fallback: elapsed_time
+        elapsed = a.get("elapsed_time", 0)
+        if elapsed > 0:
+            return elapsed / 60
+        # Fallback: duration_minutes
+        return a.get("duration_minutes", 0)
+    
     def get_pace(a):
         # Pace en min/km
         pace = a.get("avg_pace_min_km")
@@ -4902,11 +4915,9 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
             return (1000 / speed) / 60
         # Calculer depuis distance/durée
         dist = get_distance(a)
-        duration = a.get("moving_time", a.get("duration_minutes", 0) * 60)
-        if isinstance(duration, int) and duration < 1000:
-            duration = duration * 60  # Convertir minutes en secondes
-        if dist > 0 and duration > 0:
-            return (duration / 60) / dist
+        duration_min = get_duration_minutes(a)
+        if dist > 0 and duration_min > 0:
+            return duration_min / dist
         return None
     
     # Collecter les données
@@ -4914,12 +4925,15 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
     total_sessions = 0
     paces = []
     long_runs = []  # Sorties > 15km
-    fast_runs = []  # Séances rapides (< 5:30/km)
+    vma_efforts = []  # Efforts >= 6 min pour calcul VMA
     distances = []
+    
+    MIN_VMA_DURATION = 6  # Minutes minimum pour calcul VMA
     
     for a in activities:
         dist = get_distance(a)
         pace = get_pace(a)
+        duration_min = get_duration_minutes(a)
         
         if dist > 0:
             total_km += dist
@@ -4929,8 +4943,14 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
             if pace and 3 < pace < 10:  # Pace réaliste
                 paces.append(pace)
                 
-                if pace < 5.5:  # Rapide
-                    fast_runs.append({"distance": dist, "pace": pace})
+                # Pour la VMA : effort >= 6 minutes ET allure rapide (< 5:30/km)
+                if duration_min >= MIN_VMA_DURATION and pace < 5.5:
+                    vma_efforts.append({
+                        "distance": dist, 
+                        "pace": pace, 
+                        "duration": duration_min,
+                        "speed_kmh": 60 / pace
+                    })
                 
                 if dist >= 15:  # Sortie longue
                     long_runs.append({"distance": dist, "pace": pace})
@@ -4949,16 +4969,34 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
     max_long_run = max(distances) if distances else 0
     
     # Estimer la VMA (Vitesse Maximale Aérobie)
-    # VMA ≈ vitesse sur séance la plus rapide + 15-20%
-    if fast_runs:
-        best_fast_pace = min(r["pace"] for r in fast_runs)
-        # Convertir pace en km/h puis estimer VMA
-        best_speed_kmh = 60 / best_fast_pace
-        estimated_vma = best_speed_kmh * 1.15  # +15% approximation
+    # Basé sur les efforts >= 6 minutes (physiologiquement représentatif)
+    vma_method = "estimated"
+    
+    if vma_efforts:
+        # Prendre le meilleur effort de >= 6 minutes
+        best_vma_effort = max(vma_efforts, key=lambda x: x["speed_kmh"])
+        best_sustained_speed = best_vma_effort["speed_kmh"]
+        
+        # La VMA est environ 5-10% au-dessus de l'allure soutenue sur 6+ min
+        # Plus l'effort est long, plus on est proche de la VMA
+        duration = best_vma_effort["duration"]
+        if duration >= 20:
+            # Effort long (20+ min) = environ 85% VMA → VMA = vitesse / 0.85
+            estimated_vma = best_sustained_speed / 0.85
+        elif duration >= 12:
+            # Effort moyen (12-20 min) = environ 90% VMA
+            estimated_vma = best_sustained_speed / 0.90
+        else:
+            # Effort court (6-12 min) = environ 95% VMA
+            estimated_vma = best_sustained_speed / 0.95
+        
+        vma_method = f"effort_{int(duration)}min"
     else:
-        # Estimation grossière depuis allure moyenne
+        # Pas d'effort rapide >= 6 min, estimation depuis allure moyenne
+        # L'allure moyenne d'endurance est environ 70% VMA
         avg_speed_kmh = 60 / avg_pace
-        estimated_vma = avg_speed_kmh * 1.25
+        estimated_vma = avg_speed_kmh / 0.70
+        vma_method = "from_avg_pace"
     
     # Prédictions basées sur VMA et volume
     predictions = []
