@@ -302,32 +302,6 @@ export default function TrainingPlan() {
         </div>
       </div>
 
-      {/* ACWR & TSB */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="card-modern p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px" }}>
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="w-3 h-3" style={{ color: "var(--text-tertiary)" }} />
-            <span className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>ACWR</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-white">{context.acwr?.toFixed(2) || "1.00"}</span>
-            {context.acwr <= 1.3 && context.acwr >= 0.8 && (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            )}
-          </div>
-        </div>
-
-        <div className="card-modern p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px" }}>
-          <div className="flex items-center gap-2 mb-1">
-            <Zap className="w-3 h-3" style={{ color: "var(--text-tertiary)" }} />
-            <span className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>TSB</span>
-          </div>
-          <span className={`text-xl font-bold ${context.tsb > 0 ? "text-emerald-400" : "text-white"}`}>
-            {context.tsb?.toFixed(1) || "-5.0"}
-          </span>
-        </div>
-      </div>
-
       {/* PRÉDICTIONS DE COURSE */}
       {predictions?.has_data && (
         <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
