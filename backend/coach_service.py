@@ -360,24 +360,44 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     week = compute_week_number(start_date.date() if isinstance(start_date, datetime) else start_date)
     phase = determine_phase(week, config["cycle_weeks"])
     
-    # 3. Récupérer les données d'entraînement
+    # 3. Récupérer les données d'entraînement (Strava en priorité, sinon workouts locaux)
     today = datetime.now(timezone.utc)
     seven_days_ago = today - timedelta(days=7)
     twenty_eight_days_ago = today - timedelta(days=28)
     
-    workouts_7 = await db.workouts.find({
+    # Essayer d'abord les activités Strava
+    workouts_7 = await db.strava_activities.find({
         "user_id": user_id,
-        "date": {"$gte": seven_days_ago.isoformat()}
+        "start_date_local": {"$gte": seven_days_ago.isoformat()}
     }).to_list(100)
     
-    workouts_28 = await db.workouts.find({
+    workouts_28 = await db.strava_activities.find({
         "user_id": user_id,
-        "date": {"$gte": twenty_eight_days_ago.isoformat()}
-    }).to_list(100)
+        "start_date_local": {"$gte": twenty_eight_days_ago.isoformat()}
+    }).to_list(300)
+    
+    # Fallback sur workouts locaux si pas de données Strava
+    if not workouts_28:
+        workouts_7 = await db.workouts.find({
+            "user_id": user_id,
+            "date": {"$gte": seven_days_ago.isoformat()}
+        }).to_list(100)
+        
+        workouts_28 = await db.workouts.find({
+            "user_id": user_id,
+            "date": {"$gte": twenty_eight_days_ago.isoformat()}
+        }).to_list(100)
     
     # 4. Calculer les métriques
-    km_7 = sum(w.get("distance_km", 0) or 0 for w in workouts_7)
-    km_28 = sum(w.get("distance_km", 0) or 0 for w in workouts_28)
+    def get_distance_km(w):
+        """Extrait la distance en km (Strava = mètres, workouts = km)"""
+        dist = w.get("distance", 0)
+        if dist > 1000:  # Strava retourne en mètres
+            return dist / 1000
+        return w.get("distance_km", dist) or 0
+    
+    km_7 = sum(get_distance_km(w) for w in workouts_7)
+    km_28 = sum(get_distance_km(w) for w in workouts_28)
     weekly_km = km_28 / 4 if km_28 > 0 else 20
     
     # Estimation des charges (TSS simplifié: 10 pts/km)
