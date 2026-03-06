@@ -103,16 +103,73 @@ async def enrich_chat_response(
     conversation_history: List[Dict],
     user_id: str = "unknown"
 ) -> Tuple[Optional[str], bool, Dict]:
-    """Enrichit la réponse chat avec GPT-4o-mini."""
-    prompt = f"""DONNÉES UTILISATEUR:
-{_format_context(context)}
+    """Enrichit la réponse chat avec GPT-4o-mini.
+    
+    Le contexte inclut:
+    - Stats 7j et 28j (km, sessions)
+    - Métriques fitness (ACWR, TSB)
+    - Résumé des séances récentes
+    - Détail d'une séance si spécifiée
+    """
+    language = context.get("language", "fr")
+    
+    # Formater le contexte de manière lisible
+    stats_7 = context.get("stats_7j", {})
+    stats_28 = context.get("stats_28j", {})
+    fitness = context.get("fitness", {})
+    recent = context.get("recent_sessions", "")
+    workout = context.get("workout_detail")
+    
+    context_text = f"""📊 DONNÉES ATHLÈTE:
+
+CETTE SEMAINE (7j):
+- Volume: {stats_7.get('km', 0)} km
+- Séances: {stats_7.get('sessions', 0)}
+
+CE MOIS (28j):
+- Volume: {stats_28.get('km', 0)} km  
+- Séances: {stats_28.get('sessions', 0)}
+
+ÉTAT DE FORME:
+- ACWR: {fitness.get('acwr', 1.0)} ({fitness.get('acwr_status', 'ok')})
+- TSB: {fitness.get('tsb', 0)} ({fitness.get('tsb_status', 'normal')})
+
+SÉANCES RÉCENTES:
+{recent}"""
+
+    # Ajouter les détails de la séance si disponibles
+    if workout:
+        zones = workout.get('zones', {})
+        zones_str = ""
+        if zones:
+            zones_str = f"Z1:{zones.get('z1',0)}% Z2:{zones.get('z2',0)}% Z3:{zones.get('z3',0)}% Z4:{zones.get('z4',0)}% Z5:{zones.get('z5',0)}%"
+        
+        context_text += f"""
+
+SÉANCE EN COURS D'ANALYSE:
+- Nom: {workout.get('name', 'N/A')}
+- Distance: {workout.get('distance_km', 0):.1f} km
+- Durée: {workout.get('duration_min', 0):.0f} min
+- FC moyenne: {workout.get('avg_hr', 'N/A')} bpm
+- FC max: {workout.get('max_hr', 'N/A')} bpm
+- Zones: {zones_str}"""
+
+    # Formater l'historique de conversation
+    history_text = ""
+    if conversation_history:
+        for msg in conversation_history[-4:]:  # 4 derniers messages max
+            role = "Athlète" if msg.get("role") == "user" else "Coach"
+            content = msg.get("content", "")[:200]  # Tronquer si trop long
+            history_text += f"{role}: {content}\n"
+    
+    prompt = f"""{context_text}
 
 HISTORIQUE CONVERSATION:
-{_format_history(conversation_history)}
+{history_text if history_text else "(Nouvelle conversation)"}
 
-QUESTION: {user_message}
+QUESTION DE L'ATHLÈTE: {user_message}
 
-Réponds en tant que coach running motivant."""
+Réponds en {language.upper()} comme un coach personnel bienveillant et expert."""
 
     return await _call_gpt(SYSTEM_PROMPT_COACH, prompt, user_id, "chat")
 
