@@ -43,6 +43,149 @@ const formatDuration = (minutes) => {
   return `${mins}m`;
 };
 
+// Splits Chart Component - Graphique des allures par km
+const SplitsChart = ({ splits, lang }) => {
+  if (!splits || splits.length === 0) return null;
+  
+  // Calculate min/max pace for scaling
+  const paces = splits.map(s => s.pace_min_km);
+  const minPace = Math.min(...paces);
+  const maxPace = Math.max(...paces);
+  const avgPace = paces.reduce((a, b) => a + b, 0) / paces.length;
+  
+  // Add padding for visual clarity
+  const chartMin = Math.max(0, minPace - 0.5);
+  const chartMax = maxPace + 0.5;
+  const range = chartMax - chartMin;
+  
+  // Find fastest and slowest km
+  const fastestIdx = paces.indexOf(minPace);
+  const slowestIdx = paces.indexOf(maxPace);
+  
+  // Calculate bar height percentage (inverted: lower pace = taller bar)
+  const getBarHeight = (pace) => {
+    return ((chartMax - pace) / range) * 100;
+  };
+  
+  // Get color based on pace relative to average
+  const getBarColor = (pace, idx) => {
+    if (idx === fastestIdx) return "#22c55e"; // Green for fastest
+    if (idx === slowestIdx) return "#f97316"; // Orange for slowest
+    if (pace < avgPace - 0.2) return "#3b82f6"; // Blue for fast
+    if (pace > avgPace + 0.2) return "#eab308"; // Yellow for slow
+    return "#8b5cf6"; // Purple for average
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Chart header with stats */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-4">
+          <div>
+            <p className="font-mono text-[9px] text-muted-foreground uppercase">
+              {lang === "fr" ? "Plus rapide" : "Fastest"}
+            </p>
+            <p className="font-mono text-xs font-semibold text-emerald-400">
+              Km {splits[fastestIdx]?.km} • {splits[fastestIdx]?.pace_str}
+            </p>
+          </div>
+          <div>
+            <p className="font-mono text-[9px] text-muted-foreground uppercase">
+              {lang === "fr" ? "Plus lent" : "Slowest"}
+            </p>
+            <p className="font-mono text-xs font-semibold text-orange-400">
+              Km {splits[slowestIdx]?.km} • {splits[slowestIdx]?.pace_str}
+            </p>
+          </div>
+          <div>
+            <p className="font-mono text-[9px] text-muted-foreground uppercase">
+              {lang === "fr" ? "Moyenne" : "Average"}
+            </p>
+            <p className="font-mono text-xs font-semibold">
+              {Math.floor(avgPace)}:{String(Math.round((avgPace % 1) * 60)).padStart(2, '0')}/km
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bar chart */}
+      <div className="relative h-32 flex items-end gap-0.5 bg-muted/20 rounded-lg p-2 pt-6">
+        {/* Y-axis labels */}
+        <div className="absolute left-1 top-1 bottom-6 flex flex-col justify-between text-[8px] font-mono text-muted-foreground">
+          <span>{Math.floor(chartMin)}:{String(Math.round((chartMin % 1) * 60)).padStart(2, '0')}</span>
+          <span>{Math.floor(chartMax)}:{String(Math.round((chartMax % 1) * 60)).padStart(2, '0')}</span>
+        </div>
+        
+        {/* Average line */}
+        <div 
+          className="absolute left-8 right-2 h-px bg-white/30 z-10"
+          style={{ 
+            bottom: `${getBarHeight(avgPace) + 8}%`,
+          }}
+        >
+          <span className="absolute -right-1 -top-2 text-[8px] font-mono text-white/50">moy</span>
+        </div>
+
+        {/* Bars container */}
+        <div className="flex-1 flex items-end gap-0.5 h-full ml-6">
+          {splits.map((split, idx) => {
+            const height = getBarHeight(split.pace_min_km);
+            const color = getBarColor(split.pace_min_km, idx);
+            
+            return (
+              <div
+                key={split.km}
+                className="flex-1 flex flex-col items-center justify-end group relative"
+                style={{ minWidth: splits.length > 15 ? '8px' : '16px' }}
+              >
+                {/* Tooltip on hover */}
+                <div className="absolute bottom-full mb-1 hidden group-hover:block z-20 bg-black/90 px-2 py-1 rounded text-[10px] font-mono whitespace-nowrap">
+                  <p className="text-white font-semibold">Km {split.km}</p>
+                  <p className="text-emerald-400">{split.pace_str}/km</p>
+                  {split.avg_hr && <p className="text-red-400">{split.avg_hr} bpm</p>}
+                </div>
+                
+                {/* Bar */}
+                <div
+                  className="w-full rounded-t transition-all duration-300 hover:opacity-80"
+                  style={{
+                    height: `${Math.max(height, 5)}%`,
+                    backgroundColor: color,
+                    minHeight: '4px'
+                  }}
+                />
+                
+                {/* Km label (show every 5km or if few splits) */}
+                {(splits.length <= 10 || split.km % 5 === 0 || split.km === 1) && (
+                  <span className="font-mono text-[8px] text-muted-foreground mt-1">
+                    {split.km}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-4 text-[9px] font-mono text-muted-foreground">
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span>{lang === "fr" ? "Rapide" : "Fast"}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-violet-500" />
+          <span>{lang === "fr" ? "Normal" : "Normal"}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-orange-400" />
+          <span>{lang === "fr" ? "Lent" : "Slow"}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Heart Rate Zones Visualization Component
 const HRZonesChart = ({ zones, t }) => {
   if (!zones) return null;
