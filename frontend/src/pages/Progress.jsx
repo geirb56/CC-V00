@@ -155,29 +155,29 @@ export default function Progress() {
         </Card>
       </div>
 
-      {/* VMA Section with Chart */}
+      {/* VO2MAX Section with Chart */}
       {(predictions?.has_data || vmaHistory?.has_data) && (
         <div className="mb-6">
           <Card className="bg-card border-border overflow-hidden">
             <CardContent className="p-4">
-              {/* Header with current VMA */}
+              {/* Header with current VO2MAX */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-xl flex flex-col items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(168,85,247,0.15) 100%)", border: "1px solid rgba(139,92,246,0.3)" }}>
                     <Zap className="w-5 h-5" style={{ color: "#a855f7" }} />
-                    <span className="text-[8px] font-mono uppercase mt-0.5" style={{ color: "rgba(168,85,247,0.8)" }}>VMA</span>
+                    <span className="text-[7px] font-mono uppercase mt-0.5" style={{ color: "rgba(168,85,247,0.8)" }}>VO2MAX</span>
                   </div>
                   <div>
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-bold text-white">
-                        {vmaHistory?.current_vma || predictions?.athlete_profile?.estimated_vma || "--"}
+                        {vmaHistory?.current_vo2max || predictions?.athlete_profile?.estimated_vo2max || "--"}
                       </span>
-                      <span className="text-lg text-muted-foreground">km/h</span>
+                      <span className="text-sm text-muted-foreground">ml/kg/min</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {predictions?.athlete_profile?.vma_efforts_count > 0 
-                        ? (lang === "fr" ? `Basée sur ${predictions.athlete_profile.vma_efforts_count} effort(s) intense(s)` : `Based on ${predictions.athlete_profile.vma_efforts_count} intense effort(s)`)
-                        : (lang === "fr" ? "Estimée depuis ton allure moyenne" : "Estimated from your average pace")}
+                        ? (lang === "fr" ? `Basé sur ${predictions.athlete_profile.vma_efforts_count} effort(s) intense(s)` : `Based on ${predictions.athlete_profile.vma_efforts_count} intense effort(s)`)
+                        : (lang === "fr" ? "Estimé depuis ton allure moyenne" : "Estimated from your average pace")}
                     </p>
                   </div>
                 </div>
@@ -191,7 +191,7 @@ export default function Progress() {
                       <ArrowDownRight className="w-4 h-4 text-red-500" />
                     )}
                     <span className={`text-sm font-bold ${vmaHistory.trend > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {vmaHistory.trend > 0 ? '+' : ''}{vmaHistory.trend} km/h
+                      {vmaHistory.trend > 0 ? '+' : ''}{vmaHistory.trend}
                     </span>
                     <span className="text-xs text-muted-foreground ml-1">
                       ({lang === "fr" ? "6 mois" : "6 months"})
@@ -200,7 +200,7 @@ export default function Progress() {
                 )}
               </div>
               
-              {/* VMA Evolution Chart */}
+              {/* VO2MAX Evolution Chart */}
               {vmaHistory?.history && vmaHistory.history.length > 0 && (
                 <div className="mt-4">
                   <p className="text-[10px] font-mono uppercase text-muted-foreground mb-3">
@@ -209,7 +209,7 @@ export default function Progress() {
                   <div className="h-32">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart 
-                        data={vmaHistory.history.filter(h => h.vma !== null)}
+                        data={vmaHistory.history.filter(h => h.vo2max !== null)}
                         margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
                       >
                         <XAxis 
@@ -219,7 +219,7 @@ export default function Progress() {
                           tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontFamily: "JetBrains Mono" }}
                         />
                         <YAxis 
-                          domain={['dataMin - 1', 'dataMax + 1']}
+                          domain={['dataMin - 2', 'dataMax + 2']}
                           axisLine={false}
                           tickLine={false}
                           tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontFamily: "JetBrains Mono" }}
@@ -232,7 +232,7 @@ export default function Progress() {
                               return (
                                 <div className="bg-popover border border-border p-2 rounded-lg shadow-lg">
                                   <p className="font-mono text-xs text-muted-foreground">{data.month_label}</p>
-                                  <p className="font-bold text-white">{data.vma} km/h</p>
+                                  <p className="font-bold text-white">{data.vo2max} ml/kg/min</p>
                                   <p className="text-[10px] text-muted-foreground">{data.sessions} séances</p>
                                 </div>
                               );
@@ -241,13 +241,13 @@ export default function Progress() {
                           }}
                         />
                         <ReferenceLine 
-                          y={vmaHistory.current_vma} 
+                          y={vmaHistory.current_vo2max} 
                           stroke="rgba(139,92,246,0.3)" 
                           strokeDasharray="3 3" 
                         />
                         <Line 
                           type="monotone" 
-                          dataKey="vma" 
+                          dataKey="vo2max" 
                           stroke="#a855f7" 
                           strokeWidth={2}
                           dot={{ fill: "#a855f7", strokeWidth: 0, r: 4 }}

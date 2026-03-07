@@ -5552,6 +5552,7 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
             "best_pace": f"{int(best_pace)}:{int((best_pace % 1) * 60):02d}/km",
             "max_long_run": round(max_long_run, 1),
             "estimated_vma": round(estimated_vma, 1),
+            "estimated_vo2max": round(estimated_vma * 3.5, 1),
             "vma_method": vma_method,
             "vma_efforts_count": len(vma_efforts),
             "total_sessions_60d": total_sessions
@@ -5560,6 +5561,7 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
         "methodology": {
             "vma_min_duration": f"{MIN_VMA_DURATION} min",
             "vma_calculation": "Basé sur le meilleur effort ≥ 6 min. Effort 6-12min = ~95% VMA, 12-20min = ~90% VMA, 20+min = ~85% VMA.",
+            "vo2max_formula": "VO2MAX (ml/kg/min) = VMA (km/h) × 3.5",
             "note": "Les prédictions sont des estimations. Un test VMA réel ou des temps de course donnent des prédictions plus précises."
         }
     }
@@ -5568,8 +5570,8 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
 @api_router.get("/training/vma-history")
 async def get_vma_history(user: dict = Depends(auth_user)):
     """
-    Retourne l'historique de la VMA sur les 6 derniers mois.
-    Calcule la VMA pour chaque mois basé sur les meilleures performances.
+    Retourne l'historique du VO2MAX sur les 6 derniers mois.
+    VO2MAX (ml/kg/min) = VMA (km/h) × 3.5
     """
     today = datetime.now(timezone.utc)
     six_months_ago = today - timedelta(days=180)
@@ -5690,10 +5692,14 @@ async def get_vma_history(user: dict = Depends(auth_user)):
         month_names_fr = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
         month_label = month_names_fr[int(month) - 1]
         
+        # Convert VMA to VO2MAX: VO2MAX (ml/kg/min) = VMA (km/h) × 3.5
+        vo2max = round(estimated_vma * 3.5, 1)
+        
         vma_history.append({
             "month": month_key,
             "month_label": month_label,
             "vma": round(estimated_vma, 1),
+            "vo2max": vo2max,
             "sessions": len(month_activities),
             "vma_efforts": len(vma_efforts)
         })
@@ -5714,29 +5720,33 @@ async def get_vma_history(user: dict = Depends(auth_user)):
                 "month": target_month,
                 "month_label": month_label,
                 "vma": None,
+                "vo2max": None,
                 "sessions": 0,
                 "vma_efforts": 0
             })
     
-    # Calculate current VMA (latest non-null)
+    # Calculate current VO2MAX (latest non-null)
     current_vma = None
+    current_vo2max = None
     for h in reversed(result_history):
         if h["vma"] is not None:
             current_vma = h["vma"]
+            current_vo2max = h["vo2max"]
             break
     
-    # Calculate trend
-    valid_vmas = [h["vma"] for h in result_history if h["vma"] is not None]
-    if len(valid_vmas) >= 2:
-        trend = valid_vmas[-1] - valid_vmas[0]
-        trend_pct = (trend / valid_vmas[0]) * 100 if valid_vmas[0] > 0 else 0
+    # Calculate trend (based on VO2MAX)
+    valid_vo2max = [h["vo2max"] for h in result_history if h["vo2max"] is not None]
+    if len(valid_vo2max) >= 2:
+        trend = valid_vo2max[-1] - valid_vo2max[0]
+        trend_pct = (trend / valid_vo2max[0]) * 100 if valid_vo2max[0] > 0 else 0
     else:
         trend = 0
         trend_pct = 0
     
     return {
-        "has_data": len(valid_vmas) > 0,
+        "has_data": len(valid_vo2max) > 0,
         "current_vma": current_vma,
+        "current_vo2max": current_vo2max,
         "trend": round(trend, 1),
         "trend_pct": round(trend_pct, 1),
         "history": result_history
