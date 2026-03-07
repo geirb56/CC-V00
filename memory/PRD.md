@@ -56,6 +56,13 @@ Application de coaching sportif personnalisé pour les sports d'endurance (cours
   - Suppression de ces sélecteurs de TrainingPlan.jsx
   - Le plan est régénéré automatiquement lors des changements
 
+- **Création de la page Progression**:
+  - Ajout de l'onglet "Progression" dans la navigation (5 onglets total)
+  - Déplacement des prédictions de course depuis la page Plan
+  - Affichage de la VMA, volume hebdo, sortie max
+  - Prédictions par distance (5K, 10K, Semi, Marathon, Ultra)
+  - Page Plan épurée (uniquement le cycle d'entraînement)
+
 ### Previous Sessions
 - **Système d'abonnement** (trial/free/early_adopter) avec middleware de protection
 - **Coach IA conversationnel** avec GPT-4o-mini et contexte utilisateur

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useLocation } from "react-router-dom";
-import { Home, BarChart3, CalendarDays, MessageCircle, Zap, RefreshCw, User, CreditCard, Settings } from "lucide-react";
+import { Home, BarChart3, CalendarDays, MessageCircle, Zap, RefreshCw, User, CreditCard, Settings, TrendingUp } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAutoSync } from "@/hooks/useAutoSync";
 import ChatCoach from "@/components/ChatCoach";
@@ -43,6 +43,7 @@ export const Layout = () => {
     { path: "/", icon: Home, labelKey: "Accueil" },
     { path: "/coach", icon: MessageCircle, labelKey: "Coach" },
     { path: "/training", icon: CalendarDays, labelKey: "Plan" },
+    { path: "/progress", icon: TrendingUp, labelKey: "Progression" },
     { path: "/settings", icon: Settings, labelKey: "Réglages" },
   ];
 

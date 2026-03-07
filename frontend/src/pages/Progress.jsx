@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSubscription } from "@/context/SubscriptionContext";
 import { 
   BarChart, 
   Bar, 
@@ -16,12 +17,19 @@ import {
   TrendingUp, 
   Activity,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Bike,
   Footprints,
-  Calendar
+  Calendar,
+  Timer,
+  Zap,
+  Target
 } from "lucide-react";
+import Paywall from "@/components/Paywall";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const USER_ID = "default";
 
 const getWorkoutIcon = (type) => {
   switch (type) {
@@ -59,20 +67,28 @@ const CustomTooltip = ({ active, payload, label, t }) => {
 export default function Progress() {
   const [stats, setStats] = useState(null);
   const [workouts, setWorkouts] = useState([]);
+  const [predictions, setPredictions] = useState(null);
+  const [fullCycle, setFullCycle] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPredictions, setShowPredictions] = useState(true);
   const { t, lang } = useLanguage();
+  const { isFree, loading: subLoading } = useSubscription();
 
   const dateLocale = t("dateFormat.locale");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, workoutsRes] = await Promise.all([
+        const [statsRes, workoutsRes, predictionsRes, cycleRes] = await Promise.all([
           axios.get(`${API}/stats`),
-          axios.get(`${API}/workouts`)
+          axios.get(`${API}/workouts`),
+          axios.get(`${API}/training/race-predictions`, { headers: { "X-User-Id": USER_ID } }).catch(() => ({ data: null })),
+          axios.get(`${API}/training/full-cycle`, { headers: { "X-User-Id": USER_ID } }).catch(() => ({ data: null }))
         ]);
         setStats(statsRes.data);
         setWorkouts(workoutsRes.data);
+        if (predictionsRes.data) setPredictions(predictionsRes.data);
+        if (cycleRes.data) setFullCycle(cycleRes.data);
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {
@@ -82,13 +98,18 @@ export default function Progress() {
     fetchData();
   }, []);
 
-  if (loading) {
+  if (loading || subLoading) {
     return (
       <div className="p-6 md:p-8 animate-pulse">
         <div className="h-8 w-48 bg-muted rounded mb-8" />
         <div className="h-64 bg-muted rounded mb-8" />
       </div>
     );
+  }
+
+  // Show paywall for free users
+  if (isFree) {
+    return <Paywall language={lang} returnPath="/progress" />;
   }
 
   // Prepare chart data with localized day names
@@ -193,6 +214,142 @@ export default function Progress() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Race Predictions & VMA */}
+      {predictions?.has_data && (
+        <div className="mb-8">
+          <Card className="bg-card border-border overflow-hidden">
+            <CardContent className="p-0">
+              {/* Header */}
+              <div 
+                className="flex items-center justify-between p-4 cursor-pointer"
+                onClick={() => setShowPredictions(!showPredictions)}
+                style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(251,191,36,0.05) 100%)" }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(245,158,11,0.2)" }}>
+                    <Timer className="w-5 h-5" style={{ color: "#f59e0b" }} />
+                  </div>
+                  <div>
+                    <h2 className="font-heading text-lg uppercase tracking-tight font-semibold">
+                      {lang === "fr" ? "Prédictions de course" : "Race Predictions"}
+                    </h2>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {lang === "fr" ? "Basées sur ta VMA et ton volume" : "Based on your VMA and volume"}
+                    </p>
+                  </div>
+                </div>
+                <button className="p-2 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
+                  {showPredictions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {showPredictions && (
+                <div className="p-4 space-y-4">
+                  {/* Athlete Profile - VMA */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-4 rounded-xl text-center" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(168,85,247,0.1) 100%)", border: "1px solid rgba(139,92,246,0.3)" }}>
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Zap className="w-4 h-4" style={{ color: "#a855f7" }} />
+                        <span className="text-[10px] font-mono uppercase" style={{ color: "rgba(168,85,247,0.8)" }}>VMA</span>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{predictions.athlete_profile?.estimated_vma || "--"}</p>
+                      <p className="text-[10px] text-muted-foreground">km/h</p>
+                    </div>
+                    <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-[10px] font-mono uppercase text-muted-foreground">Vol./sem</span>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{predictions.athlete_profile?.weekly_km || "--"}</p>
+                      <p className="text-[10px] text-muted-foreground">km</p>
+                    </div>
+                    <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Target className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-[10px] font-mono uppercase text-muted-foreground">Sortie max</span>
+                      </div>
+                      <p className="text-2xl font-bold text-white">{predictions.athlete_profile?.max_long_run || "--"}</p>
+                      <p className="text-[10px] text-muted-foreground">km</p>
+                    </div>
+                  </div>
+
+                  {/* Predictions by distance */}
+                  <div className="space-y-2">
+                    {predictions.predictions?.map((pred) => (
+                      <div 
+                        key={pred.distance}
+                        className="flex items-center gap-3 p-3 rounded-xl transition-all"
+                        style={{ 
+                          background: pred.distance === fullCycle?.goal ? `${pred.readiness_color}15` : "rgba(255,255,255,0.03)",
+                          border: pred.distance === fullCycle?.goal ? `2px solid ${pred.readiness_color}` : "1px solid rgba(255,255,255,0.05)"
+                        }}
+                      >
+                        {/* Distance badge */}
+                        <div 
+                          className="shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center"
+                          style={{ background: `${pred.readiness_color}20` }}
+                        >
+                          <span className="text-sm font-bold" style={{ color: pred.readiness_color }}>
+                            {pred.distance}
+                          </span>
+                        </div>
+
+                        {/* Predicted time */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl font-bold text-white">{pred.predicted_time}</span>
+                            {pred.distance === fullCycle?.goal && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold" style={{ background: "#8b5cf6", color: "white" }}>
+                                OBJECTIF
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {pred.predicted_pace} • {pred.predicted_range}
+                          </p>
+                        </div>
+
+                        {/* Readiness */}
+                        <div className="shrink-0 text-right">
+                          <div 
+                            className="px-3 py-1 rounded-full text-xs font-bold mb-1"
+                            style={{ background: `${pred.readiness_color}20`, color: pred.readiness_color }}
+                          >
+                            {pred.readiness_label}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {pred.readiness_score}% prêt
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Legend */}
+                  <div className="pt-3 border-t border-white/10 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "rgba(139,92,246,0.2)", color: "#a855f7" }}>
+                        VMA: {predictions.athlete_profile?.estimated_vma} km/h
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {predictions.athlete_profile?.vma_efforts_count > 0 
+                          ? `(${predictions.athlete_profile.vma_efforts_count} effort(s) ≥ 6 min)`
+                          : (lang === "fr" ? "(estimée depuis allure moyenne)" : "(estimated from average pace)")}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {predictions.methodology?.vma_calculation || (lang === "fr" 
+                        ? "VMA basée sur efforts ≥ 6 min. Prédictions ajustées selon volume et endurance."
+                        : "VMA based on efforts ≥ 6 min. Predictions adjusted by volume and endurance.")}
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
