@@ -41,9 +41,9 @@ export const Layout = () => {
 
   const navItems = [
     { path: "/", icon: Home, labelKey: "Accueil" },
-    { path: "/coach", icon: MessageCircle, labelKey: "Coach" },
     { path: "/training", icon: CalendarDays, labelKey: "Plan" },
     { path: "/progress", icon: TrendingUp, labelKey: "Progression" },
+    { path: "/coach", icon: MessageCircle, labelKey: "Coach" },
     { path: "/settings", icon: Settings, labelKey: "Réglages" },
   ];
 
