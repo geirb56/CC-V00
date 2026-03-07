@@ -5789,6 +5789,9 @@ async def get_vma_history(user: dict = Depends(auth_user)):
         "months": 12,
         "history": result_history
     }
+
+
+@api_router.get("/training/full-cycle")
 async def get_full_training_cycle(user: dict = Depends(auth_user)):
     """
     Retourne l'aperçu complet du cycle d'entraînement avec toutes les semaines.
