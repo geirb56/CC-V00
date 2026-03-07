@@ -4,9 +4,9 @@ import { useSubscription } from "@/context/SubscriptionContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  Target, Calendar, TrendingUp, RefreshCw, CheckCircle2, 
+  TrendingUp, RefreshCw, CheckCircle2, 
   Zap, Clock, Activity, ChevronDown, ChevronUp, Play,
-  Trophy, Mountain, Timer
+  Trophy, Mountain, Timer, Calendar
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -14,14 +14,6 @@ import Paywall from "@/components/Paywall";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const USER_ID = "default";
-
-const GOAL_OPTIONS = [
-  { value: "5K", label: "5 km", weeks: 6 },
-  { value: "10K", label: "10 km", weeks: 8 },
-  { value: "SEMI", label: "Semi-Marathon", weeks: 12 },
-  { value: "MARATHON", label: "Marathon", weeks: 16 },
-  { value: "ULTRA", label: "Ultra-Trail", weeks: 20 },
-];
 
 // Couleurs par phase
 const PHASE_COLORS = {
@@ -99,7 +91,6 @@ export default function TrainingPlan() {
   const [predictions, setPredictions] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [settingGoal, setSettingGoal] = useState(false);
   const [sessionsPerWeek, setSessionsPerWeek] = useState(null);
   const [expandedWeek, setExpandedWeek] = useState(null);
   const [showAllWeeks, setShowAllWeeks] = useState(true);
@@ -159,21 +150,6 @@ export default function TrainingPlan() {
       toast.error(lang === "fr" ? "Erreur" : "Error");
     } finally {
       setRefreshing(false);
-    }
-  };
-
-  const handleSetGoal = async (goal) => {
-    setSettingGoal(true);
-    try {
-      await axios.post(`${API}/training/set-goal?goal=${goal}`, {}, {
-        headers: { "X-User-Id": USER_ID }
-      });
-      toast.success(lang === "fr" ? `Objectif ${goal} défini` : `Goal ${goal} set`);
-      fetchData();
-    } catch (err) {
-      toast.error(lang === "fr" ? "Erreur" : "Error");
-    } finally {
-      setSettingGoal(false);
     }
   };
 
@@ -281,66 +257,6 @@ export default function TrainingPlan() {
         <div className="flex justify-between mt-2 text-xs" style={{ color: "var(--text-tertiary)" }}>
           <span>{lang === "fr" ? "Début" : "Start"}</span>
           <span>{fullCycle?.goal || "SEMI"}</span>
-        </div>
-      </div>
-
-      {/* Objectif & Séances selection */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Objectif */}
-        <div className="card-modern p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Target className="w-3 h-3" style={{ color: "var(--text-tertiary)" }} />
-            <span className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>Objectif</span>
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {GOAL_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => handleSetGoal(opt.value)}
-                disabled={settingGoal}
-                className={`px-2 py-1 rounded-full text-[10px] font-medium transition-all ${
-                  fullCycle?.goal === opt.value ? "text-white" : "text-slate-400 hover:text-white"
-                }`}
-                style={{
-                  background: fullCycle?.goal === opt.value ? "#8b5cf6" : "var(--bg-secondary)",
-                  border: `1px solid ${fullCycle?.goal === opt.value ? "#8b5cf6" : "var(--border-color)"}`
-                }}
-                data-testid={`goal-btn-${opt.value}`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Séances par semaine */}
-        <div className="card-modern p-3" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "12px" }}>
-          <div className="flex items-center gap-2 mb-2">
-            <Calendar className="w-3 h-3" style={{ color: "var(--text-tertiary)" }} />
-            <span className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>Séances/sem</span>
-          </div>
-          <div className="flex gap-1">
-            {[3, 4, 5, 6].map((num) => (
-              <button
-                key={num}
-                onClick={() => {
-                  setSessionsPerWeek(num);
-                  handleRefresh(num);
-                }}
-                disabled={refreshing}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
-                  sessionsPerWeek === num ? "text-white" : "text-slate-400 hover:text-white"
-                }`}
-                style={{
-                  background: sessionsPerWeek === num ? "#22c55e" : "var(--bg-secondary)",
-                  border: `1px solid ${sessionsPerWeek === num ? "#22c55e" : "var(--border-color)"}`
-                }}
-                data-testid={`sessions-btn-${num}`}
-              >
-                {num}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 

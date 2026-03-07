@@ -49,6 +49,13 @@ Application de coaching sportif personnalisé pour les sports d'endurance (cours
   - Fix du montant Stripe (float au lieu d'int pour emergentintegrations)
   - Tests complets: 18/18 backend + 15/15 frontend passés
 
+- **Déplacement des sélecteurs vers Réglages**:
+  - Nouvelle section "Plan d'entraînement" dans Settings.jsx
+  - Sélecteur d'objectif (5K, 10K, Semi-Marathon, Marathon, Ultra-Trail)
+  - Sélecteur de séances par semaine (3, 4, 5, 6)
+  - Suppression de ces sélecteurs de TrainingPlan.jsx
+  - Le plan est régénéré automatiquement lors des changements
+
 ### Previous Sessions
 - **Système d'abonnement** (trial/free/early_adopter) avec middleware de protection
 - **Coach IA conversationnel** avec GPT-4o-mini et contexte utilisateur

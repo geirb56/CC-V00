@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSubscription } from "@/context/SubscriptionContext";
-import { Globe, Info, Link2, Loader2, Check, X, RefreshCw, Target, Calendar, Trash2, Clock, Route, Crown, Sparkles } from "lucide-react";
+import { Globe, Info, Link2, Loader2, Check, X, RefreshCw, Target, Calendar, Trash2, Clock, Route, Crown, Sparkles, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -22,6 +22,16 @@ const DISTANCE_KM = {
   "marathon": 42.195,
   "ultra": 50
 };
+
+// Options pour le plan d'entraînement
+const TRAINING_GOAL_OPTIONS = [
+  { value: "5K", label: "5 km" },
+  { value: "10K", label: "10 km" },
+  { value: "SEMI", label: "Semi-Marathon" },
+  { value: "MARATHON", label: "Marathon" },
+  { value: "ULTRA", label: "Ultra-Trail" },
+];
+const SESSIONS_OPTIONS = [3, 4, 5, 6];
 
 export default function Settings() {
   const { t, lang, setLang } = useLanguage();
@@ -54,10 +64,17 @@ export default function Settings() {
   const [targetMinutes, setTargetMinutes] = useState("");
   const [savingGoal, setSavingGoal] = useState(false);
 
+  // Training Plan state
+  const [trainingGoal, setTrainingGoal] = useState(null);
+  const [sessionsPerWeek, setSessionsPerWeek] = useState(null);
+  const [loadingTrainingPlan, setLoadingTrainingPlan] = useState(true);
+  const [updatingTrainingPlan, setUpdatingTrainingPlan] = useState(false);
+
   useEffect(() => {
     loadStravaStatus();
     loadGoal();
     loadPremiumStatus();
+    loadTrainingPlan();
     
     // Handle OAuth callback
     const stravaParam = searchParams.get("strava");
@@ -93,6 +110,55 @@ export default function Settings() {
       console.error("Failed to load premium status:", error);
     } finally {
       setLoadingPremium(false);
+    }
+  };
+
+  const loadTrainingPlan = async () => {
+    try {
+      const res = await axios.get(`${API}/training/full-cycle`, { 
+        headers: { "X-User-Id": USER_ID } 
+      });
+      if (res.data) {
+        setTrainingGoal(res.data.goal || "SEMI");
+        setSessionsPerWeek(res.data.sessions_per_week || 4);
+      }
+    } catch (error) {
+      console.error("Failed to load training plan:", error);
+      // Defaults
+      setTrainingGoal("SEMI");
+      setSessionsPerWeek(4);
+    } finally {
+      setLoadingTrainingPlan(false);
+    }
+  };
+
+  const handleSetTrainingGoal = async (goal) => {
+    setUpdatingTrainingPlan(true);
+    try {
+      await axios.post(`${API}/training/set-goal?goal=${goal}`, {}, {
+        headers: { "X-User-Id": USER_ID }
+      });
+      setTrainingGoal(goal);
+      toast.success(lang === "fr" ? `Objectif ${goal} défini` : `Goal ${goal} set`);
+    } catch (err) {
+      toast.error(lang === "fr" ? "Erreur" : "Error");
+    } finally {
+      setUpdatingTrainingPlan(false);
+    }
+  };
+
+  const handleSetSessionsPerWeek = async (sessions) => {
+    setUpdatingTrainingPlan(true);
+    try {
+      await axios.post(`${API}/training/refresh?sessions=${sessions}`, {}, {
+        headers: { "X-User-Id": USER_ID }
+      });
+      setSessionsPerWeek(sessions);
+      toast.success(lang === "fr" ? `${sessions} séances/semaine` : `${sessions} sessions/week`);
+    } catch (err) {
+      toast.error(lang === "fr" ? "Erreur" : "Error");
+    } finally {
+      setUpdatingTrainingPlan(false);
     }
   };
 
@@ -538,6 +604,105 @@ export default function Settings() {
                       )}
                       {t("settings.saveGoal")}
                     </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Training Plan Section - Objectif & Séances/semaine */}
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 flex items-center justify-center bg-muted border border-border flex-shrink-0">
+                <Dumbbell className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-heading text-lg uppercase tracking-tight font-semibold mb-1">
+                  {lang === "fr" ? "Plan d'entraînement" : "Training Plan"}
+                </h2>
+                <p className="font-mono text-xs text-muted-foreground mb-4">
+                  {lang === "fr" ? "Configure ton objectif et le nombre de séances par semaine" : "Set your goal and sessions per week"}
+                </p>
+                
+                {loadingTrainingPlan ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="font-mono text-xs">{t("common.loading")}</span>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Objectif de distance */}
+                    <div>
+                      <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2 block">
+                        {lang === "fr" ? "Objectif distance" : "Distance Goal"}
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {TRAINING_GOAL_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => handleSetTrainingGoal(opt.value)}
+                            disabled={updatingTrainingPlan}
+                            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                              trainingGoal === opt.value 
+                                ? "text-white" 
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                            style={{
+                              background: trainingGoal === opt.value 
+                                ? "linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)" 
+                                : "var(--muted)",
+                              border: `1px solid ${trainingGoal === opt.value ? "#8b5cf6" : "var(--border)"}`
+                            }}
+                            data-testid={`training-goal-btn-${opt.value}`}
+                          >
+                            {updatingTrainingPlan && trainingGoal !== opt.value ? (
+                              <span className="flex items-center gap-1">
+                                {opt.label}
+                              </span>
+                            ) : (
+                              opt.label
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Séances par semaine */}
+                    <div>
+                      <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2 block">
+                        {lang === "fr" ? "Séances par semaine" : "Sessions per week"}
+                      </label>
+                      <div className="flex gap-2">
+                        {SESSIONS_OPTIONS.map((num) => (
+                          <button
+                            key={num}
+                            onClick={() => handleSetSessionsPerWeek(num)}
+                            disabled={updatingTrainingPlan}
+                            className={`w-12 h-12 rounded-lg text-sm font-bold transition-all ${
+                              sessionsPerWeek === num 
+                                ? "text-white" 
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                            style={{
+                              background: sessionsPerWeek === num 
+                                ? "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)" 
+                                : "var(--muted)",
+                              border: `1px solid ${sessionsPerWeek === num ? "#22c55e" : "var(--border)"}`
+                            }}
+                            data-testid={`sessions-per-week-btn-${num}`}
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="font-mono text-[10px] text-muted-foreground mt-2">
+                        {lang === "fr" 
+                          ? "Le plan sera régénéré automatiquement" 
+                          : "Plan will be regenerated automatically"}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
