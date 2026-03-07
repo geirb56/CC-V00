@@ -5695,12 +5695,10 @@ async def get_vma_history(user: dict = Depends(auth_user)):
         # Convert VMA to VO2MAX (with sanity check)
         vo2max = round(estimated_vma * 3.5, 1)
         
-        # Filter unrealistic values (VO2MAX > 70 is extremely rare, even for elite athletes)
+        # Exclude unrealistic values (VO2MAX > 70 is extremely rare, even for elite athletes)
         if vo2max > 70:
-            # Recalculate using average pace method instead
-            avg_speed = 60 / avg_pace
-            estimated_vma = avg_speed / 0.70
-            vo2max = round(estimated_vma * 3.5, 1)
+            # Skip this data point - likely GPS error or corrupted data
+            continue
         
         # Parse period for display
         parts = period_key.split("-")
