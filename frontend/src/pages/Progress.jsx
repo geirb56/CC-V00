@@ -141,7 +141,34 @@ export default function Progress() {
         </Card>
       </div>
 
-      {/* Race Predictions & VMA */}
+      {/* VMA Section */}
+      {predictions?.has_data && (
+        <div className="mb-6">
+          <Card className="bg-card border-border overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl flex flex-col items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.2) 0%, rgba(168,85,247,0.15) 100%)", border: "1px solid rgba(139,92,246,0.3)" }}>
+                  <Zap className="w-5 h-5 mb-1" style={{ color: "#a855f7" }} />
+                  <span className="text-[9px] font-mono uppercase" style={{ color: "rgba(168,85,247,0.8)" }}>VMA</span>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold text-white">{predictions.athlete_profile?.estimated_vma || "--"}</span>
+                    <span className="text-lg text-muted-foreground">km/h</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {predictions.athlete_profile?.vma_efforts_count > 0 
+                      ? (lang === "fr" ? `Basée sur ${predictions.athlete_profile.vma_efforts_count} effort(s) intense(s)` : `Based on ${predictions.athlete_profile.vma_efforts_count} intense effort(s)`)
+                      : (lang === "fr" ? "Estimée depuis ton allure moyenne" : "Estimated from your average pace")}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Race Predictions */}
       {predictions?.has_data && (
         <div className="mb-8">
           <Card className="bg-card border-border overflow-hidden">
@@ -172,34 +199,6 @@ export default function Progress() {
 
               {showPredictions && (
                 <div className="p-4 space-y-4">
-                  {/* Athlete Profile - VMA */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="p-4 rounded-xl text-center" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(168,85,247,0.1) 100%)", border: "1px solid rgba(139,92,246,0.3)" }}>
-                      <div className="flex items-center justify-center gap-1 mb-1">
-                        <Zap className="w-4 h-4" style={{ color: "#a855f7" }} />
-                        <span className="text-[10px] font-mono uppercase" style={{ color: "rgba(168,85,247,0.8)" }}>VMA</span>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{predictions.athlete_profile?.estimated_vma || "--"}</p>
-                      <p className="text-[10px] text-muted-foreground">km/h</p>
-                    </div>
-                    <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                      <div className="flex items-center justify-center gap-1 mb-1">
-                        <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-[10px] font-mono uppercase text-muted-foreground">Vol./sem</span>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{predictions.athlete_profile?.weekly_km || "--"}</p>
-                      <p className="text-[10px] text-muted-foreground">km</p>
-                    </div>
-                    <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                      <div className="flex items-center justify-center gap-1 mb-1">
-                        <Target className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-[10px] font-mono uppercase text-muted-foreground">Sortie max</span>
-                      </div>
-                      <p className="text-2xl font-bold text-white">{predictions.athlete_profile?.max_long_run || "--"}</p>
-                      <p className="text-[10px] text-muted-foreground">km</p>
-                    </div>
-                  </div>
-
                   {/* Predictions by distance */}
                   <div className="space-y-2">
                     {predictions.predictions?.map((pred) => (
@@ -250,25 +249,6 @@ export default function Progress() {
                         </div>
                       </div>
                     ))}
-                  </div>
-
-                  {/* Legend */}
-                  <div className="pt-3 border-t border-white/10 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs px-2 py-1 rounded-lg" style={{ background: "rgba(139,92,246,0.2)", color: "#a855f7" }}>
-                        VMA: {predictions.athlete_profile?.estimated_vma} km/h
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {predictions.athlete_profile?.vma_efforts_count > 0 
-                          ? `(${predictions.athlete_profile.vma_efforts_count} effort(s) ≥ 6 min)`
-                          : (lang === "fr" ? "(estimée depuis allure moyenne)" : "(estimated from average pace)")}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      {predictions.methodology?.vma_calculation || (lang === "fr" 
-                        ? "VMA basée sur efforts ≥ 6 min. Prédictions ajustées selon volume et endurance."
-                        : "VMA based on efforts ≥ 6 min. Predictions adjusted by volume and endurance.")}
-                    </p>
                   </div>
                 </div>
               )}
