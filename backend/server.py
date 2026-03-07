@@ -6252,6 +6252,186 @@ async def reset_service_metrics():
     return {"success": True, "previous": old_metrics}
 
 
+# ========== SUBSCRIPTION SYSTEM (Early Adopter) ==========
+
+class SubscriptionInfo(BaseModel):
+    """Informations d'abonnement utilisateur"""
+    user_id: str
+    status: str  # trial, free, early_adopter, premium
+    display: Dict
+    features: Dict
+    trial_days_remaining: Optional[int] = None
+    price_locked: Optional[float] = None
+    stripe_customer_id: Optional[str] = None
+
+
+class ActivateSubscriptionRequest(BaseModel):
+    """Requête pour activer un abonnement"""
+    user_id: str = "default"
+    stripe_customer_id: Optional[str] = None
+    stripe_subscription_id: Optional[str] = None
+
+
+@api_router.get("/subscription/info")
+async def get_subscription_info(user_id: str = "default", language: str = "fr"):
+    """
+    Récupère les informations d'abonnement complètes d'un utilisateur.
+    
+    Retourne:
+    - status: trial, free, early_adopter, premium
+    - display: Textes localisés pour l'UI
+    - features: Fonctionnalités accessibles
+    - trial_days_remaining: Jours restants si en essai
+    """
+    subscription = await get_user_subscription(db, user_id)
+    status = subscription.get("status", SubscriptionStatus.FREE)
+    
+    return {
+        "user_id": user_id,
+        "status": status,
+        "display": get_subscription_display(subscription, language),
+        "features": FEATURES.get(status, FEATURES[SubscriptionStatus.FREE]),
+        "trial_days_remaining": get_trial_days_remaining(subscription),
+        "price_locked": subscription.get("price_locked"),
+        "stripe_customer_id": subscription.get("stripe_customer_id"),
+        "created_at": subscription.get("created_at"),
+        "activated_at": subscription.get("activated_at")
+    }
+
+
+@api_router.post("/subscription/activate-early-adopter")
+async def activate_early_adopter_subscription(request: ActivateSubscriptionRequest):
+    """
+    Active l'abonnement Early Adopter pour un utilisateur.
+    Prix garanti à vie: 4.99€/mois
+    
+    Appelé après un paiement Stripe réussi.
+    """
+    subscription = await activate_early_adopter(
+        db,
+        request.user_id,
+        request.stripe_customer_id or f"cus_simulated_{request.user_id}",
+        request.stripe_subscription_id or f"sub_simulated_{request.user_id}"
+    )
+    
+    return {
+        "success": True,
+        "status": subscription.get("status"),
+        "message": "Abonnement Early Adopter activé ! Prix garanti à vie: 4.99€/mois",
+        "subscription": subscription
+    }
+
+
+@api_router.post("/subscription/cancel")
+async def cancel_user_subscription(user_id: str = "default"):
+    """
+    Annule l'abonnement d'un utilisateur.
+    Le statut passe à 'free'.
+    """
+    subscription = await cancel_subscription(db, user_id)
+    
+    return {
+        "success": True,
+        "status": subscription.get("status"),
+        "message": "Abonnement annulé"
+    }
+
+
+@api_router.post("/subscription/simulate-trial-end")
+async def simulate_trial_end(user_id: str = "default"):
+    """
+    [DEV ONLY] Simule la fin de l'essai gratuit pour tester le paywall.
+    """
+    await db.subscriptions.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "trial_end": datetime.now(timezone.utc).isoformat(),
+                "status": SubscriptionStatus.FREE
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "message": "Essai terminé, utilisateur passé en FREE"
+    }
+
+
+@api_router.post("/subscription/reset-to-trial")
+async def reset_to_trial(user_id: str = "default"):
+    """
+    [DEV ONLY] Remet l'utilisateur en essai gratuit de 7 jours.
+    """
+    now = datetime.now(timezone.utc)
+    trial_end = now + timedelta(days=7)
+    
+    await db.subscriptions.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "status": SubscriptionStatus.TRIAL,
+                "trial_start": now.isoformat(),
+                "trial_end": trial_end.isoformat(),
+                "updated_at": now.isoformat()
+            }
+        },
+        upsert=True
+    )
+    
+    return {
+        "success": True,
+        "message": f"Essai gratuit réactivé jusqu'au {trial_end.isoformat()}"
+    }
+
+
+@api_router.get("/subscription/early-adopter-offer")
+async def get_early_adopter_offer(language: str = "fr"):
+    """
+    Retourne les détails de l'offre Early Adopter.
+    """
+    if language == "fr":
+        return {
+            "title": "Active ton coach running",
+            "subtitle": "Ton plan d'entraînement personnalisé est prêt",
+            "description": "Active ton abonnement pour y accéder.",
+            "offer_name": "Early Adopter",
+            "price": EARLY_ADOPTER_PRICE,
+            "price_display": f"{EARLY_ADOPTER_PRICE:.2f} € / mois",
+            "price_guarantee": "Prix garanti à vie",
+            "features": [
+                "Plan d'entraînement personnalisé",
+                "Adaptation automatique du plan",
+                "Analyse intelligente des séances",
+                "Coach IA conversationnel",
+                "Synchronisation montres/apps",
+                "Prédictions de course"
+            ],
+            "cta_button": "Activer mon coach",
+            "trial_cta": "Profite de ton essai gratuit"
+        }
+    else:
+        return {
+            "title": "Activate your running coach",
+            "subtitle": "Your personalized training plan is ready",
+            "description": "Activate your subscription to access it.",
+            "offer_name": "Early Adopter",
+            "price": EARLY_ADOPTER_PRICE,
+            "price_display": f"€{EARLY_ADOPTER_PRICE:.2f} / month",
+            "price_guarantee": "Price guaranteed for life",
+            "features": [
+                "Personalized training plan",
+                "Automatic plan adaptation",
+                "Smart session analysis",
+                "AI conversational coach",
+                "Watch/app synchronization",
+                "Race predictions"
+            ],
+            "cta_button": "Activate my coach",
+            "trial_cta": "Enjoy your free trial"
+        }
+
+
 # Include the router
 app.include_router(api_router)
 
