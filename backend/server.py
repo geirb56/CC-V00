@@ -5570,22 +5570,23 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
 @api_router.get("/training/vma-history")
 async def get_vma_history(user: dict = Depends(auth_user)):
     """
-    Retourne l'historique du VO2MAX sur les 6 derniers mois.
+    Retourne l'historique du VO2MAX sur les 12 derniers mois.
+    2 points par mois (1ère et 2ème quinzaine).
     VO2MAX (ml/kg/min) = VMA (km/h) × 3.5
     """
     today = datetime.now(timezone.utc)
-    six_months_ago = today - timedelta(days=180)
+    twelve_months_ago = today - timedelta(days=365)
     
-    # Récupérer toutes les activités des 6 derniers mois
+    # Récupérer toutes les activités des 12 derniers mois
     activities = await db.strava_activities.find({
         "user_id": user["id"],
-        "start_date_local": {"$gte": six_months_ago.isoformat()}
-    }).to_list(1000)
+        "start_date_local": {"$gte": twelve_months_ago.isoformat()}
+    }).to_list(2000)
     
     if not activities:
         activities = await db.workouts.find({
-            "date": {"$gte": six_months_ago.isoformat()}
-        }).to_list(1000)
+            "date": {"$gte": twelve_months_ago.isoformat()}
+        }).to_list(2000)
     
     if not activities:
         return {"has_data": False, "history": []}
@@ -5631,27 +5632,31 @@ async def get_vma_history(user: dict = Depends(auth_user)):
                     return None
         return None
     
-    # Group activities by month and calculate VMA for each
+    # Group activities by half-month periods
     from collections import defaultdict
-    monthly_activities = defaultdict(list)
+    period_activities = defaultdict(list)
     
     for a in activities:
         activity_date = get_activity_date(a)
         if activity_date:
-            month_key = activity_date.strftime("%Y-%m")
-            monthly_activities[month_key].append(a)
+            year = activity_date.year
+            month = activity_date.month
+            # 1 = first half (1-15), 2 = second half (16-end)
+            half = 1 if activity_date.day <= 15 else 2
+            period_key = f"{year}-{month:02d}-{half}"
+            period_activities[period_key].append(a)
     
-    # Calculate VMA for each month
+    # Calculate VO2MAX for each half-month period
     MIN_VMA_DURATION = 6
-    vma_history = []
+    vo2max_history = []
     
-    for month_key in sorted(monthly_activities.keys()):
-        month_activities = monthly_activities[month_key]
+    for period_key in sorted(period_activities.keys()):
+        period_acts = period_activities[period_key]
         
         vma_efforts = []
         paces = []
         
-        for a in month_activities:
+        for a in period_acts:
             dist = get_distance(a)
             pace = get_pace(a)
             duration_min = get_duration(a)
@@ -5669,7 +5674,7 @@ async def get_vma_history(user: dict = Depends(auth_user)):
         if not paces:
             continue
         
-        # Calculate VMA for this month
+        # Calculate VMA for this period
         avg_pace = sum(paces) / len(paces)
         
         if vma_efforts:
@@ -5687,38 +5692,71 @@ async def get_vma_history(user: dict = Depends(auth_user)):
             avg_speed = 60 / avg_pace
             estimated_vma = avg_speed / 0.70
         
-        # Parse month for display
-        year, month = month_key.split("-")
-        month_names_fr = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
-        month_label = month_names_fr[int(month) - 1]
-        
-        # Convert VMA to VO2MAX: VO2MAX (ml/kg/min) = VMA (km/h) × 3.5
+        # Convert VMA to VO2MAX (with sanity check)
         vo2max = round(estimated_vma * 3.5, 1)
         
-        vma_history.append({
-            "month": month_key,
-            "month_label": month_label,
+        # Filter unrealistic values (VO2MAX > 70 is extremely rare, even for elite athletes)
+        if vo2max > 70:
+            # Recalculate using average pace method instead
+            avg_speed = 60 / avg_pace
+            estimated_vma = avg_speed / 0.70
+            vo2max = round(estimated_vma * 3.5, 1)
+        
+        # Parse period for display
+        parts = period_key.split("-")
+        year = int(parts[0])
+        month = int(parts[1])
+        half = int(parts[2])
+        
+        month_names_fr = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
+        month_name = month_names_fr[month - 1]
+        # Label: "Jan 1" for first half, "Jan 2" for second half
+        period_label = f"{month_name} {half}"
+        
+        vo2max_history.append({
+            "period": period_key,
+            "period_label": period_label,
+            "month": f"{year}-{month:02d}",
+            "month_label": month_name,
+            "half": half,
             "vma": round(estimated_vma, 1),
             "vo2max": vo2max,
-            "sessions": len(month_activities),
+            "sessions": len(period_acts),
             "vma_efforts": len(vma_efforts)
         })
     
-    # Fill in missing months with None/interpolated values
+    # Generate all expected periods for 12 months (24 half-month periods)
     result_history = []
-    for i in range(6):
-        target_date = today - timedelta(days=30 * (5 - i))
-        target_month = target_date.strftime("%Y-%m")
-        month_names_fr = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
-        month_label = month_names_fr[target_date.month - 1]
+    month_names_fr = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
+    
+    for i in range(24):  # 12 months * 2 halves
+        target_date = today - timedelta(days=15 * (23 - i))
+        year = target_date.year
+        month = target_date.month
+        # Determine which half based on position
+        half = 1 if (i % 2 == 0) else 2
         
-        found = next((h for h in vma_history if h["month"] == target_month), None)
+        # Recalculate to get correct month
+        months_back = 11 - (i // 2)
+        target_month_date = today - timedelta(days=30 * months_back)
+        year = target_month_date.year
+        month = target_month_date.month
+        half = 1 if (i % 2 == 0) else 2
+        
+        period_key = f"{year}-{month:02d}-{half}"
+        month_name = month_names_fr[month - 1]
+        period_label = f"{month_name} {half}"
+        
+        found = next((h for h in vo2max_history if h["period"] == period_key), None)
         if found:
             result_history.append(found)
         else:
             result_history.append({
-                "month": target_month,
-                "month_label": month_label,
+                "period": period_key,
+                "period_label": period_label,
+                "month": f"{year}-{month:02d}",
+                "month_label": month_name,
+                "half": half,
                 "vma": None,
                 "vo2max": None,
                 "sessions": 0,
@@ -5734,7 +5772,7 @@ async def get_vma_history(user: dict = Depends(auth_user)):
             current_vo2max = h["vo2max"]
             break
     
-    # Calculate trend (based on VO2MAX)
+    # Calculate trend (based on VO2MAX over 12 months)
     valid_vo2max = [h["vo2max"] for h in result_history if h["vo2max"] is not None]
     if len(valid_vo2max) >= 2:
         trend = valid_vo2max[-1] - valid_vo2max[0]
@@ -5749,6 +5787,8 @@ async def get_vma_history(user: dict = Depends(auth_user)):
         "current_vo2max": current_vo2max,
         "trend": round(trend, 1),
         "trend_pct": round(trend_pct, 1),
+        "period_count": 24,
+        "months": 12,
         "history": result_history
     }
 async def get_full_training_cycle(user: dict = Depends(auth_user)):

@@ -194,29 +194,30 @@ export default function Progress() {
                       {vmaHistory.trend > 0 ? '+' : ''}{vmaHistory.trend}
                     </span>
                     <span className="text-xs text-muted-foreground ml-1">
-                      ({lang === "fr" ? "6 mois" : "6 months"})
+                      ({lang === "fr" ? "12 mois" : "12 months"})
                     </span>
                   </div>
                 )}
               </div>
               
-              {/* VO2MAX Evolution Chart */}
+              {/* VO2MAX Evolution Chart - 12 months */}
               {vmaHistory?.history && vmaHistory.history.length > 0 && (
                 <div className="mt-4">
                   <p className="text-[10px] font-mono uppercase text-muted-foreground mb-3">
-                    {lang === "fr" ? "Évolution sur 6 mois" : "6-month evolution"}
+                    {lang === "fr" ? "Évolution sur 12 mois" : "12-month evolution"}
                   </p>
-                  <div className="h-32">
+                  <div className="h-36">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart 
                         data={vmaHistory.history.filter(h => h.vo2max !== null)}
                         margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
                       >
                         <XAxis 
-                          dataKey="month_label" 
+                          dataKey="period_label" 
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontFamily: "JetBrains Mono" }}
+                          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9, fontFamily: "JetBrains Mono" }}
+                          interval={1}
                         />
                         <YAxis 
                           domain={['dataMin - 2', 'dataMax + 2']}
@@ -231,7 +232,9 @@ export default function Progress() {
                               const data = payload[0].payload;
                               return (
                                 <div className="bg-popover border border-border p-2 rounded-lg shadow-lg">
-                                  <p className="font-mono text-xs text-muted-foreground">{data.month_label}</p>
+                                  <p className="font-mono text-xs text-muted-foreground">
+                                    {data.month_label} {data.half === 1 ? "(1-15)" : "(16-fin)"}
+                                  </p>
                                   <p className="font-bold text-white">{data.vo2max} ml/kg/min</p>
                                   <p className="text-[10px] text-muted-foreground">{data.sessions} séances</p>
                                 </div>
@@ -250,8 +253,9 @@ export default function Progress() {
                           dataKey="vo2max" 
                           stroke="#a855f7" 
                           strokeWidth={2}
-                          dot={{ fill: "#a855f7", strokeWidth: 0, r: 4 }}
-                          activeDot={{ fill: "#a855f7", strokeWidth: 2, stroke: "white", r: 6 }}
+                          dot={{ fill: "#a855f7", strokeWidth: 0, r: 3 }}
+                          activeDot={{ fill: "#a855f7", strokeWidth: 2, stroke: "white", r: 5 }}
+                          connectNulls={true}
                         />
                       </LineChart>
                     </ResponsiveContainer>
