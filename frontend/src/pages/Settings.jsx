@@ -25,6 +25,14 @@ const DISTANCE_KM = {
 
 export default function Settings() {
   const { t, lang, setLang } = useLanguage();
+  const { 
+    subscription, 
+    isTrial, 
+    isEarlyAdopter, 
+    isFree, 
+    trialDaysRemaining,
+    refreshSubscription 
+  } = useSubscription();
   const [searchParams, setSearchParams] = useSearchParams();
   const [stravaStatus, setStravaStatus] = useState(null);
   const [loadingStrava, setLoadingStrava] = useState(true);
