@@ -177,7 +177,7 @@ export default function TrainingPlan() {
     }
   };
 
-  if (loading) {
+  if (loading || subLoading) {
     return (
       <div className="p-4 space-y-4" style={{ background: "var(--bg-primary)", minHeight: "100vh" }}>
         <Skeleton className="h-10 w-64" />
@@ -190,6 +190,11 @@ export default function TrainingPlan() {
     );
   }
 
+  // Show paywall for free users
+  if (isFree || apiError === "subscription_required") {
+    return <Paywall language={lang} returnPath="/training" />;
+  }
+
   const context = plan?.context || {};
   const sessions = plan?.plan?.sessions || [];
   const weeks = fullCycle?.weeks || [];
@@ -198,6 +203,33 @@ export default function TrainingPlan() {
 
   return (
     <div className="p-4 pb-24 space-y-4" style={{ background: "var(--bg-primary)" }} data-testid="training-plan-page">
+      
+      {/* Trial Banner */}
+      {isTrial && trialDaysRemaining !== null && (
+        <div 
+          className="p-3 rounded-xl flex items-center justify-between"
+          style={{ 
+            background: "linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(139,92,246,0.2) 100%)",
+            border: "1px solid rgba(59,130,246,0.3)"
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-400" />
+            <span className="text-sm text-blue-300">
+              {lang === "fr" 
+                ? `Essai gratuit : ${trialDaysRemaining} jour${trialDaysRemaining > 1 ? 's' : ''} restant${trialDaysRemaining > 1 ? 's' : ''}`
+                : `Free trial: ${trialDaysRemaining} day${trialDaysRemaining > 1 ? 's' : ''} remaining`}
+            </span>
+          </div>
+          <a 
+            href="/settings" 
+            className="text-xs font-medium px-3 py-1 rounded-full"
+            style={{ background: "rgba(59,130,246,0.3)", color: "#93c5fd" }}
+          >
+            {lang === "fr" ? "S'abonner" : "Subscribe"}
+          </a>
+        </div>
+      )}
       
       {/* Header */}
       <div className="flex items-center justify-between">
