@@ -819,9 +819,6 @@ export default function Settings() {
                     </Button>
                   </div>
                 )}
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
           </CardContent>
