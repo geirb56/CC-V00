@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSubscription } from "@/context/SubscriptionContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
+import Paywall from "@/components/Paywall";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const USER_ID = "default";
