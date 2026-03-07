@@ -675,89 +675,150 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Premium Subscription */}
-        <Card className={`border-border ${premiumStatus?.is_premium ? "bg-gradient-to-br from-amber-500/5 to-orange-500/5 border-amber-500/20" : "bg-card"}`}>
+        {/* Subscription Status - Early Adopter System */}
+        <Card className={`border-border ${
+          isEarlyAdopter 
+            ? "bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/30" 
+            : isTrial 
+              ? "bg-gradient-to-br from-blue-500/10 to-violet-500/10 border-blue-500/30"
+              : "bg-card"
+        }`}>
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
-              <div className={`w-10 h-10 flex items-center justify-center flex-shrink-0 ${
-                premiumStatus?.is_premium 
+              <div className={`w-10 h-10 flex items-center justify-center flex-shrink-0 rounded-lg ${
+                isEarlyAdopter 
                   ? "bg-gradient-to-br from-amber-500 to-orange-500" 
-                  : "bg-muted border border-border"
+                  : isTrial
+                    ? "bg-gradient-to-br from-blue-500 to-violet-500"
+                    : "bg-muted border border-border"
               }`}>
-                <Crown className={`w-5 h-5 ${premiumStatus?.is_premium ? "text-white" : "text-muted-foreground"}`} />
+                <Crown className={`w-5 h-5 ${(isEarlyAdopter || isTrial) ? "text-white" : "text-muted-foreground"}`} />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="font-heading text-lg uppercase tracking-tight font-semibold">
-                    CardioCoach Premium
+                    {lang === "fr" ? "Abonnement" : "Subscription"}
                   </h2>
-                  {premiumStatus?.is_premium && (
-                    <Badge className="bg-amber-500 text-white text-[9px]">ACTIF</Badge>
+                  {isEarlyAdopter && (
+                    <Badge className="bg-amber-500 text-white text-[9px]">EARLY ADOPTER</Badge>
+                  )}
+                  {isTrial && (
+                    <Badge className="bg-blue-500 text-white text-[9px]">ESSAI GRATUIT</Badge>
+                  )}
+                  {isFree && (
+                    <Badge className="bg-gray-500 text-white text-[9px]">LIMITÉ</Badge>
                   )}
                 </div>
-                <p className="font-mono text-xs text-muted-foreground mb-4">
-                  {lang === "fr" 
-                    ? "Chat coach interactif avec analyse personnalisée" 
-                    : "Interactive coach chat with personalized analysis"
-                  }
+                
+                {/* Status Display */}
+                <p className="font-mono text-sm text-foreground mb-1">
+                  {isEarlyAdopter && (lang === "fr" ? "Early Adopter — 4,99 € / mois (prix garanti à vie)" : "Early Adopter — €4.99 / month (price guaranteed for life)")}
+                  {isTrial && (lang === "fr" ? "Essai gratuit actif" : "Free trial active")}
+                  {isFree && (lang === "fr" ? "Accès limité — abonnement requis" : "Limited access — subscription required")}
                 </p>
                 
-                {loadingPremium || processingPayment ? (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="font-mono text-xs">
-                      {processingPayment 
-                        ? (lang === "fr" ? "Vérification du paiement..." : "Verifying payment...")
-                        : (lang === "fr" ? "Chargement..." : "Loading...")
-                      }
-                    </span>
-                  </div>
-                ) : premiumStatus?.is_premium ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-amber-500" />
-                        <span className="font-mono text-xs">
-                          {premiumStatus.messages_remaining}/{30} {lang === "fr" ? "messages restants" : "messages left"}
-                        </span>
-                      </div>
+                {/* Trial countdown */}
+                {isTrial && trialDaysRemaining !== null && (
+                  <div className="mt-3 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {lang === "fr" ? "Temps restant" : "Time remaining"}
+                      </span>
+                      <span className="font-mono text-xs font-bold text-blue-400">
+                        {trialDaysRemaining} {lang === "fr" ? "jours" : "days"}
+                      </span>
                     </div>
                     <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all"
-                        style={{ width: `${(premiumStatus.messages_remaining / 30) * 100}%` }}
+                        className="h-full bg-gradient-to-r from-blue-500 to-violet-500 transition-all"
+                        style={{ width: `${(trialDaysRemaining / 7) * 100}%` }}
                       />
                     </div>
-                    <p className="font-mono text-[10px] text-muted-foreground">
-                      {lang === "fr" 
-                        ? "Les messages se réinitialisent chaque mois" 
-                        : "Messages reset every month"
-                      }
-                    </p>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <ul className="space-y-2">
-                      <li className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Sparkles className="w-3 h-3 text-amber-500" />
-                        {lang === "fr" ? "30 messages/mois avec le coach" : "30 messages/month with coach"}
-                      </li>
-                      <li className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Sparkles className="w-3 h-3 text-amber-500" />
-                        {lang === "fr" ? "Analyse personnalisée de tes données" : "Personalized data analysis"}
-                      </li>
-                      <li className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Sparkles className="w-3 h-3 text-amber-500" />
-                        {lang === "fr" ? "Conseils adaptés à ton profil" : "Advice tailored to your profile"}
-                      </li>
+                )}
+                
+                {/* Early Adopter benefits */}
+                {isEarlyAdopter && (
+                  <div className="mt-4 space-y-2">
+                    <p className="font-mono text-xs text-muted-foreground mb-2">
+                      {lang === "fr" ? "Fonctionnalités incluses :" : "Features included:"}
+                    </p>
+                    <ul className="space-y-1.5">
+                      {[
+                        lang === "fr" ? "Plan d'entraînement personnalisé" : "Personalized training plan",
+                        lang === "fr" ? "Coach IA conversationnel" : "AI conversational coach",
+                        lang === "fr" ? "Analyse intelligente des séances" : "Smart session analysis",
+                        lang === "fr" ? "Prédictions de course" : "Race predictions"
+                      ].map((feature, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Check className="w-3 h-3 text-amber-500" />
+                          {feature}
+                        </li>
+                      ))}
                     </ul>
+                  </div>
+                )}
+                
+                {/* Subscribe CTA for trial/free users */}
+                {(isTrial || isFree) && (
+                  <div className="mt-4 space-y-4">
+                    <div className="p-4 rounded-lg" style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)" }}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="w-4 h-4 text-amber-400" />
+                        <span className="font-bold text-amber-400">
+                          {lang === "fr" ? "Offre Early Adopter" : "Early Adopter Offer"}
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold text-white mb-1">4,99 € <span className="text-sm font-normal text-muted-foreground">/ {lang === "fr" ? "mois" : "month"}</span></p>
+                      <p className="text-xs text-amber-300">{lang === "fr" ? "Prix garanti à vie" : "Price guaranteed for life"}</p>
+                    </div>
+                    
+                    <ul className="space-y-2">
+                      {[
+                        lang === "fr" ? "Plan d'entraînement personnalisé" : "Personalized training plan",
+                        lang === "fr" ? "Coach IA illimité" : "Unlimited AI coach",
+                        lang === "fr" ? "Analyse intelligente des séances" : "Smart session analysis",
+                        lang === "fr" ? "Synchronisation montres/apps" : "Watch/app sync",
+                        lang === "fr" ? "Prédictions de course" : "Race predictions"
+                      ].map((feature, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Sparkles className="w-3 h-3 text-amber-500" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    
                     <Button
-                      onClick={handleSubscribe}
-                      data-testid="subscribe-premium"
-                      className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-none uppercase font-bold tracking-wider text-xs h-9 px-4 flex items-center gap-2"
+                      onClick={async () => {
+                        setProcessingPayment(true);
+                        try {
+                          await axios.post(`${API}/subscription/activate-early-adopter`, { user_id: USER_ID });
+                          toast.success(lang === "fr" ? "Abonnement activé !" : "Subscription activated!");
+                          refreshSubscription();
+                        } catch (err) {
+                          toast.error(lang === "fr" ? "Erreur" : "Error");
+                        } finally {
+                          setProcessingPayment(false);
+                        }
+                      }}
+                      disabled={processingPayment}
+                      data-testid="subscribe-early-adopter"
+                      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg uppercase font-bold tracking-wider text-sm h-12 flex items-center justify-center gap-2"
                     >
-                      <Crown className="w-4 h-4" />
-                      {lang === "fr" ? "S'abonner • 4.99€/mois" : "Subscribe • €4.99/month"}
+                      {processingPayment ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          {lang === "fr" ? "Activation..." : "Activating..."}
+                        </>
+                      ) : (
+                        <>
+                          <Crown className="w-4 h-4" />
+                          {lang === "fr" ? "Activer mon coach" : "Activate my coach"}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
                     </Button>
                   </div>
                 )}
