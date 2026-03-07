@@ -2876,66 +2876,116 @@ async def analyze_with_coach(request: CoachRequest):
     except Exception as e:
         logger.warning(f"Could not fetch training plan for coach context: {e}")
     
-    # 6. Récupérer la VMA et les prédictions
+    # 6. Récupérer la VMA et les prédictions depuis l'endpoint existant
     vma_info = ""
     predictions_summary = ""
     try:
-        # Calculer la VMA depuis les activités
-        vma_efforts = []
-        for act in all_activities:
-            dist = get_distance_km(act)
-            duration = act.get("moving_time", act.get("duration_minutes", 0) * 60)
-            if duration > 100:
-                duration = duration / 60
-            if duration >= 6 and dist > 0:  # Efforts >= 6 min
-                speed = (dist / duration) * 60  # km/h
-                if speed >= 10 and speed <= 25:  # Vitesses réalistes
-                    vma_efforts.append(speed)
+        # Utiliser la même logique que /api/training/race-predictions
+        sixty_days_ago = today - timedelta(days=60)
+        pred_activities = await db.strava_activities.find({
+            "$or": [{"user_id": user_id}, {"user_id": None}, {"user_id": {"$exists": False}}],
+            "start_date_local": {"$gte": sixty_days_ago.isoformat()}
+        }).to_list(500)
         
-        if vma_efforts:
-            estimated_vma = round(max(vma_efforts) * 1.05, 1)  # +5% car VMA > vitesse soutenue
-        else:
-            # Fallback sur allure moyenne
-            total_dist = sum(get_distance_km(a) for a in all_activities)
-            total_time = sum((a.get("moving_time", 0) / 60 if a.get("moving_time", 0) > 100 else a.get("duration_minutes", 0)) for a in all_activities)
-            if total_time > 0:
-                avg_speed = (total_dist / total_time) * 60
-                estimated_vma = round(avg_speed * 1.25, 1)
-            else:
-                estimated_vma = 12.0
+        if not pred_activities:
+            pred_activities = await db.workouts.find({
+                "date": {"$gte": sixty_days_ago.isoformat()}
+            }).to_list(500)
         
-        vma_info = f"VMA estimée: {estimated_vma} km/h"
-        
-        # Prédictions basées sur VMA
-        vma_pace_sec = 3600 / estimated_vma  # secondes par km à VMA
-        predictions = []
-        
-        # 5K (95-100% VMA)
-        pace_5k = vma_pace_sec / 0.95
-        time_5k = (pace_5k * 5) / 60
-        predictions.append(f"5K: {int(time_5k)}:{int((time_5k % 1) * 60):02d}")
-        
-        # 10K (90-92% VMA)
-        pace_10k = vma_pace_sec / 0.90
-        time_10k = (pace_10k * 10) / 60
-        predictions.append(f"10K: {int(time_10k)}:{int((time_10k % 1) * 60):02d}")
-        
-        # Semi (82-85% VMA)
-        pace_semi = vma_pace_sec / 0.83
-        time_semi = (pace_semi * 21.1) / 60
-        h_semi = int(time_semi // 60)
-        m_semi = int(time_semi % 60)
-        predictions.append(f"Semi: {h_semi}h{m_semi:02d}")
-        
-        # Marathon (78-80% VMA)
-        pace_marathon = vma_pace_sec / 0.78
-        time_marathon = (pace_marathon * 42.195) / 60
-        h_mar = int(time_marathon // 60)
-        m_mar = int(time_marathon % 60)
-        predictions.append(f"Marathon: {h_mar}h{m_mar:02d}")
-        
-        predictions_summary = " | ".join(predictions)
-        
+        if pred_activities:
+            # Calculer la VMA avec la méthode correcte
+            def get_pred_distance(a):
+                dist = a.get("distance", 0)
+                if dist > 1000:
+                    return dist / 1000
+                return a.get("distance_km", dist)
+            
+            def get_pred_duration(a):
+                moving_time = a.get("moving_time", 0)
+                if moving_time > 0:
+                    return moving_time / 60
+                elapsed = a.get("elapsed_time", 0)
+                if elapsed > 0:
+                    return elapsed / 60
+                return a.get("duration_minutes", 0)
+            
+            def get_pred_pace(a):
+                pace = a.get("avg_pace_min_km")
+                if pace:
+                    return pace
+                speed = a.get("average_speed", 0)
+                if speed > 0:
+                    return (1000 / speed) / 60
+                dist = get_pred_distance(a)
+                duration_min = get_pred_duration(a)
+                if dist > 0 and duration_min > 0:
+                    return duration_min / dist
+                return None
+            
+            paces = []
+            vma_efforts = []
+            MIN_VMA_DURATION = 6
+            
+            for a in pred_activities:
+                dist = get_pred_distance(a)
+                pace = get_pred_pace(a)
+                duration_min = get_pred_duration(a)
+                
+                if dist > 0 and pace and 3 < pace < 10:
+                    paces.append(pace)
+                    # Efforts >= 6 min ET allure rapide (< 5:30/km)
+                    if duration_min >= MIN_VMA_DURATION and pace < 5.5:
+                        vma_efforts.append({
+                            "pace": pace,
+                            "duration": duration_min,
+                            "speed_kmh": 60 / pace
+                        })
+            
+            if paces:
+                avg_pace = sum(paces) / len(paces)
+                
+                # Calculer VMA avec la méthode correcte
+                if vma_efforts:
+                    best_vma_effort = max(vma_efforts, key=lambda x: x["speed_kmh"])
+                    best_sustained_speed = best_vma_effort["speed_kmh"]
+                    duration = best_vma_effort["duration"]
+                    
+                    if duration >= 20:
+                        estimated_vma = best_sustained_speed / 0.85
+                    elif duration >= 12:
+                        estimated_vma = best_sustained_speed / 0.90
+                    else:
+                        estimated_vma = best_sustained_speed / 0.95
+                else:
+                    avg_speed_kmh = 60 / avg_pace
+                    estimated_vma = avg_speed_kmh / 0.70
+                
+                estimated_vma = round(estimated_vma, 1)
+                vma_info = f"VMA estimée: {estimated_vma} km/h"
+                
+                # Prédictions basées sur VMA
+                pred_5k_speed = estimated_vma * 0.95
+                pred_5k_pace = 60 / pred_5k_speed
+                time_5k = (pred_5k_pace * 5)
+                
+                pred_10k_speed = estimated_vma * 0.90
+                pred_10k_pace = 60 / pred_10k_speed
+                time_10k = (pred_10k_pace * 10)
+                
+                pred_semi_speed = estimated_vma * 0.82
+                pred_semi_pace = 60 / pred_semi_speed
+                time_semi = (pred_semi_pace * 21.1)
+                h_semi = int(time_semi // 60)
+                m_semi = int(time_semi % 60)
+                
+                pred_marathon_speed = estimated_vma * 0.75
+                pred_marathon_pace = 60 / pred_marathon_speed
+                time_marathon = (pred_marathon_pace * 42.195)
+                h_mar = int(time_marathon // 60)
+                m_mar = int(time_marathon % 60)
+                
+                predictions_summary = f"5K: {int(time_5k)}:{int((time_5k % 1) * 60):02d} | 10K: {int(time_10k)}:{int((time_10k % 1) * 60):02d} | Semi: {h_semi}h{m_semi:02d} | Marathon: {h_mar}h{m_mar:02d}"
+                
     except Exception as e:
         logger.warning(f"Could not calculate VMA for coach context: {e}")
         vma_info = "VMA: non calculée"
