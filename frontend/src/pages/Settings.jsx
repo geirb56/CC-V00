@@ -73,10 +73,13 @@ export default function Settings() {
     // Handle Stripe callback
     const sessionId = searchParams.get("session_id");
     const premiumParam = searchParams.get("premium");
+    const subscriptionParam = searchParams.get("subscription");
     
     if (sessionId && premiumParam === "success") {
-      handlePaymentSuccess(sessionId);
-    } else if (premiumParam === "cancelled") {
+      handlePaymentSuccess(sessionId, "premium");
+    } else if (sessionId && subscriptionParam === "early_adopter_success") {
+      handlePaymentSuccess(sessionId, "early_adopter");
+    } else if (premiumParam === "cancelled" || subscriptionParam === "cancelled") {
       toast.info(lang === "fr" ? "Paiement annulé" : "Payment cancelled");
       setSearchParams({});
     }
@@ -93,23 +96,39 @@ export default function Settings() {
     }
   };
 
-  const handlePaymentSuccess = async (sessionId) => {
+  const handlePaymentSuccess = async (sessionId, planType = "premium") => {
     setProcessingPayment(true);
     try {
+      // Déterminer l'endpoint selon le type de plan
+      const endpoint = planType === "early_adopter" 
+        ? `${API}/subscription/verify-checkout/${sessionId}?user_id=${USER_ID}`
+        : `${API}/premium/checkout/status/${sessionId}?user_id=${USER_ID}`;
+      
       // Poll for payment completion
       let attempts = 0;
       const maxAttempts = 10;
       
       while (attempts < maxAttempts) {
-        const res = await axios.get(`${API}/premium/checkout/status/${sessionId}?user_id=${USER_ID}`);
+        const res = await axios.get(endpoint);
         
-        if (res.data.status === "completed" || res.data.payment_status === "paid") {
-          toast.success(lang === "fr" ? "🎉 Premium activé ! Bienvenue dans CardioCoach Pro" : "🎉 Premium activated!");
-          loadPremiumStatus();
+        if (res.data.success || res.data.status === "completed" || res.data.status === "early_adopter" || res.data.payment_status === "paid") {
+          const successMsg = planType === "early_adopter"
+            ? (lang === "fr" ? "🎉 Abonnement Early Adopter activé ! Prix garanti à vie." : "🎉 Early Adopter activated! Price guaranteed for life.")
+            : (lang === "fr" ? "🎉 Premium activé ! Bienvenue dans CardioCoach Pro" : "🎉 Premium activated!");
+          
+          toast.success(successMsg);
+          
+          // Rafraîchir le statut de l'abonnement
+          if (planType === "early_adopter") {
+            refreshSubscription();
+          } else {
+            loadPremiumStatus();
+          }
+          
           setSearchParams({});
           break;
-        } else if (res.data.status === "expired") {
-          toast.error(lang === "fr" ? "Session expirée" : "Session expired");
+        } else if (res.data.status === "expired" || res.data.error) {
+          toast.error(lang === "fr" ? "Session expirée ou erreur" : "Session expired or error");
           setSearchParams({});
           break;
         }
@@ -792,14 +811,24 @@ export default function Settings() {
                       onClick={async () => {
                         setProcessingPayment(true);
                         try {
-                          await axios.post(`${API}/subscription/activate-early-adopter`, { user_id: USER_ID });
-                          toast.success(lang === "fr" ? "Abonnement activé !" : "Subscription activated!");
-                          refreshSubscription();
+                          // Créer une session Stripe Checkout
+                          const res = await axios.post(
+                            `${API}/subscription/early-adopter/checkout?user_id=${USER_ID}&origin_url=${encodeURIComponent(window.location.origin)}`
+                          );
+                          
+                          if (res.data?.checkout_url) {
+                            // Rediriger vers Stripe Checkout
+                            window.location.href = res.data.checkout_url;
+                          } else {
+                            toast.error(lang === "fr" ? "Erreur de paiement" : "Payment error");
+                            setProcessingPayment(false);
+                          }
                         } catch (err) {
-                          toast.error(lang === "fr" ? "Erreur" : "Error");
-                        } finally {
+                          console.error("Checkout error:", err);
+                          toast.error(lang === "fr" ? "Erreur de paiement" : "Payment error");
                           setProcessingPayment(false);
                         }
+                        // Note: pas de finally car on redirige vers Stripe
                       }}
                       disabled={processingPayment}
                       data-testid="subscribe-early-adopter"
@@ -808,7 +837,7 @@ export default function Settings() {
                       {processingPayment ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          {lang === "fr" ? "Activation..." : "Activating..."}
+                          {lang === "fr" ? "Redirection..." : "Redirecting..."}
                         </>
                       ) : (
                         <>

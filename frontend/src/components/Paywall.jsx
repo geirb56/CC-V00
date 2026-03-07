@@ -74,23 +74,22 @@ export default function Paywall({
   const handleActivate = async () => {
     setActivating(true);
     try {
-      // Pour la démo, on active directement
-      // En production, cela redirigerait vers Stripe Checkout
-      await axios.post(`${API}/subscription/activate-early-adopter`, {
-        user_id: userId
-      });
+      // Créer une session Stripe Checkout pour Early Adopter
+      const res = await axios.post(
+        `${API}/subscription/early-adopter/checkout?user_id=${encodeURIComponent(userId)}&origin_url=${encodeURIComponent(window.location.origin)}`
+      );
       
-      // Rediriger vers la page demandée
-      if (onClose) {
-        onClose();
+      if (res.data?.checkout_url) {
+        // Rediriger vers Stripe Checkout
+        window.location.href = res.data.checkout_url;
+      } else {
+        console.error("No checkout URL received");
       }
-      navigate(returnPath);
-      window.location.reload(); // Refresh pour mettre à jour l'état
     } catch (err) {
-      console.error("Error activating subscription:", err);
-    } finally {
+      console.error("Error creating checkout session:", err);
       setActivating(false);
     }
+    // Note: pas de setActivating(false) car on redirige vers Stripe
   };
 
   if (loading) {

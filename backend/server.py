@@ -6460,7 +6460,7 @@ async def create_early_adopter_checkout(http_request: Request, user_id: str = "d
     
     # Créer la session checkout
     checkout_request = CheckoutSessionRequest(
-        amount=int(EARLY_ADOPTER_PRICE * 100),  # En centimes
+        amount=float(EARLY_ADOPTER_PRICE),  # En euros (format float requis par Stripe Emergent)
         currency="eur",
         success_url=success_url,
         cancel_url=cancel_url,
