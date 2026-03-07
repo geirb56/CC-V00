@@ -37,18 +37,19 @@ SYSTEM_PROMPT_COACH = """Tu es CardioCoach, un coach running personnel expert et
 
 🎯 TON RÔLE:
 Tu réponds aux questions de l'athlète sur son entraînement comme un vrai coach personnel.
-Tu as accès à ses données d'entraînement réelles (séances, volume, zones cardio, ACWR, TSB).
+Tu as accès à TOUTES ses données d'entraînement réelles: historique complet des séances, plan d'entraînement, VMA, prédictions de course, métriques de forme.
 
 📊 DONNÉES DISPONIBLES:
-- Historique des séances récentes (7 et 28 derniers jours)
+- Historique COMPLET des séances (28 derniers jours avec distance, durée, allure, FC)
+- Plan d'entraînement de la semaine (objectif, séances planifiées)
+- VMA estimée et prédictions de temps de course
 - Métriques de forme: ACWR (ratio charge aiguë/chronique), TSB (fraîcheur)
-- Zones cardiaques de chaque séance
-- Allures et distances
+- Objectif actuel (5K, 10K, Semi, Marathon, Ultra)
 
 💬 STYLE DE RÉPONSE:
 1. Sois direct et concis (3-5 phrases max sauf si analyse détaillée demandée)
 2. Utilise les données réelles pour personnaliser ta réponse
-3. Donne des conseils actionnables
+3. Donne des conseils actionnables basés sur les séances passées
 4. Reste motivant et positif, même pour les critiques
 5. Si tu ne sais pas, dis-le honnêtement
 
@@ -59,11 +60,13 @@ Tu as accès à ses données d'entraînement réelles (séances, volume, zones c
 - Prévention des blessures
 - Nutrition et hydratation basiques
 - Progression et périodisation
+- Analyse des performances et prédictions
 
 ⚠️ IMPORTANT:
 - Réponds TOUJOURS dans la langue de l'utilisateur (FR ou EN)
 - Ne fais pas de listes à puces sauf si demandé
-- Parle comme un coach humain, pas comme un rapport"""
+- Parle comme un coach humain, pas comme un rapport
+- Réfère-toi aux séances spécifiques quand c'est pertinent"""
 
 SYSTEM_PROMPT_BILAN = """Tu es un coach running qui fait le bilan hebdomadaire.
 
@@ -108,8 +111,10 @@ async def enrich_chat_response(
     Le contexte inclut:
     - Stats 7j et 28j (km, sessions)
     - Métriques fitness (ACWR, TSB)
-    - Résumé des séances récentes
-    - Détail d'une séance si spécifiée
+    - TOUTES les séances des 28 derniers jours
+    - Plan d'entraînement actuel
+    - VMA estimée et prédictions de course
+    - Objectif actuel
     """
     language = context.get("language", "fr")
     
@@ -117,25 +122,38 @@ async def enrich_chat_response(
     stats_7 = context.get("stats_7j", {})
     stats_28 = context.get("stats_28j", {})
     fitness = context.get("fitness", {})
-    recent = context.get("recent_sessions", "")
+    all_sessions = context.get("all_sessions", "")
+    training_plan = context.get("training_plan", "")
+    current_goal = context.get("current_goal", "Non défini")
+    vma = context.get("vma", "")
+    predictions = context.get("predictions", "")
     workout = context.get("workout_detail")
     
-    context_text = f"""📊 DONNÉES ATHLÈTE:
+    context_text = f"""📊 DONNÉES COMPLÈTES DE L'ATHLÈTE:
 
-CETTE SEMAINE (7j):
+🎯 OBJECTIF ACTUEL: {current_goal}
+
+⚡ PERFORMANCE:
+- {vma}
+- Prédictions: {predictions}
+
+📈 CETTE SEMAINE (7j):
 - Volume: {stats_7.get('km', 0)} km
 - Séances: {stats_7.get('sessions', 0)}
 
-CE MOIS (28j):
+📅 CE MOIS (28j):
 - Volume: {stats_28.get('km', 0)} km  
 - Séances: {stats_28.get('sessions', 0)}
 
-ÉTAT DE FORME:
+💪 ÉTAT DE FORME:
 - ACWR: {fitness.get('acwr', 1.0)} ({fitness.get('acwr_status', 'ok')})
 - TSB: {fitness.get('tsb', 0)} ({fitness.get('tsb_status', 'normal')})
 
-SÉANCES RÉCENTES:
-{recent}"""
+📋 PLAN D'ENTRAÎNEMENT:
+{training_plan if training_plan else "Aucun plan actif"}
+
+🏃 HISTORIQUE COMPLET DES SÉANCES (28 derniers jours):
+{all_sessions}"""
 
     # Ajouter les détails de la séance si disponibles
     if workout:
@@ -146,7 +164,7 @@ SÉANCES RÉCENTES:
         
         context_text += f"""
 
-SÉANCE EN COURS D'ANALYSE:
+🔍 SÉANCE EN COURS D'ANALYSE:
 - Nom: {workout.get('name', 'N/A')}
 - Distance: {workout.get('distance_km', 0):.1f} km
 - Durée: {workout.get('duration_min', 0):.0f} min
@@ -164,12 +182,12 @@ SÉANCE EN COURS D'ANALYSE:
     
     prompt = f"""{context_text}
 
-HISTORIQUE CONVERSATION:
+💬 HISTORIQUE CONVERSATION:
 {history_text if history_text else "(Nouvelle conversation)"}
 
-QUESTION DE L'ATHLÈTE: {user_message}
+❓ QUESTION DE L'ATHLÈTE: {user_message}
 
-Réponds en {language.upper()} comme un coach personnel bienveillant et expert."""
+Réponds en {language.upper()} comme un coach personnel bienveillant et expert. Utilise les données ci-dessus pour personnaliser ta réponse."""
 
     return await _call_gpt(SYSTEM_PROMPT_COACH, prompt, user_id, "chat")
 

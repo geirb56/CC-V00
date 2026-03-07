@@ -7,6 +7,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import re
+import json
 import logging
 import random
 import secrets
@@ -2819,9 +2820,9 @@ async def analyze_with_coach(request: CoachRequest):
     atl = km_7
     tsb = round(ctl - atl, 1)
     
-    # 4. Préparer le contexte pour le LLM
-    recent_sessions_summary = []
-    for act in recent_activities[:5]:
+    # 4. Préparer le résumé de TOUTES les séances (pas seulement 5)
+    all_sessions_summary = []
+    for act in all_activities:
         name = act.get("name", "Séance")
         dist = get_distance_km(act)
         duration = act.get("moving_time", act.get("duration_minutes", 0) * 60)
@@ -2829,14 +2830,117 @@ async def analyze_with_coach(request: CoachRequest):
             duration = duration / 60  # Convertir secondes en minutes
         avg_hr = act.get("average_heartrate", act.get("avg_heart_rate"))
         date_str = act.get("start_date_local", act.get("date", ""))[:10]
+        avg_pace = ""
+        if dist > 0 and duration > 0:
+            pace_sec = (duration * 60) / dist
+            pace_min = int(pace_sec // 60)
+            pace_sec_rem = int(pace_sec % 60)
+            avg_pace = f"{pace_min}:{pace_sec_rem:02d}/km"
         
         session_info = f"- {date_str}: {name}, {dist:.1f}km"
         if duration:
             session_info += f", {int(duration)}min"
+        if avg_pace:
+            session_info += f", {avg_pace}"
         if avg_hr:
-            session_info += f", FC moy {int(avg_hr)}bpm"
-        recent_sessions_summary.append(session_info)
+            session_info += f", FC {int(avg_hr)}bpm"
+        all_sessions_summary.append(session_info)
     
+    # 5. Récupérer le plan d'entraînement actuel
+    training_plan_summary = ""
+    current_goal = "Non défini"
+    sessions_per_week = 4
+    try:
+        plan_data = await db.training_plans.find_one(
+            {"user_id": user_id},
+            sort=[("created_at", -1)]
+        )
+        if plan_data:
+            current_goal = plan_data.get("goal", "SEMI")
+            sessions_per_week = plan_data.get("sessions_per_week", 4)
+            sessions = plan_data.get("sessions", [])
+            if sessions:
+                training_plan_summary = f"Objectif: {current_goal} | {sessions_per_week} séances/semaine\n"
+                training_plan_summary += "Planning de la semaine:\n"
+                for s in sessions:
+                    day = s.get("day", "")
+                    stype = s.get("type", "")
+                    details = s.get("details", "")
+                    dist = s.get("distance_km", 0)
+                    training_plan_summary += f"  • {day}: {stype}"
+                    if dist > 0:
+                        training_plan_summary += f" ({dist}km)"
+                    if details and stype != "Repos":
+                        training_plan_summary += f" - {details[:60]}"
+                    training_plan_summary += "\n"
+    except Exception as e:
+        logger.warning(f"Could not fetch training plan for coach context: {e}")
+    
+    # 6. Récupérer la VMA et les prédictions
+    vma_info = ""
+    predictions_summary = ""
+    try:
+        # Calculer la VMA depuis les activités
+        vma_efforts = []
+        for act in all_activities:
+            dist = get_distance_km(act)
+            duration = act.get("moving_time", act.get("duration_minutes", 0) * 60)
+            if duration > 100:
+                duration = duration / 60
+            if duration >= 6 and dist > 0:  # Efforts >= 6 min
+                speed = (dist / duration) * 60  # km/h
+                if speed >= 10 and speed <= 25:  # Vitesses réalistes
+                    vma_efforts.append(speed)
+        
+        if vma_efforts:
+            estimated_vma = round(max(vma_efforts) * 1.05, 1)  # +5% car VMA > vitesse soutenue
+        else:
+            # Fallback sur allure moyenne
+            total_dist = sum(get_distance_km(a) for a in all_activities)
+            total_time = sum((a.get("moving_time", 0) / 60 if a.get("moving_time", 0) > 100 else a.get("duration_minutes", 0)) for a in all_activities)
+            if total_time > 0:
+                avg_speed = (total_dist / total_time) * 60
+                estimated_vma = round(avg_speed * 1.25, 1)
+            else:
+                estimated_vma = 12.0
+        
+        vma_info = f"VMA estimée: {estimated_vma} km/h"
+        
+        # Prédictions basées sur VMA
+        vma_pace_sec = 3600 / estimated_vma  # secondes par km à VMA
+        predictions = []
+        
+        # 5K (95-100% VMA)
+        pace_5k = vma_pace_sec / 0.95
+        time_5k = (pace_5k * 5) / 60
+        predictions.append(f"5K: {int(time_5k)}:{int((time_5k % 1) * 60):02d}")
+        
+        # 10K (90-92% VMA)
+        pace_10k = vma_pace_sec / 0.90
+        time_10k = (pace_10k * 10) / 60
+        predictions.append(f"10K: {int(time_10k)}:{int((time_10k % 1) * 60):02d}")
+        
+        # Semi (82-85% VMA)
+        pace_semi = vma_pace_sec / 0.83
+        time_semi = (pace_semi * 21.1) / 60
+        h_semi = int(time_semi // 60)
+        m_semi = int(time_semi % 60)
+        predictions.append(f"Semi: {h_semi}h{m_semi:02d}")
+        
+        # Marathon (78-80% VMA)
+        pace_marathon = vma_pace_sec / 0.78
+        time_marathon = (pace_marathon * 42.195) / 60
+        h_mar = int(time_marathon // 60)
+        m_mar = int(time_marathon % 60)
+        predictions.append(f"Marathon: {h_mar}h{m_mar:02d}")
+        
+        predictions_summary = " | ".join(predictions)
+        
+    except Exception as e:
+        logger.warning(f"Could not calculate VMA for coach context: {e}")
+        vma_info = "VMA: non calculée"
+    
+    # 7. Construire le contexte complet
     context = {
         "language": language,
         "stats_7j": {
@@ -2853,7 +2957,11 @@ async def analyze_with_coach(request: CoachRequest):
             "tsb": tsb,
             "tsb_status": "frais" if tsb > 0 else "fatigué" if tsb < -10 else "en charge"
         },
-        "recent_sessions": "\n".join(recent_sessions_summary) if recent_sessions_summary else "Aucune séance récente"
+        "all_sessions": "\n".join(all_sessions_summary) if all_sessions_summary else "Aucune séance enregistrée",
+        "training_plan": training_plan_summary if training_plan_summary else "Aucun plan d'entraînement actif",
+        "current_goal": current_goal,
+        "vma": vma_info,
+        "predictions": predictions_summary
     }
     
     # 5. Si workout_id spécifié, enrichir le contexte avec les détails de la séance
