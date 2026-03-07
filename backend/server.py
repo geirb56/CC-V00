@@ -5290,19 +5290,20 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
     """
     Prédit les temps de course pour 5K, 10K, Semi, Marathon, Ultra
     basé sur le profil d'entraînement de l'athlète.
+    Utilise une fenêtre de 6 semaines (42 jours) pour la VMA.
     """
     today = datetime.now(timezone.utc)
-    sixty_days_ago = today - timedelta(days=60)
+    six_weeks_ago = today - timedelta(days=42)  # 6 semaines comme pour VO2MAX
     
-    # Récupérer les activités des 60 derniers jours
+    # Récupérer les activités des 6 dernières semaines
     activities = await db.strava_activities.find({
         "user_id": user["id"],
-        "start_date_local": {"$gte": sixty_days_ago.isoformat()}
+        "start_date_local": {"$gte": six_weeks_ago.isoformat()}
     }).to_list(500)
     
     if not activities:
         activities = await db.workouts.find({
-            "date": {"$gte": sixty_days_ago.isoformat()}
+            "date": {"$gte": six_weeks_ago.isoformat()}
         }).to_list(500)
     
     if not activities:
@@ -5391,7 +5392,7 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
         }
     
     # Calculer les métriques de base
-    weekly_km = total_km / 8.5  # ~60 jours = 8.5 semaines
+    weekly_km = total_km / 6  # 6 semaines
     avg_pace = sum(paces) / len(paces)
     best_pace = min(paces) if paces else avg_pace
     max_long_run = max(distances) if distances else 0
@@ -5555,7 +5556,8 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
             "estimated_vo2max": round(estimated_vma * 3.5, 1),
             "vma_method": vma_method,
             "vma_efforts_count": len(vma_efforts),
-            "total_sessions_60d": total_sessions
+            "total_sessions_6w": total_sessions,
+            "calculation_window": "6 weeks"
         },
         "predictions": predictions,
         "methodology": {
