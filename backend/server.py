@@ -2715,43 +2715,120 @@ async def get_dashboard_insight(language: str = "fr", user_id: str = "default"):
 
 @api_router.get("/stats")
 async def get_stats():
-    """Get training statistics"""
-    workouts = await db.workouts.find({}, {"_id": 0}).to_list(100)
-    if not workouts:
-        workouts = get_mock_workouts()
+    """Get training statistics with proper 7-day and 30-day calculations"""
+    from datetime import datetime, timedelta
+    from collections import defaultdict
     
-    total_distance = sum(w.get("distance_km", 0) for w in workouts)
-    total_duration = sum(w.get("duration_minutes", 0) for w in workouts)
+    # Get all workouts
+    workouts = await db.workouts.find({}, {"_id": 0}).to_list(500)
     
-    hr_values = [w.get("avg_heart_rate") for w in workouts if w.get("avg_heart_rate")]
+    # Also check Strava activities
+    strava_activities = await db.strava_activities.find({}, {"_id": 0}).to_list(500)
+    
+    # Merge both sources
+    all_activities = []
+    
+    for w in workouts:
+        date_str = w.get("date", "")[:10]
+        if date_str:
+            all_activities.append({
+                "date": date_str,
+                "distance_km": w.get("distance_km", 0),
+                "duration_minutes": w.get("duration_minutes", 0),
+                "avg_heart_rate": w.get("avg_heart_rate"),
+                "type": w.get("type", "run")
+            })
+    
+    for a in strava_activities:
+        date_str = a.get("start_date_local", "")[:10]
+        dist = a.get("distance", 0)
+        if dist > 1000:
+            dist = dist / 1000
+        duration = a.get("moving_time", 0)
+        if duration > 100:
+            duration = duration / 60
+        if date_str:
+            all_activities.append({
+                "date": date_str,
+                "distance_km": dist,
+                "duration_minutes": duration,
+                "avg_heart_rate": a.get("average_heartrate"),
+                "type": a.get("type", "run").lower()
+            })
+    
+    if not all_activities:
+        all_activities = [{
+            "date": (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d"),
+            "distance_km": 8 + (i % 5),
+            "duration_minutes": 45 + (i % 20),
+            "avg_heart_rate": 140,
+            "type": "run"
+        } for i in range(10)]
+    
+    # Calculate date boundaries
+    today = datetime.now().date()
+    seven_days_ago = today - timedelta(days=7)
+    thirty_days_ago = today - timedelta(days=30)
+    
+    # Filter activities by period
+    last_7_days = []
+    last_30_days = []
+    
+    for a in all_activities:
+        try:
+            activity_date = datetime.strptime(a["date"], "%Y-%m-%d").date()
+            if activity_date >= seven_days_ago:
+                last_7_days.append(a)
+            if activity_date >= thirty_days_ago:
+                last_30_days.append(a)
+        except:
+            continue
+    
+    # Calculate 7-day stats
+    km_7_days = sum(a.get("distance_km", 0) for a in last_7_days)
+    sessions_7_days = len(last_7_days)
+    
+    # Calculate 30-day stats
+    km_30_days = sum(a.get("distance_km", 0) for a in last_30_days)
+    sessions_30_days = len(last_30_days)
+    
+    # Total stats
+    total_distance = sum(a.get("distance_km", 0) for a in all_activities)
+    total_duration = sum(a.get("duration_minutes", 0) for a in all_activities)
+    
+    hr_values = [a.get("avg_heart_rate") for a in all_activities if a.get("avg_heart_rate")]
     avg_hr = sum(hr_values) / len(hr_values) if hr_values else None
     
     # Count by type
     by_type = {}
-    for w in workouts:
-        t = w.get("type", "other")
+    for a in all_activities:
+        t = a.get("type", "other")
         by_type[t] = by_type.get(t, 0) + 1
     
-    # Weekly summary (simplified)
-    weekly = []
-    from collections import defaultdict
-    week_data = defaultdict(lambda: {"distance": 0, "duration": 0, "count": 0})
-    for w in workouts:
-        date_str = w.get("date", "")[:10]
-        week_data[date_str]["distance"] += w.get("distance_km", 0)
-        week_data[date_str]["duration"] += w.get("duration_minutes", 0)
-        week_data[date_str]["count"] += 1
+    # Daily breakdown for last 7 days
+    daily_data = defaultdict(lambda: {"distance": 0, "duration": 0, "count": 0})
+    for a in last_7_days:
+        date_str = a.get("date", "")
+        daily_data[date_str]["distance"] += a.get("distance_km", 0)
+        daily_data[date_str]["duration"] += a.get("duration_minutes", 0)
+        daily_data[date_str]["count"] += 1
     
-    for date, data in sorted(week_data.items()):
-        weekly.append({"date": date, **data})
+    weekly_summary = []
+    for date, data in sorted(daily_data.items()):
+        weekly_summary.append({"date": date, **data})
     
     return {
-        "total_workouts": len(workouts),
+        "total_workouts": len(all_activities),
         "total_distance_km": round(total_distance, 1),
-        "total_duration_minutes": total_duration,
+        "total_duration_minutes": int(total_duration),
         "avg_heart_rate": round(avg_hr, 1) if avg_hr else None,
         "workouts_by_type": by_type,
-        "weekly_summary": weekly[-7:]  # Last 7 days
+        "weekly_summary": weekly_summary,
+        # New fields for precise calculations
+        "sessions_7_days": sessions_7_days,
+        "km_7_days": round(km_7_days, 1),
+        "sessions_30_days": sessions_30_days,
+        "km_30_days": round(km_30_days, 1)
     }
 
 

@@ -76,15 +76,10 @@ export default function Progress() {
     return <Paywall language={lang} returnPath="/progress" />;
   }
 
-  // Calculer les stats hebdo et mensuelles à partir des données réelles
-  // weekly_summary contient les 7 derniers jours
-  const weeklySummary = stats?.weekly_summary || [];
-  const weeklyKm = weeklySummary.reduce((sum, day) => sum + (day.distance || 0), 0);
-  const weeklySessionsCount = weeklySummary.reduce((sum, day) => sum + (day.count || 0), 0);
-  
-  // Pour le mois, on multiplie la moyenne hebdo par ~4.3 semaines
-  // ou on utilise le total si disponible sur 28 jours
-  const monthlyKm = stats?.monthly_distance_km || (weeklyKm * 4.3).toFixed(0);
+  // Utiliser les stats calculées côté backend (7 et 30 derniers jours)
+  const sessions7Days = stats?.sessions_7_days || 0;
+  const km7Days = stats?.km_7_days || 0;
+  const km30Days = stats?.km_30_days || 0;
 
   return (
     <div className="p-6 md:p-8 pb-24 md:pb-8" data-testid="progress-page">
@@ -100,47 +95,47 @@ export default function Progress() {
 
       {/* Weekly & Monthly Stats */}
       <div className="grid grid-cols-3 gap-3 mb-8">
-        {/* Séances / semaine */}
+        {/* Séances 7 jours */}
         <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="w-4 h-4 text-primary" />
               <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {lang === "fr" ? "Séances/sem" : "Sessions/wk"}
+                {lang === "fr" ? "Séances (7j)" : "Sessions (7d)"}
               </span>
             </div>
             <p className="font-heading text-3xl font-bold text-white">
-              {weeklySessionsCount}
+              {sessions7Days}
             </p>
           </CardContent>
         </Card>
 
-        {/* Km / semaine */}
+        {/* Km 7 jours */}
         <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
               <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {lang === "fr" ? "Km/sem" : "Km/wk"}
+                {lang === "fr" ? "Km (7j)" : "Km (7d)"}
               </span>
             </div>
             <p className="font-heading text-3xl font-bold text-white">
-              {typeof weeklyKm === 'number' ? weeklyKm.toFixed(1) : weeklyKm}
+              {km7Days}
             </p>
           </CardContent>
         </Card>
 
-        {/* Km / mois */}
+        {/* Km 30 jours */}
         <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="w-4 h-4 text-violet-500" />
               <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {lang === "fr" ? "Km/mois" : "Km/month"}
+                {lang === "fr" ? "Km (30j)" : "Km (30d)"}
               </span>
             </div>
             <p className="font-heading text-3xl font-bold text-white">
-              {monthlyKm}
+              {km30Days}
             </p>
           </CardContent>
         </Card>
