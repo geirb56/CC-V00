@@ -5632,31 +5632,13 @@ async def get_vma_history(user: dict = Depends(auth_user)):
                     return None
         return None
     
-    # Group activities by half-month periods
-    from collections import defaultdict
-    period_activities = defaultdict(list)
-    
-    for a in activities:
-        activity_date = get_activity_date(a)
-        if activity_date:
-            year = activity_date.year
-            month = activity_date.month
-            # 1 = first half (1-15), 2 = second half (16-end)
-            half = 1 if activity_date.day <= 15 else 2
-            period_key = f"{year}-{month:02d}-{half}"
-            period_activities[period_key].append(a)
-    
-    # Calculate VO2MAX for each half-month period
-    MIN_VMA_DURATION = 6
-    vo2max_history = []
-    
-    for period_key in sorted(period_activities.keys()):
-        period_acts = period_activities[period_key]
-        
+    # Helper function to calculate VO2MAX for a given set of activities
+    def calculate_vo2max_for_activities(acts):
+        MIN_VMA_DURATION = 6
         vma_efforts = []
         paces = []
         
-        for a in period_acts:
+        for a in acts:
             dist = get_distance(a)
             pace = get_pace(a)
             duration_min = get_duration(a)
@@ -5672,9 +5654,8 @@ async def get_vma_history(user: dict = Depends(auth_user)):
                     })
         
         if not paces:
-            continue
+            return None, None
         
-        # Calculate VMA for this period
         avg_pace = sum(paces) / len(paces)
         
         if vma_efforts:
@@ -5692,24 +5673,59 @@ async def get_vma_history(user: dict = Depends(auth_user)):
             avg_speed = 60 / avg_pace
             estimated_vma = avg_speed / 0.70
         
-        # Convert VMA to VO2MAX (with sanity check)
         vo2max = round(estimated_vma * 3.5, 1)
         
-        # Exclude unrealistic values (VO2MAX > 70 is extremely rare, even for elite athletes)
+        # Exclude unrealistic values
         if vo2max > 70:
-            # Skip this data point - likely GPS error or corrupted data
-            continue
+            return None, None
         
-        # Parse period for display
-        parts = period_key.split("-")
-        year = int(parts[0])
-        month = int(parts[1])
-        half = int(parts[2])
+        return round(estimated_vma, 1), vo2max
+    
+    # Generate data points for 12 months (24 half-month periods)
+    # Each point uses a ROLLING 6-WEEK WINDOW ending at that date
+    month_names_fr = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
+    vo2max_history = []
+    
+    for i in range(24):  # 24 half-month periods over 12 months
+        # Calculate the end date for this period
+        months_back = 11 - (i // 2)
+        half = 1 if (i % 2 == 0) else 2
         
-        month_names_fr = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
+        # Target date for this data point
+        target_month_date = today - timedelta(days=30 * months_back)
+        year = target_month_date.year
+        month = target_month_date.month
+        
+        # End of period: 15th or end of month
+        if half == 1:
+            period_end = datetime(year, month, 15, tzinfo=timezone.utc)
+        else:
+            # Last day of month
+            if month == 12:
+                period_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc) - timedelta(days=1)
+            else:
+                period_end = datetime(year, month + 1, 1, tzinfo=timezone.utc) - timedelta(days=1)
+        
+        # 6-week window ending at period_end
+        period_start = period_end - timedelta(days=42)
+        
+        # Filter activities within this 6-week window
+        def is_in_window(a):
+            activity_date = get_activity_date(a)
+            if activity_date is None:
+                return False
+            if activity_date.tzinfo is None:
+                activity_date = activity_date.replace(tzinfo=timezone.utc)
+            return period_start <= activity_date <= period_end
+        
+        window_activities = [a for a in activities if is_in_window(a)]
+        
+        # Calculate VO2MAX for this window
+        vma, vo2max = calculate_vo2max_for_activities(window_activities)
+        
         month_name = month_names_fr[month - 1]
-        # Label: "Jan 1" for first half, "Jan 2" for second half
         period_label = f"{month_name} {half}"
+        period_key = f"{year}-{month:02d}-{half}"
         
         vo2max_history.append({
             "period": period_key,
@@ -5717,123 +5733,22 @@ async def get_vma_history(user: dict = Depends(auth_user)):
             "month": f"{year}-{month:02d}",
             "month_label": month_name,
             "half": half,
-            "vma": round(estimated_vma, 1),
+            "vma": vma,
             "vo2max": vo2max,
-            "sessions": len(period_acts),
-            "vma_efforts": len(vma_efforts)
+            "sessions": len(window_activities),
+            "window_days": 42
         })
     
-    # Generate all expected periods for 12 months (24 half-month periods)
-    result_history = []
-    month_names_fr = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
+    result_history = vo2max_history
     
-    for i in range(24):  # 12 months * 2 halves
-        target_date = today - timedelta(days=15 * (23 - i))
-        year = target_date.year
-        month = target_date.month
-        # Determine which half based on position
-        half = 1 if (i % 2 == 0) else 2
-        
-        # Recalculate to get correct month
-        months_back = 11 - (i // 2)
-        target_month_date = today - timedelta(days=30 * months_back)
-        year = target_month_date.year
-        month = target_month_date.month
-        half = 1 if (i % 2 == 0) else 2
-        
-        period_key = f"{year}-{month:02d}-{half}"
-        month_name = month_names_fr[month - 1]
-        period_label = f"{month_name} {half}"
-        
-        found = next((h for h in vo2max_history if h["period"] == period_key), None)
-        if found:
-            result_history.append(found)
-        else:
-            result_history.append({
-                "period": period_key,
-                "period_label": period_label,
-                "month": f"{year}-{month:02d}",
-                "month_label": month_name,
-                "half": half,
-                "vma": None,
-                "vo2max": None,
-                "sessions": 0,
-                "vma_efforts": 0
-            })
-    
-    # Calculate CURRENT VO2MAX based on last 6 weeks only (more representative of current fitness)
-    six_weeks_ago = today - timedelta(days=42)
-    
-    def is_recent(a):
-        activity_date = get_activity_date(a)
-        if activity_date is None:
-            return False
-        # Make both dates timezone-aware or naive for comparison
-        if activity_date.tzinfo is None:
-            activity_date = activity_date.replace(tzinfo=timezone.utc)
-        return activity_date >= six_weeks_ago
-    
-    recent_activities = [a for a in activities if is_recent(a)]
-    
+    # Current VO2MAX = last non-null value from the graph (already based on 6 weeks)
     current_vma = None
     current_vo2max = None
-    current_vma_method = "none"
-    
-    if recent_activities:
-        recent_vma_efforts = []
-        recent_paces = []
-        
-        for a in recent_activities:
-            dist = get_distance(a)
-            pace = get_pace(a)
-            duration_min = get_duration(a)
-            
-            if dist > 0 and pace and 3 < pace < 10:
-                recent_paces.append(pace)
-                if duration_min >= MIN_VMA_DURATION and pace < 5.5:
-                    recent_vma_efforts.append({
-                        "pace": pace,
-                        "duration": duration_min,
-                        "speed_kmh": 60 / pace
-                    })
-        
-        if recent_paces:
-            avg_pace = sum(recent_paces) / len(recent_paces)
-            
-            if recent_vma_efforts:
-                best_effort = max(recent_vma_efforts, key=lambda x: x["speed_kmh"])
-                best_speed = best_effort["speed_kmh"]
-                duration = best_effort["duration"]
-                
-                if duration >= 20:
-                    current_vma = best_speed / 0.85
-                elif duration >= 12:
-                    current_vma = best_speed / 0.90
-                else:
-                    current_vma = best_speed / 0.95
-                current_vma_method = f"effort_{int(duration)}min"
-            else:
-                avg_speed = 60 / avg_pace
-                current_vma = avg_speed / 0.70
-                current_vma_method = "average_pace"
-            
-            current_vma = round(current_vma, 1)
-            current_vo2max = round(current_vma * 3.5, 1)
-            
-            # Sanity check
-            if current_vo2max > 70:
-                current_vma = None
-                current_vo2max = None
-                current_vma_method = "excluded"
-    
-    # If no recent data, fallback to latest from history
-    if current_vma is None:
-        for h in reversed(result_history):
-            if h["vma"] is not None:
-                current_vma = h["vma"]
-                current_vo2max = h["vo2max"]
-                current_vma_method = "historical"
-                break
+    for h in reversed(result_history):
+        if h["vma"] is not None:
+            current_vma = h["vma"]
+            current_vo2max = h["vo2max"]
+            break
     
     # Calculate trend (based on VO2MAX over 12 months)
     valid_vo2max = [h["vo2max"] for h in result_history if h["vo2max"] is not None]
@@ -5848,8 +5763,7 @@ async def get_vma_history(user: dict = Depends(auth_user)):
         "has_data": len(valid_vo2max) > 0 or current_vo2max is not None,
         "current_vma": current_vma,
         "current_vo2max": current_vo2max,
-        "current_vma_method": current_vma_method,
-        "current_period": "6 weeks",
+        "calculation_window": "6 weeks",
         "trend": round(trend, 1),
         "trend_pct": round(trend_pct, 1),
         "period_count": 24,
