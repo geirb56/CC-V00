@@ -5,21 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  ResponsiveContainer,
-  Tooltip,
-  Cell
-} from "recharts";
-import { 
   TrendingUp, 
   Activity,
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Bike,
   Footprints,
   Calendar,
   Timer,
@@ -31,16 +21,6 @@ import Paywall from "@/components/Paywall";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const USER_ID = "default";
 
-const getWorkoutIcon = (type) => {
-  switch (type) {
-    case "cycle":
-      return Bike;
-    case "run":
-    default:
-      return Footprints;
-  }
-};
-
 const formatDuration = (minutes) => {
   const hrs = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -48,20 +28,6 @@ const formatDuration = (minutes) => {
     return `${hrs}h ${mins}m`;
   }
   return `${mins}m`;
-};
-
-const CustomTooltip = ({ active, payload, label, t }) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-popover border border-border p-3">
-        <p className="font-mono text-xs text-muted-foreground mb-1">{label}</p>
-        <p className="font-mono text-sm font-medium">
-          {payload[0].value.toFixed(1)} {t("dashboard.km")}
-        </p>
-      </div>
-    );
-  }
-  return null;
 };
 
 export default function Progress() {
@@ -73,8 +39,6 @@ export default function Progress() {
   const [showPredictions, setShowPredictions] = useState(true);
   const { t, lang } = useLanguage();
   const { isFree, loading: subLoading } = useSubscription();
-
-  const dateLocale = t("dateFormat.locale");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -112,14 +76,15 @@ export default function Progress() {
     return <Paywall language={lang} returnPath="/progress" />;
   }
 
-  // Prepare chart data with localized day names
-  const chartData = stats?.weekly_summary?.map(day => ({
-    date: new Date(day.date).toLocaleDateString(dateLocale, { weekday: "short" }),
-    distance: day.distance,
-    count: day.count
-  })) || [];
-
-  const typeData = stats?.workouts_by_type || {};
+  // Calculer les stats hebdo et mensuelles à partir des données réelles
+  // weekly_summary contient les 7 derniers jours
+  const weeklySummary = stats?.weekly_summary || [];
+  const weeklyKm = weeklySummary.reduce((sum, day) => sum + (day.distance || 0), 0);
+  const weeklySessionsCount = weeklySummary.reduce((sum, day) => sum + (day.count || 0), 0);
+  
+  // Pour le mois, on multiplie la moyenne hebdo par ~4.3 semaines
+  // ou on utilise le total si disponible sur 28 jours
+  const monthlyKm = stats?.monthly_distance_km || (weeklyKm * 4.3).toFixed(0);
 
   return (
     <div className="p-6 md:p-8 pb-24 md:pb-8" data-testid="progress-page">
@@ -133,91 +98,53 @@ export default function Progress() {
         </p>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-        <Card className="metric-card bg-card border-border">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-start justify-between mb-3">
-              <span className="data-label">{t("progress.totalVolume")}</span>
-              <TrendingUp className="w-4 h-4 text-chart-2" />
-            </div>
-            <p className="font-heading text-3xl md:text-4xl font-bold">
-              {stats?.total_distance_km?.toFixed(0) || 0}
-            </p>
-            <p className="font-mono text-xs text-muted-foreground mt-1">{t("progress.kilometers")}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="metric-card bg-card border-border">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-start justify-between mb-3">
-              <span className="data-label">{t("progress.sessions")}</span>
+      {/* Weekly & Monthly Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        {/* Séances / semaine */}
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
               <Activity className="w-4 h-4 text-primary" />
+              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                {lang === "fr" ? "Séances/sem" : "Sessions/wk"}
+              </span>
             </div>
-            <p className="font-heading text-3xl md:text-4xl font-bold">
-              {stats?.total_workouts || 0}
+            <p className="font-heading text-3xl font-bold text-white">
+              {weeklySessionsCount}
             </p>
-            <p className="font-mono text-xs text-muted-foreground mt-1">{t("progress.workouts")}</p>
           </CardContent>
         </Card>
 
-        <Card className="metric-card bg-card border-border col-span-2 md:col-span-1">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-start justify-between mb-3">
-              <span className="data-label">{t("progress.byType")}</span>
-              <Calendar className="w-4 h-4 text-muted-foreground" />
+        {/* Km / semaine */}
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-4 h-4 text-emerald-500" />
+              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                {lang === "fr" ? "Km/sem" : "Km/wk"}
+              </span>
             </div>
-            <div className="flex items-center gap-4">
-              {Object.entries(typeData).map(([type, count]) => {
-                const Icon = getWorkoutIcon(type);
-                return (
-                  <div key={type} className="flex items-center gap-2">
-                    <Icon className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-mono text-sm">{count}</span>
-                  </div>
-                );
-              })}
+            <p className="font-heading text-3xl font-bold text-white">
+              {typeof weeklyKm === 'number' ? weeklyKm.toFixed(1) : weeklyKm}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Km / mois */}
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="w-4 h-4 text-violet-500" />
+              <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                {lang === "fr" ? "Km/mois" : "Km/month"}
+              </span>
             </div>
+            <p className="font-heading text-3xl font-bold text-white">
+              {monthlyKm}
+            </p>
           </CardContent>
         </Card>
       </div>
-
-      {/* Distance Chart */}
-      {chartData.length > 0 && (
-        <div className="mb-8">
-          <h2 className="font-heading text-lg uppercase tracking-tight font-semibold mb-4">
-            {t("progress.dailyDistance")}
-          </h2>
-          <Card className="chart-container">
-            <CardContent className="p-6">
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis 
-                    dataKey="date" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontFamily: "JetBrains Mono" }}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontFamily: "JetBrains Mono" }}
-                  />
-                  <Tooltip content={(props) => <CustomTooltip {...props} t={t} />} cursor={false} />
-                  <Bar dataKey="distance" radius={[0, 0, 0, 0]}>
-                    {chartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={entry.distance > 0 ? "hsl(var(--primary))" : "hsl(var(--muted))"}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Race Predictions & VMA */}
       {predictions?.has_data && (
@@ -362,7 +289,6 @@ export default function Progress() {
         </h2>
         <div className="space-y-3">
           {workouts.map((workout, index) => {
-            const Icon = getWorkoutIcon(workout.type);
             const typeLabel = t(`workoutTypes.${workout.type}`) || workout.type;
             return (
               <Link
@@ -376,7 +302,7 @@ export default function Progress() {
                   <CardContent className="p-4">
                     <div className="flex items-center gap-4">
                       <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-muted border border-border">
-                        <Icon className="w-5 h-5 text-muted-foreground" />
+                        <Footprints className="w-5 h-5 text-muted-foreground" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
@@ -384,7 +310,7 @@ export default function Progress() {
                             {typeLabel}
                           </span>
                           <span className="font-mono text-[10px] text-muted-foreground">
-                            {new Date(workout.date).toLocaleDateString(dateLocale, {
+                            {new Date(workout.date).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", {
                               month: "short",
                               day: "numeric"
                             })}
