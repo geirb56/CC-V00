@@ -2,6 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { SubscriptionProvider } from "@/context/SubscriptionContext";
 import Dashboard from "@/pages/Dashboard";
 import WorkoutDetail from "@/pages/WorkoutDetail";
 import DetailedAnalysis from "@/pages/DetailedAnalysis";
@@ -18,28 +19,30 @@ import IOSPWAHint from "@/components/IOSPWAHint";
 function App() {
   return (
     <LanguageProvider>
-      <div className="App min-h-screen bg-background text-foreground">
-        <div className="noise-overlay" aria-hidden="true" />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="workout/:id" element={<WorkoutDetail />} />
-              <Route path="workout/:id/analysis" element={<DetailedAnalysis />} />
-              <Route path="progress" element={<Progress />} />
-              <Route path="coach" element={<Coach />} />
-              <Route path="guidance" element={<Guidance />} />
-              <Route path="digest" element={<Digest />} />
-              <Route path="training" element={<TrainingPlan />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="subscription" element={<Subscription />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-        <Toaster position="bottom-right" />
-        {/* PWA iOS hint - discret, one-time, non-bloquant */}
-        <IOSPWAHint />
-      </div>
+      <SubscriptionProvider>
+        <div className="App min-h-screen bg-background text-foreground">
+          <div className="noise-overlay" aria-hidden="true" />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="workout/:id" element={<WorkoutDetail />} />
+                <Route path="workout/:id/analysis" element={<DetailedAnalysis />} />
+                <Route path="progress" element={<Progress />} />
+                <Route path="coach" element={<Coach />} />
+                <Route path="guidance" element={<Guidance />} />
+                <Route path="digest" element={<Digest />} />
+                <Route path="training" element={<TrainingPlan />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="subscription" element={<Subscription />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+          <Toaster position="bottom-right" />
+          {/* PWA iOS hint - discret, one-time, non-bloquant */}
+          <IOSPWAHint />
+        </div>
+      </SubscriptionProvider>
     </LanguageProvider>
   );
 }
