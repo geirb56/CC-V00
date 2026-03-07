@@ -93,6 +93,7 @@ const getSessionStyleKey = (type, intensity) => {
 
 export default function TrainingPlan() {
   const { t, lang } = useLanguage();
+  const { isFree, loading: subLoading, trialDaysRemaining, isTrial } = useSubscription();
   const [plan, setPlan] = useState(null);
   const [fullCycle, setFullCycle] = useState(null);
   const [predictions, setPredictions] = useState(null);
@@ -103,6 +104,7 @@ export default function TrainingPlan() {
   const [expandedWeek, setExpandedWeek] = useState(null);
   const [showAllWeeks, setShowAllWeeks] = useState(true);
   const [showPredictions, setShowPredictions] = useState(true);
+  const [apiError, setApiError] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -113,6 +115,7 @@ export default function TrainingPlan() {
       ]);
       setPlan(planRes.data);
       setFullCycle(cycleRes.data);
+      setApiError(null);
       if (predictionsRes.data) {
         setPredictions(predictionsRes.data);
       }
@@ -125,7 +128,12 @@ export default function TrainingPlan() {
       }
     } catch (err) {
       console.error("Error fetching plan:", err);
-      toast.error(lang === "fr" ? "Erreur de chargement" : "Loading error");
+      // Check if it's a subscription error
+      if (err.response?.status === 403 && err.response?.data?.error === "subscription_required") {
+        setApiError("subscription_required");
+      } else {
+        toast.error(lang === "fr" ? "Erreur de chargement" : "Loading error");
+      }
     } finally {
       setLoading(false);
     }
