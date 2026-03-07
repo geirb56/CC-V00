@@ -5565,7 +5565,182 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
     }
 
 
-@api_router.get("/training/full-cycle")
+@api_router.get("/training/vma-history")
+async def get_vma_history(user: dict = Depends(auth_user)):
+    """
+    Retourne l'historique de la VMA sur les 6 derniers mois.
+    Calcule la VMA pour chaque mois basé sur les meilleures performances.
+    """
+    today = datetime.now(timezone.utc)
+    six_months_ago = today - timedelta(days=180)
+    
+    # Récupérer toutes les activités des 6 derniers mois
+    activities = await db.strava_activities.find({
+        "user_id": user["id"],
+        "start_date_local": {"$gte": six_months_ago.isoformat()}
+    }).to_list(1000)
+    
+    if not activities:
+        activities = await db.workouts.find({
+            "date": {"$gte": six_months_ago.isoformat()}
+        }).to_list(1000)
+    
+    if not activities:
+        return {"has_data": False, "history": []}
+    
+    # Helper functions
+    def get_distance(a):
+        dist = a.get("distance", 0)
+        if dist > 1000:
+            return dist / 1000
+        return a.get("distance_km", dist)
+    
+    def get_duration(a):
+        moving_time = a.get("moving_time", 0)
+        if moving_time > 0:
+            return moving_time / 60
+        elapsed = a.get("elapsed_time", 0)
+        if elapsed > 0:
+            return elapsed / 60
+        return a.get("duration_minutes", 0)
+    
+    def get_pace(a):
+        pace = a.get("avg_pace_min_km")
+        if pace:
+            return pace
+        speed = a.get("average_speed", 0)
+        if speed > 0:
+            return (1000 / speed) / 60
+        dist = get_distance(a)
+        duration_min = get_duration(a)
+        if dist > 0 and duration_min > 0:
+            return duration_min / dist
+        return None
+    
+    def get_activity_date(a):
+        date_str = a.get("start_date_local", a.get("date", ""))
+        if date_str:
+            try:
+                return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            except:
+                try:
+                    return datetime.strptime(date_str[:10], "%Y-%m-%d")
+                except:
+                    return None
+        return None
+    
+    # Group activities by month and calculate VMA for each
+    from collections import defaultdict
+    monthly_activities = defaultdict(list)
+    
+    for a in activities:
+        activity_date = get_activity_date(a)
+        if activity_date:
+            month_key = activity_date.strftime("%Y-%m")
+            monthly_activities[month_key].append(a)
+    
+    # Calculate VMA for each month
+    MIN_VMA_DURATION = 6
+    vma_history = []
+    
+    for month_key in sorted(monthly_activities.keys()):
+        month_activities = monthly_activities[month_key]
+        
+        vma_efforts = []
+        paces = []
+        
+        for a in month_activities:
+            dist = get_distance(a)
+            pace = get_pace(a)
+            duration_min = get_duration(a)
+            
+            if dist > 0 and pace and 3 < pace < 10:
+                paces.append(pace)
+                # Efforts >= 6 min avec allure rapide
+                if duration_min >= MIN_VMA_DURATION and pace < 5.5:
+                    vma_efforts.append({
+                        "pace": pace,
+                        "duration": duration_min,
+                        "speed_kmh": 60 / pace
+                    })
+        
+        if not paces:
+            continue
+        
+        # Calculate VMA for this month
+        avg_pace = sum(paces) / len(paces)
+        
+        if vma_efforts:
+            best_effort = max(vma_efforts, key=lambda x: x["speed_kmh"])
+            best_speed = best_effort["speed_kmh"]
+            duration = best_effort["duration"]
+            
+            if duration >= 20:
+                estimated_vma = best_speed / 0.85
+            elif duration >= 12:
+                estimated_vma = best_speed / 0.90
+            else:
+                estimated_vma = best_speed / 0.95
+        else:
+            avg_speed = 60 / avg_pace
+            estimated_vma = avg_speed / 0.70
+        
+        # Parse month for display
+        year, month = month_key.split("-")
+        month_names_fr = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
+        month_label = month_names_fr[int(month) - 1]
+        
+        vma_history.append({
+            "month": month_key,
+            "month_label": month_label,
+            "vma": round(estimated_vma, 1),
+            "sessions": len(month_activities),
+            "vma_efforts": len(vma_efforts)
+        })
+    
+    # Fill in missing months with None/interpolated values
+    result_history = []
+    for i in range(6):
+        target_date = today - timedelta(days=30 * (5 - i))
+        target_month = target_date.strftime("%Y-%m")
+        month_names_fr = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"]
+        month_label = month_names_fr[target_date.month - 1]
+        
+        found = next((h for h in vma_history if h["month"] == target_month), None)
+        if found:
+            result_history.append(found)
+        else:
+            result_history.append({
+                "month": target_month,
+                "month_label": month_label,
+                "vma": None,
+                "sessions": 0,
+                "vma_efforts": 0
+            })
+    
+    # Calculate current VMA (latest non-null)
+    current_vma = None
+    for h in reversed(result_history):
+        if h["vma"] is not None:
+            current_vma = h["vma"]
+            break
+    
+    # Calculate trend
+    valid_vmas = [h["vma"] for h in result_history if h["vma"] is not None]
+    if len(valid_vmas) >= 2:
+        trend = valid_vmas[-1] - valid_vmas[0]
+        trend_pct = (trend / valid_vmas[0]) * 100 if valid_vmas[0] > 0 else 0
+    else:
+        trend = 0
+        trend_pct = 0
+    
+    return {
+        "has_data": len(valid_vmas) > 0,
+        "current_vma": current_vma,
+        "trend": round(trend, 1),
+        "trend_pct": round(trend_pct, 1),
+        "history": result_history
+    }
 async def get_full_training_cycle(user: dict = Depends(auth_user)):
     """
     Retourne l'aperçu complet du cycle d'entraînement avec toutes les semaines.
