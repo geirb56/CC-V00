@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSubscription } from "@/context/SubscriptionContext";
 import { Globe, Info, Link2, Loader2, Check, X, RefreshCw, Target, Calendar, Trash2, Clock, Route, Crown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
