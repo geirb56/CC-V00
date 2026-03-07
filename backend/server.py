@@ -79,6 +79,21 @@ from emergentintegrations.payments.stripe.checkout import (
     CheckoutSessionRequest
 )
 
+# Import subscription manager
+from subscription_manager import (
+    get_user_subscription,
+    create_trial_subscription,
+    activate_early_adopter,
+    cancel_subscription,
+    get_trial_days_remaining,
+    has_feature_access,
+    is_route_protected,
+    get_subscription_display,
+    SubscriptionStatus,
+    FEATURES,
+    EARLY_ADOPTER_PRICE
+)
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
