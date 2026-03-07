@@ -336,6 +336,55 @@ async def rate_limit_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def subscription_middleware(request: Request, call_next):
+    """Middleware de vérification d'abonnement.
+    
+    Bloque l'accès aux routes protégées pour les utilisateurs 'free'.
+    Les utilisateurs 'trial', 'early_adopter' et 'premium' ont accès complet.
+    """
+    path = request.url.path
+    
+    # Skip non-API requests
+    if not path.startswith("/api"):
+        return await call_next(request)
+    
+    # Skip public routes (subscription, auth, health, etc.)
+    if not is_route_protected(path):
+        return await call_next(request)
+    
+    # Get user ID
+    user_id = get_user_id_from_request(request)
+    
+    try:
+        # Get subscription status
+        subscription = await get_user_subscription(db, user_id)
+        status = subscription.get("status", SubscriptionStatus.FREE)
+        
+        # Check if user has access
+        if status == SubscriptionStatus.FREE:
+            logger.info(f"[Subscription] Blocked {path} for FREE user {user_id}")
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "error": "subscription_required",
+                    "message": "Abonnement requis pour accéder à cette fonctionnalité",
+                    "message_en": "Subscription required to access this feature",
+                    "status": status,
+                    "upgrade_url": "/subscription"
+                }
+            )
+        
+        # Store subscription in request state for later use
+        request.state.subscription = subscription
+        
+    except Exception as e:
+        logger.error(f"[Subscription] Error checking subscription: {e}")
+        # En cas d'erreur, on laisse passer (fail open)
+    
+    return await call_next(request)
+
+
 # ========== MODELS ==========
 
 class Workout(BaseModel):
