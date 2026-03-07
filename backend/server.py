@@ -5761,14 +5761,79 @@ async def get_vma_history(user: dict = Depends(auth_user)):
                 "vma_efforts": 0
             })
     
-    # Calculate current VO2MAX (latest non-null)
+    # Calculate CURRENT VO2MAX based on last 6 weeks only (more representative of current fitness)
+    six_weeks_ago = today - timedelta(days=42)
+    
+    def is_recent(a):
+        activity_date = get_activity_date(a)
+        if activity_date is None:
+            return False
+        # Make both dates timezone-aware or naive for comparison
+        if activity_date.tzinfo is None:
+            activity_date = activity_date.replace(tzinfo=timezone.utc)
+        return activity_date >= six_weeks_ago
+    
+    recent_activities = [a for a in activities if is_recent(a)]
+    
     current_vma = None
     current_vo2max = None
-    for h in reversed(result_history):
-        if h["vma"] is not None:
-            current_vma = h["vma"]
-            current_vo2max = h["vo2max"]
-            break
+    current_vma_method = "none"
+    
+    if recent_activities:
+        recent_vma_efforts = []
+        recent_paces = []
+        
+        for a in recent_activities:
+            dist = get_distance(a)
+            pace = get_pace(a)
+            duration_min = get_duration(a)
+            
+            if dist > 0 and pace and 3 < pace < 10:
+                recent_paces.append(pace)
+                if duration_min >= MIN_VMA_DURATION and pace < 5.5:
+                    recent_vma_efforts.append({
+                        "pace": pace,
+                        "duration": duration_min,
+                        "speed_kmh": 60 / pace
+                    })
+        
+        if recent_paces:
+            avg_pace = sum(recent_paces) / len(recent_paces)
+            
+            if recent_vma_efforts:
+                best_effort = max(recent_vma_efforts, key=lambda x: x["speed_kmh"])
+                best_speed = best_effort["speed_kmh"]
+                duration = best_effort["duration"]
+                
+                if duration >= 20:
+                    current_vma = best_speed / 0.85
+                elif duration >= 12:
+                    current_vma = best_speed / 0.90
+                else:
+                    current_vma = best_speed / 0.95
+                current_vma_method = f"effort_{int(duration)}min"
+            else:
+                avg_speed = 60 / avg_pace
+                current_vma = avg_speed / 0.70
+                current_vma_method = "average_pace"
+            
+            current_vma = round(current_vma, 1)
+            current_vo2max = round(current_vma * 3.5, 1)
+            
+            # Sanity check
+            if current_vo2max > 70:
+                current_vma = None
+                current_vo2max = None
+                current_vma_method = "excluded"
+    
+    # If no recent data, fallback to latest from history
+    if current_vma is None:
+        for h in reversed(result_history):
+            if h["vma"] is not None:
+                current_vma = h["vma"]
+                current_vo2max = h["vo2max"]
+                current_vma_method = "historical"
+                break
     
     # Calculate trend (based on VO2MAX over 12 months)
     valid_vo2max = [h["vo2max"] for h in result_history if h["vo2max"] is not None]
@@ -5780,9 +5845,11 @@ async def get_vma_history(user: dict = Depends(auth_user)):
         trend_pct = 0
     
     return {
-        "has_data": len(valid_vo2max) > 0,
+        "has_data": len(valid_vo2max) > 0 or current_vo2max is not None,
         "current_vma": current_vma,
         "current_vo2max": current_vo2max,
+        "current_vma_method": current_vma_method,
+        "current_period": "6 weeks",
         "trend": round(trend, 1),
         "trend_pct": round(trend_pct, 1),
         "period_count": 24,

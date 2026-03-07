@@ -175,9 +175,7 @@ export default function Progress() {
                       <span className="text-sm text-muted-foreground">ml/kg/min</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {predictions?.athlete_profile?.vma_efforts_count > 0 
-                        ? (lang === "fr" ? `Basé sur ${predictions.athlete_profile.vma_efforts_count} effort(s) intense(s)` : `Based on ${predictions.athlete_profile.vma_efforts_count} intense effort(s)`)
-                        : (lang === "fr" ? "Estimé depuis ton allure moyenne" : "Estimated from your average pace")}
+                      {lang === "fr" ? "Basé sur les 6 dernières semaines" : "Based on last 6 weeks"}
                     </p>
                   </div>
                 </div>
