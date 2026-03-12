@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSubscription } from "@/context/SubscriptionContext";
+import { useUnitSystem } from "@/context/UnitContext";
 import { Globe, Info, Link2, Loader2, Check, X, RefreshCw, Target, Calendar, Trash2, Clock, Route, Crown, Sparkles, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +44,7 @@ export default function Settings() {
     trialDaysRemaining,
     refreshSubscription 
   } = useSubscription();
+  const { unitSystem, setUnitSystem } = useUnitSystem();
   const [searchParams, setSearchParams] = useSearchParams();
   const [stravaStatus, setStravaStatus] = useState(null);
   const [loadingStrava, setLoadingStrava] = useState(true);
@@ -423,6 +425,67 @@ export default function Settings() {
       </div>
 
       <div className="space-y-6">
+        {/* Units Section */}
+        <Card className="bg-card border-border">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 flex items-center justify-center bg-muted border border-border flex-shrink-0">
+                <Route className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-heading text-lg uppercase tracking-tight font-semibold mb-1">
+                  {lang === "fr" ? "Unités" : "Units"}
+                </h2>
+                <p className="font-mono text-xs text-muted-foreground mb-4">
+                  {lang === "fr"
+                    ? "Choisis ton système d'unités pour les distances, allures et vitesses"
+                    : "Choose your unit system for distance, pace and speed"}
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setUnitSystem("metric")}
+                    className={`flex-1 p-4 border font-mono text-sm uppercase tracking-wider text-left transition-colors ${
+                      unitSystem === "metric"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                    }`}
+                    data-testid="units-metric"
+                  >
+                    <span className="block text-xs mb-1">
+                      {lang === "fr" ? "Métrique" : "Metric"}
+                    </span>
+                    <span className="block text-lg mb-1">km, min/km</span>
+                    <span className="block text-[10px] uppercase text-muted-foreground">
+                      km, km/h, m
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setUnitSystem("imperial")}
+                    className={`flex-1 p-4 border font-mono text-sm uppercase tracking-wider text-left transition-colors ${
+                      unitSystem === "imperial"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                    }`}
+                    data-testid="units-imperial"
+                  >
+                    <span className="block text-xs mb-1">
+                      {lang === "fr" ? "Impérial" : "Imperial"}
+                    </span>
+                    <span className="block text-lg mb-1">mi, min/mi</span>
+                    <span className="block text-[10px] uppercase text-muted-foreground">
+                      mi, mph, ft
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Training Goal Section */}
         <Card className="bg-card border-border">
           <CardContent className="p-6">
