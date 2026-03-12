@@ -21,11 +21,12 @@ Application de coaching sportif personnalisé pour les sports d'endurance (cours
 4. ✅ Sélecteur d'objectif (5K, 10K, Semi, Marathon, Ultra)
 5. ✅ Sélecteur du nombre de séances par semaine (3-6)
 6. ✅ Affichage de la séance du jour sur le Dashboard
-7. ✅ Navigation avec 4 onglets (Accueil, Coach, Plan, Réglages)
+7. ✅ Navigation avec 5 onglets (Accueil, Plan, Progression, Coach, Réglages)
 8. ✅ Coach IA conversationnel (GPT-4o-mini)
 9. ✅ Prédictions de course avec VMA
 10. ✅ Système d'abonnement (trial/free/early_adopter)
 11. ✅ Intégration Stripe pour les paiements
+12. ✅ **Plan d'entraînement dynamique avec allures personnalisées basées sur la VMA**
 
 ## Architecture
 - **Backend**: FastAPI + MongoDB + LiteLLM (GPT-4o-mini)
@@ -40,58 +41,65 @@ Application de coaching sportif personnalisé pour les sports d'endurance (cours
 
 ## What's Been Implemented
 
-### 2026-03-07 (Current Session)
+### 2026-03-12 (Session actuelle)
+- **Plan d'entraînement dynamique avec VMA**:
+  - Allures personnalisées (Z1-Z5, marathon, semi) calculées à partir de la VMA
+  - VMA estimée via moyenne glissante sur 6 semaines d'entraînement
+  - Score de préparation (readiness_score: 0-100) basé sur volume (60%) et forme (40%)
+  - Adaptation de la durée de préparation selon le niveau:
+    - Avancé (≥90%): -25% semaines
+    - Normal (≥70%): durée standard
+    - Progressif (≥50%): +25% semaines
+    - Débutant (<50%): +50% semaines
+  - Zones d'allure: Z1 (65-70% VMA), Z2 (75-80%), Z3 (82-87%), Z4 (88-93%), Z5 (95-100%)
+  - Affichage des allures personnalisées dans les détails des séances
+  - Tests complets: 20/20 backend + 12/12 frontend passés
+
+### 2026-03-07 (Session précédente)
 - **Intégration Stripe complète pour Early Adopter**:
   - Frontend: `Paywall.jsx` et `Settings.jsx` appellent l'endpoint Stripe Checkout
   - Backend: `/api/subscription/early-adopter/checkout` crée une session Stripe (4.99€)
   - Backend: `/api/webhook/stripe/early-adopter` reçoit la confirmation de paiement
   - Backend: `/api/subscription/verify-checkout/{session_id}` active le statut early_adopter
-  - Fix du montant Stripe (float au lieu d'int pour emergentintegrations)
   - Tests complets: 18/18 backend + 15/15 frontend passés
 
 - **Déplacement des sélecteurs vers Réglages**:
   - Nouvelle section "Plan d'entraînement" dans Settings.jsx
   - Sélecteur d'objectif (5K, 10K, Semi-Marathon, Marathon, Ultra-Trail)
   - Sélecteur de séances par semaine (3, 4, 5, 6)
-  - Suppression de ces sélecteurs de TrainingPlan.jsx
-  - Le plan est régénéré automatiquement lors des changements
 
 - **Création de la page Progression**:
   - Ajout de l'onglet "Progression" dans la navigation (5 onglets total)
-  - Déplacement des prédictions de course depuis la page Plan
-  - Affichage de la VMA, volume hebdo, sortie max
-  - Prédictions par distance (5K, 10K, Semi, Marathon, Ultra)
-  - Page Plan épurée (uniquement le cycle d'entraînement)
+  - Graphique VO2MAX sur 12 mois avec moyenne glissante 6 semaines
+  - Prédictions de course par distance
 
-### Previous Sessions
+### Sessions précédentes
 - **Système d'abonnement** (trial/free/early_adopter) avec middleware de protection
-- **Coach IA conversationnel** avec GPT-4o-mini et contexte utilisateur
-- **Prédictions de course** avec calcul VMA précis
+- **Coach IA conversationnel** avec GPT-4o-mini et contexte utilisateur enrichi
 - **Métriques ACWR/TSB** sur le dashboard
 - **Analyse des séances** avec graphiques pace/km
-- **Navigation simplifiée** (4 onglets)
-- **Carte "Aujourd'hui"** sur le Dashboard
 - **Plan multi-semaines** avec vue complète du cycle
 
 ## Key Files
-- `/app/frontend/src/pages/Settings.jsx` - Page paramètres avec section abonnement
-- `/app/frontend/src/components/Paywall.jsx` - Composant paywall avec CTA Stripe
-- `/app/frontend/src/context/SubscriptionContext.jsx` - Gestion état abonnement
-- `/app/backend/server.py` - API endpoints (6600+ lignes)
+- `/app/backend/coach_service.py` - **generate_dynamic_training_plan()** avec calcul VMA et allures
+- `/app/backend/llm_coach.py` - **generate_cycle_week()** avec allures personnalisées dans le prompt
+- `/app/frontend/src/pages/TrainingPlan.jsx` - Affichage des séances avec détails d'allure
+- `/app/frontend/src/pages/Progress.jsx` - Graphique VO2MAX et prédictions
+- `/app/backend/server.py` - API endpoints (7000+ lignes)
 - `/app/backend/subscription_manager.py` - Logique métier abonnements
-- `/app/backend/llm_coach.py` - Coach IA conversationnel
 
 ## Key API Endpoints
-- `GET /api/subscription/info` - Statut d'abonnement complet
-- `POST /api/subscription/early-adopter/checkout` - Créer session Stripe
-- `GET /api/subscription/verify-checkout/{session_id}` - Vérifier paiement
+- `GET /api/training/plan` - Plan avec VMA, allures personnalisées, readiness_score
+- `POST /api/training/refresh` - Régénérer le plan avec nouvelles allures
+- `GET /api/training/full-cycle` - Aperçu complet du cycle multi-semaines
+- `GET /api/training/vma-history` - Historique VO2MAX sur 12 mois
+- `GET /api/training/race-predictions` - Prédictions basées sur VMA 6 semaines
 - `POST /api/coach/v2/chat` - Chat conversationnel IA
-- `GET /api/training/race-predictions` - Prédictions de course
-- `GET /api/training/plan` - Plan d'entraînement
+- `POST /api/subscription/early-adopter/checkout` - Session Stripe
 
 ## Prioritized Backlog
 ### P0 (Critical)
-- ✅ Intégration Stripe pour abonnement Early Adopter
+- ✅ Plan d'entraînement dynamique avec allures personnalisées
 
 ### P1 (High Priority)
 - Aucun item haute priorité en attente
