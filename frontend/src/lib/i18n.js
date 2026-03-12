@@ -1,3 +1,5 @@
+export const LANGUAGE_STORAGE_KEY = "cardiocoach_lang";
+
 export const translations = {
   en: {
     // Navigation
@@ -190,6 +192,7 @@ export const translations = {
       languageDesc: "Select your preferred language",
       english: "English",
       french: "French",
+      spanish: "Spanish",
       about: "About",
       aboutDesc: "CardioCoach is an elite endurance coaching tool for runners and cyclists. This is not a medical application.",
       version: "Version",
@@ -472,6 +475,7 @@ export const translations = {
       languageDesc: "Selectionnez votre langue preferee",
       english: "Anglais",
       french: "Francais",
+      spanish: "Espagnol",
       about: "A propos",
       aboutDesc: "CardioCoach est un outil de coaching endurance elite pour coureurs et cyclistes. Ceci n'est pas une application medicale.",
       version: "Version",
@@ -562,6 +566,92 @@ export const translations = {
       year: "numeric",
     },
   },
+  
+  // Spanish - currently uses English for most strings via fallback,
+  // with specific labels for the language settings section.
+  es: {
+    settings: {
+      title: "Settings",
+      subtitle: "Preferences",
+      language: "Language",
+      languageDesc: "Select your preferred language",
+      english: "Inglés",
+      french: "Francés",
+      spanish: "Español",
+      about: "About",
+      aboutDesc:
+        "CardioCoach is an elite endurance coaching tool for runners and cyclists. This is not a medical application.",
+      version: "Version",
+      dataSync: "Data Sync",
+      dataSyncDesc: "Connect your fitness account to import workouts automatically",
+      connected: "Connected",
+      notConnected: "Not connected",
+      connect: "Connect Account",
+      disconnect: "Disconnect",
+      sync: "Sync Now",
+      lastSync: "Last sync",
+      workouts: "Imported",
+      goal: "Training Goal",
+      goalDesc: "Set a target event to get personalized recommendations",
+      eventName: "Event name",
+      eventDate: "Event date",
+      distance: "Distance",
+      targetTime: "Target time",
+      targetTimeDesc: "Leave empty if no specific goal",
+      saveGoal: "Save goal",
+      deleteGoal: "Delete",
+      noGoal: "No goal set",
+      goalSaved: "Goal saved",
+      goalDeleted: "Goal deleted",
+      daysUntil: "days until",
+      targetPace: "Target pace",
+      distances: {
+        "5k": "5 km",
+        "10k": "10 km",
+        semi: "Half Marathon",
+        marathon: "Marathon",
+        ultra: "Ultra Trail",
+      },
+    },
+    common: {
+      loading: "Loading...",
+      error: "Error",
+      save: "Save",
+      cancel: "Cancel",
+    },
+    dateFormat: {
+      locale: "en-US",
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    },
+  },
+};
+
+export const getAppLanguage = () => {
+  // 1) User preference (localStorage)
+  if (typeof window !== "undefined") {
+    try {
+      const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      if (stored && translations[stored]) {
+        return stored;
+      }
+    } catch {
+      // Ignore storage errors and continue to detection
+    }
+
+    // 2) Device / browser language
+    const browserLang =
+      (window.navigator.language || window.navigator.userLanguage || "").toLowerCase();
+
+    if (browserLang.startsWith("fr")) return "fr";
+    if (browserLang.startsWith("es")) return "es";
+    if (browserLang.startsWith("en")) return "en";
+  }
+
+  // 3) Default to English
+  return "en";
 };
 
 export const getTranslation = (lang, path) => {
