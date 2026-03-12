@@ -7,11 +7,14 @@ import { Target, Calendar, Clock, Route, Trash2, Check, Loader2 } from "lucide-r
 import { toast } from "sonner";
 import axios from "axios";
 import { API_BASE } from "@/utils/constants";
+import { useUnitSystem } from "@/context/UnitContext";
+import { formatDistance } from "@/utils/units";
 
 const DISTANCE_OPTIONS = ["5k", "10k", "semi", "marathon", "ultra"];
 const DISTANCE_KM = { "5k": 5, "10k": 10, "semi": 21.1, "marathon": 42.195, "ultra": 50 };
 
 export const GoalSection = ({ goal, lang, t, onUpdate }) => {
+  const { unitSystem } = useUnitSystem();
   const [isEditing, setIsEditing] = useState(!goal);
   const [eventName, setEventName] = useState(goal?.event_name || "");
   const [eventDate, setEventDate] = useState(goal?.event_date || "");
@@ -114,7 +117,9 @@ export const GoalSection = ({ goal, lang, t, onUpdate }) => {
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Route className="w-4 h-4 flex-shrink-0" />
                       <span className="font-mono text-xs">
-                        {t(`settings.distances.${goal.distance_type}`)} ({goal.distance_km}km)
+                        {t(`settings.distances.${goal.distance_type}`)} (
+                          {formatDistance(goal.distance_km, { unitSystem })}
+                        )
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -134,11 +139,11 @@ export const GoalSection = ({ goal, lang, t, onUpdate }) => {
                         </span>
                       </div>
                     )}
-                    {goal.target_pace && (
+                      {goal.target_pace && (
                       <div className="flex items-center gap-2 text-primary">
                         <Target className="w-4 h-4 flex-shrink-0" />
-                        <span className="font-mono text-xs font-semibold">
-                          {t("settings.targetPace")}: {goal.target_pace}/km
+                          <span className="font-mono text-xs font-semibold">
+                          {t("settings.targetPace")}: {goal.target_pace}
                         </span>
                       </div>
                     )}

@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
 import { getWorkoutIcon, formatDuration, formatDate } from "@/utils/workoutHelpers";
+import { useUnitSystem } from "@/context/UnitContext";
+import { formatDistance } from "@/utils/units";
 
 export const WorkoutCard = ({ 
   workout, 
@@ -10,6 +12,7 @@ export const WorkoutCard = ({
   index = 0,
   path = "/workout"
 }) => {
+  const { unitSystem } = useUnitSystem();
   const Icon = getWorkoutIcon(workout.type);
   const typeLabel = t(`workoutTypes.${workout.type}`) || workout.type;
   const dateStr = formatDate(workout.date, dateLocale);
@@ -45,7 +48,7 @@ export const WorkoutCard = ({
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="text-right">
                 <p className="font-mono text-xs md:text-sm font-medium">
-                  {workout.distance_km.toFixed(1)} km
+                  {formatDistance(workout.distance_km || 0, { unitSystem })}
                 </p>
                 <p className="font-mono text-[9px] md:text-[10px] text-muted-foreground">
                   {formatDuration(workout.duration_minutes)}

@@ -15,6 +15,8 @@ import {
   Timer,
   Activity
 } from "lucide-react";
+import { useUnitSystem } from "@/context/UnitContext";
+import { formatDistance, formatPace as formatPaceUnits } from "@/utils/units";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -64,13 +66,6 @@ const formatDuration = (minutes) => {
   const mins = minutes % 60;
   if (hrs > 0) return `${hrs}h${mins.toString().padStart(2, '0')}`;
   return `${mins}min`;
-};
-
-const formatPace = (paceMinKm) => {
-  if (!paceMinKm) return "--";
-  const mins = Math.floor(paceMinKm);
-  const secs = Math.round((paceMinKm - mins) * 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}/km`;
 };
 
 const getRelativeDate = (dateStr, lang) => {
@@ -170,6 +165,7 @@ export default function Dashboard() {
   const [trainingMetrics, setTrainingMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const { t, lang } = useLanguage();
+  const { unitSystem } = useUnitSystem();
   const fetchedRef = useRef(false);
   const lastLangRef = useRef(lang);
 
@@ -297,8 +293,9 @@ export default function Dashboard() {
             <span>{lang === "fr" ? "Cette semaine" : "This week"}</span>
           </div>
           <div className="flex items-baseline">
-            <span className="metric-value">{weekStats.volume_km || 0}</span>
-            <span className="metric-unit">km</span>
+            <span className="metric-value">
+              {formatDistance(weekStats.volume_km || 0, { unitSystem })}
+            </span>
           </div>
           <div className="metric-progress-bar">
             <div 
@@ -315,8 +312,9 @@ export default function Dashboard() {
             <span>{lang === "fr" ? "Charge 28j" : "28d Load"}</span>
           </div>
           <div className="flex items-baseline">
-            <span className="metric-value">{trainingMetrics?.load_28 || 0}</span>
-            <span className="metric-unit">km</span>
+            <span className="metric-value">
+              {formatDistance(trainingMetrics?.load_28 || 0, { unitSystem })}
+            </span>
           </div>
           <p className="metric-objective">
             {lang === "fr" ? "Base chronique" : "Chronic base"}
@@ -387,7 +385,8 @@ export default function Dashboard() {
               <h3 className="today-title">{todaySession.type}</h3>
               <p className="today-meta">
                 {todaySession.duration && todaySession.duration !== "0min" && `${todaySession.duration}`}
-                {todaySession.distance_km > 0 && ` • ${todaySession.distance_km} km`}
+                {todaySession.distance_km > 0 &&
+                  ` • ${formatDistance(todaySession.distance_km, { unitSystem })}`}
                 {todaySession.target_pace && ` • Cible: ${todaySession.target_pace}`}
               </p>
               <div className="today-details">
@@ -462,9 +461,16 @@ export default function Dashboard() {
                 <div className="workout-info">
                   <p className="workout-type-name">{typeConfig.label}</p>
                   <div className="workout-stats">
-                    <span>{workout.distance_km?.toFixed(1)} km</span>
+                    <span>
+                      {formatDistance(workout.distance_km || 0, { unitSystem })}
+                    </span>
                     <span className="dot" />
-                    <span>{formatPace(workout.avg_pace_min_km)}</span>
+                    <span>
+                      {formatPaceUnits(
+                        (workout.avg_pace_min_km || 0) * 60,
+                        { unitSystem }
+                      )}
+                    </span>
                     {workout.avg_heart_rate && (
                       <>
                         <span className="dot" />

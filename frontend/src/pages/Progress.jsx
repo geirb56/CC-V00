@@ -4,6 +4,8 @@ import axios from "axios";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSubscription } from "@/context/SubscriptionContext";
+import { useUnitSystem } from "@/context/UnitContext";
+import { formatDistance } from "@/utils/units";
 import { 
   LineChart,
   Line,
@@ -51,6 +53,7 @@ export default function Progress() {
   const [showPredictions, setShowPredictions] = useState(true);
   const { t, lang } = useLanguage();
   const { isFree, loading: subLoading } = useSubscription();
+  const { unitSystem } = useUnitSystem();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -134,7 +137,7 @@ export default function Progress() {
               </span>
             </div>
             <p className="font-heading text-3xl font-bold text-white">
-              {km7Days}
+              {formatDistance(km7Days, { unitSystem })}
             </p>
           </CardContent>
         </Card>
@@ -149,7 +152,7 @@ export default function Progress() {
               </span>
             </div>
             <p className="font-heading text-3xl font-bold text-white">
-              {km30Days}
+              {formatDistance(km30Days, { unitSystem })}
             </p>
           </CardContent>
         </Card>
@@ -395,7 +398,7 @@ export default function Progress() {
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="font-mono text-sm font-medium">
-                            {workout.distance_km.toFixed(1)} {t("dashboard.km")}
+                            {formatDistance(workout.distance_km || 0, { unitSystem })}
                           </p>
                           <p className="font-mono text-[10px] text-muted-foreground">
                             {formatDuration(workout.duration_minutes)}

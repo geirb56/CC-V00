@@ -21,6 +21,8 @@ import {
   Sparkles,
   AlertTriangle
 } from "lucide-react";
+import { useUnitSystem } from "@/context/UnitContext";
+import { formatDistance } from "@/utils/units";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const USER_ID = "default";
@@ -85,6 +87,7 @@ function SignalCard({ signal, t }) {
 
 export default function Digest() {
   const { t, lang } = useLanguage();
+  const { unitSystem } = useUnitSystem();
   const navigate = useNavigate();
   const [review, setReview] = useState(null);
   const [ragReview, setRagReview] = useState(null);
@@ -250,8 +253,12 @@ export default function Digest() {
                     </p>
                   </div>
                   <div>
-                    <p className="font-mono text-sm font-bold">{Math.round(digest.metrics?.total_km || 0)}</p>
-                    <p className="font-mono text-[8px] uppercase text-muted-foreground">km</p>
+                    <p className="font-mono text-sm font-bold">
+                      {formatDistance(digest.metrics?.total_km || 0, { unitSystem })}
+                    </p>
+                    <p className="font-mono text-[8px] uppercase text-muted-foreground">
+                      {t("digest.km")}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -350,7 +357,8 @@ export default function Digest() {
                     {userGoal.event_name}
                   </p>
                   <p className="font-mono text-[10px] text-muted-foreground">
-                    {userGoal.distance_km}km • {daysUntil} {lang === "fr" ? "jours" : "days"}
+                    {formatDistance(userGoal.distance_km, { unitSystem })} • {daysUntil}{" "}
+                    {lang === "fr" ? "jours" : "days"}
                   </p>
                 </div>
               </div>
@@ -360,7 +368,7 @@ export default function Digest() {
                     {t("settings.targetPace")}
                   </p>
                   <p className="font-mono text-sm font-bold text-amber-400">
-                    {userGoal.target_pace}/km
+                    {userGoal.target_pace}
                   </p>
                 </div>
               )}
@@ -409,7 +417,7 @@ export default function Digest() {
             </div>
             <div className="flex-1 text-center px-3">
               <p className="font-mono text-2xl font-bold text-foreground">
-                {metrics.total_distance_km || 0}
+                {formatDistance(metrics.total_distance_km || 0, { unitSystem })}
               </p>
               <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
                 {t("digest.km")}
@@ -511,8 +519,12 @@ export default function Digest() {
             {ragReview.metrics && (
               <div className="flex items-center gap-4 mb-3 p-2 bg-muted/30 rounded-sm">
                 <div className="text-center">
-                  <p className="font-mono text-sm font-bold">{ragReview.metrics.km_total}</p>
-                  <p className="font-mono text-[8px] text-muted-foreground uppercase">km</p>
+                  <p className="font-mono text-sm font-bold">
+                    {formatDistance(ragReview.metrics.km_total || 0, { unitSystem })}
+                  </p>
+                  <p className="font-mono text-[8px] text-muted-foreground uppercase">
+                    {t("digest.km")}
+                  </p>
                 </div>
                 <div className="text-center">
                   <p className="font-mono text-sm font-bold">{ragReview.metrics.nb_seances}</p>
