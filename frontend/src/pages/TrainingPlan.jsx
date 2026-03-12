@@ -409,9 +409,9 @@ export default function TrainingPlan() {
                                     {session.type}
                                   </span>
                                 </div>
-                                {!isRest && session.distance_km > 0 && (
-                                  <span className="text-[10px]" style={{ color: style.text, opacity: 0.7 }}>
-                                    {session.distance_km} km
+                                {!isRest && session.details && (
+                                  <span className="text-[10px] block truncate" style={{ color: style.text, opacity: 0.7 }}>
+                                    {session.details}
                                   </span>
                                 )}
                               </div>

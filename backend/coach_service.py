@@ -311,6 +311,10 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     """
     Génère un plan d'entraînement dynamique basé sur les données utilisateur.
     
+    Intègre:
+    - VMA pour calculer les allures personnalisées
+    - Prédictions de course pour adapter la durée de préparation
+    
     Args:
         db: Instance de base de données MongoDB (async)
         user_id: ID utilisateur
@@ -350,19 +354,10 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     
     config = GOAL_CONFIG[goal]
     
-    # 2. Calculer la semaine et la phase
-    start_date = cycle.get("start_date")
-    if isinstance(start_date, str):
-        start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-    if isinstance(start_date, datetime) and start_date.tzinfo is None:
-        start_date = start_date.replace(tzinfo=timezone.utc)
-    
-    week = compute_week_number(start_date.date() if isinstance(start_date, datetime) else start_date)
-    phase = determine_phase(week, config["cycle_weeks"])
-    
-    # 3. Récupérer les données d'entraînement (Strava en priorité, sinon workouts locaux)
+    # 2. Récupérer les données d'entraînement (6 semaines pour cohérence avec VMA)
     today = datetime.now(timezone.utc)
     seven_days_ago = today - timedelta(days=7)
+    six_weeks_ago = today - timedelta(days=42)
     twenty_eight_days_ago = today - timedelta(days=28)
     
     # Essayer d'abord les activités Strava (avec ou sans user_id car certaines sont globales)
@@ -384,6 +379,16 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         "start_date_local": {"$gte": twenty_eight_days_ago.isoformat()}
     }).to_list(300)
     
+    # Données sur 6 semaines pour le calcul VMA
+    workouts_6w = await db.strava_activities.find({
+        "$or": [
+            {"user_id": user_id},
+            {"user_id": None},
+            {"user_id": {"$exists": False}}
+        ],
+        "start_date_local": {"$gte": six_weeks_ago.isoformat()}
+    }).to_list(500)
+    
     # Fallback sur workouts locaux si pas de données Strava
     if not workouts_28:
         workouts_7 = await db.workouts.find({
@@ -393,8 +398,12 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         workouts_28 = await db.workouts.find({
             "date": {"$gte": twenty_eight_days_ago.isoformat()}
         }).to_list(300)
+        
+        workouts_6w = await db.workouts.find({
+            "date": {"$gte": six_weeks_ago.isoformat()}
+        }).to_list(500)
     
-    # 4. Calculer les métriques
+    # 3. Calculer les métriques de base
     def get_distance_km(w):
         """Extrait la distance en km (Strava = mètres, workouts = km)"""
         dist = w.get("distance", 0)
@@ -402,21 +411,162 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
             return dist / 1000
         return w.get("distance_km", dist) or 0
     
+    def get_duration_min(w):
+        """Extrait la durée en minutes"""
+        moving_time = w.get("moving_time", 0)
+        if moving_time > 0:
+            return moving_time / 60
+        elapsed = w.get("elapsed_time", 0)
+        if elapsed > 0:
+            return elapsed / 60
+        return w.get("duration_minutes", 0)
+    
+    def get_pace(w):
+        """Calcule l'allure en min/km"""
+        dist = get_distance_km(w)
+        duration = get_duration_min(w)
+        if dist > 0 and duration > 0:
+            return duration / dist
+        return None
+    
     km_7 = sum(get_distance_km(w) for w in workouts_7)
     km_28 = sum(get_distance_km(w) for w in workouts_28)
     weekly_km = km_28 / 4 if km_28 > 0 else 20
     
-    # Calcul identique à /api/training/metrics pour cohérence
-    # ACWR = charge 7j / (charge 28j / 4)
+    # 4. CALCULER LA VMA (même logique que /api/training/vma-history)
+    vma_efforts = []
+    paces = []
+    MIN_VMA_DURATION = 6
+    
+    for w in workouts_6w:
+        dist = get_distance_km(w)
+        pace = get_pace(w)
+        duration = get_duration_min(w)
+        
+        if dist > 0 and pace and 3 < pace < 10:
+            paces.append(pace)
+            # Efforts >= 6 min avec allure rapide (< 5:30/km)
+            if duration >= MIN_VMA_DURATION and pace < 5.5:
+                vma_efforts.append({
+                    "pace": pace,
+                    "duration": duration,
+                    "speed_kmh": 60 / pace
+                })
+    
+    # Calcul de la VMA
+    if paces:
+        avg_pace = sum(paces) / len(paces)
+        
+        if vma_efforts:
+            best_effort = max(vma_efforts, key=lambda x: x["speed_kmh"])
+            best_speed = best_effort["speed_kmh"]
+            duration = best_effort["duration"]
+            
+            if duration >= 20:
+                estimated_vma = best_speed / 0.85
+            elif duration >= 12:
+                estimated_vma = best_speed / 0.90
+            else:
+                estimated_vma = best_speed / 0.95
+            vma_method = "effort"
+        else:
+            avg_speed = 60 / avg_pace
+            estimated_vma = avg_speed / 0.70
+            vma_method = "average"
+        
+        # Sanity check
+        if estimated_vma * 3.5 > 70:
+            estimated_vma = 14.0  # Valeur par défaut réaliste
+            vma_method = "default"
+    else:
+        estimated_vma = 12.0  # VMA par défaut
+        vma_method = "default"
+    
+    estimated_vma = round(estimated_vma, 1)
+    vo2max = round(estimated_vma * 3.5, 1)
+    
+    # 5. CALCULER LES ZONES D'ALLURE PERSONNALISÉES basées sur la VMA
+    def vma_to_pace(vma_pct):
+        """Convertit un % de VMA en allure min/km"""
+        speed = estimated_vma * vma_pct
+        if speed > 0:
+            pace = 60 / speed
+            return pace
+        return 6.0
+    
+    def format_pace(pace):
+        """Formate une allure en min:sec/km"""
+        mins = int(pace)
+        secs = int((pace % 1) * 60)
+        return f"{mins}:{secs:02d}"
+    
+    personalized_paces = {
+        "z1": f"{format_pace(vma_to_pace(0.65))}-{format_pace(vma_to_pace(0.70))}",  # 65-70% VMA (récup)
+        "z2": f"{format_pace(vma_to_pace(0.75))}-{format_pace(vma_to_pace(0.80))}",  # 75-80% VMA (endurance)
+        "z3": f"{format_pace(vma_to_pace(0.82))}-{format_pace(vma_to_pace(0.87))}",  # 82-87% VMA (tempo)
+        "z4": f"{format_pace(vma_to_pace(0.88))}-{format_pace(vma_to_pace(0.93))}",  # 88-93% VMA (seuil)
+        "z5": f"{format_pace(vma_to_pace(0.95))}-{format_pace(vma_to_pace(1.00))}",  # 95-100% VMA
+        "marathon": f"{format_pace(vma_to_pace(0.78))}-{format_pace(vma_to_pace(0.82))}",  # 78-82% VMA
+        "semi": f"{format_pace(vma_to_pace(0.82))}-{format_pace(vma_to_pace(0.85))}",  # 82-85% VMA
+    }
+    
+    # 6. ADAPTER LA DURÉE DE PRÉPARATION selon le niveau
+    # Calculer le "readiness score" pour l'objectif
+    goal_requirements = {
+        "5K": {"min_weekly_km": 15, "min_vo2max": 35, "base_weeks": 6},
+        "10K": {"min_weekly_km": 25, "min_vo2max": 38, "base_weeks": 8},
+        "SEMI": {"min_weekly_km": 35, "min_vo2max": 42, "base_weeks": 12},
+        "MARATHON": {"min_weekly_km": 50, "min_vo2max": 45, "base_weeks": 16},
+        "ULTRA": {"min_weekly_km": 60, "min_vo2max": 48, "base_weeks": 20},
+    }
+    
+    req = goal_requirements.get(goal, goal_requirements["SEMI"])
+    
+    # Score de préparation (0-100)
+    volume_score = min(100, (weekly_km / req["min_weekly_km"]) * 100) if req["min_weekly_km"] > 0 else 50
+    fitness_score = min(100, (vo2max / req["min_vo2max"]) * 100) if req["min_vo2max"] > 0 else 50
+    readiness_score = (volume_score * 0.6 + fitness_score * 0.4)  # Volume compte plus
+    
+    # Adapter le nombre de semaines
+    base_weeks = req["base_weeks"]
+    if readiness_score >= 90:
+        # Très prêt → préparation courte (-25%)
+        adjusted_weeks = max(4, int(base_weeks * 0.75))
+        prep_status = "avancé"
+    elif readiness_score >= 70:
+        # Prêt → préparation normale
+        adjusted_weeks = base_weeks
+        prep_status = "normal"
+    elif readiness_score >= 50:
+        # Besoin de progresser → préparation longue (+25%)
+        adjusted_weeks = int(base_weeks * 1.25)
+        prep_status = "progressif"
+    else:
+        # Débutant → préparation très longue (+50%)
+        adjusted_weeks = int(base_weeks * 1.5)
+        prep_status = "débutant"
+    
+    # Mettre à jour la config avec la durée adaptée
+    config = {**config, "cycle_weeks": adjusted_weeks}
+    
+    # 7. Calculer la semaine et la phase
+    start_date = cycle.get("start_date")
+    if isinstance(start_date, str):
+        start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+    if isinstance(start_date, datetime) and start_date.tzinfo is None:
+        start_date = start_date.replace(tzinfo=timezone.utc)
+    
+    week = compute_week_number(start_date.date() if isinstance(start_date, datetime) else start_date)
+    phase = determine_phase(week, adjusted_weeks)
+    
+    # 8. Calcul ACWR et TSB
     chronic_avg = km_28 / 4 if km_28 > 0 else 1
     acwr = round(km_7 / chronic_avg, 2) if chronic_avg > 0 else 1.0
     
-    # TSB = CTL - ATL (en km pour simplifier)
-    ctl = km_28 / 4  # Fitness (moyenne 28j)
-    atl = km_7       # Fatigue (7j)
+    ctl = km_28 / 4
+    atl = km_7
     tsb = round(ctl - atl, 1)
     
-    # Charges pour le contexte (en points TSS: 10 pts/km)
     load_7 = km_7 * 10
     load_28 = km_28 * 10
     
@@ -429,14 +579,21 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         "acwr": acwr
     }
     
-    # 5. Construire le contexte
+    # 9. Construire le contexte enrichi avec VMA
     context = build_training_context(fitness_data, weekly_km)
+    context["vma"] = estimated_vma
+    context["vo2max"] = vo2max
+    context["vma_method"] = vma_method
+    context["paces"] = personalized_paces
+    context["readiness_score"] = round(readiness_score, 1)
+    context["prep_status"] = prep_status
+    context["adjusted_weeks"] = adjusted_weeks
     
-    # 6. Calculer la charge cible
+    # 10. Calculer la charge cible
     target_load = determine_target_load(context, phase)
     
-    # 7. Vérifier le cache
-    cache_key = f"plan_{user_id}_{week}_{phase}_{goal}"
+    # 11. Vérifier le cache
+    cache_key = f"plan_{user_id}_{week}_{phase}_{goal}_{estimated_vma}"
     if cache_key in _plan_cache:
         cached_plan, timestamp = _plan_cache[cache_key]
         if _is_cache_valid(timestamp):
@@ -446,7 +603,7 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
             logger.debug(f"[Coach] Plan cache hit ({latency:.1f}ms)")
             return cached_plan
     
-    # 8. Générer le plan via LLM
+    # 12. Générer le plan via LLM avec allures personnalisées
     try:
         week_plan, success, meta = await generate_cycle_week(
             context=context,
@@ -454,7 +611,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
             target_load=target_load,
             goal=goal,
             user_id=user_id,
-            sessions_per_week=sessions_per_week
+            sessions_per_week=sessions_per_week,
+            personalized_paces=personalized_paces
         )
         
         if success and week_plan:
@@ -468,9 +626,9 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     except Exception as e:
         logger.warning(f"[Coach] Plan fallback: {e}")
         metrics.llm_fallback += 1
-        week_plan = _deterministic_plan(context, phase, target_load, goal, sessions_per_week)
+        week_plan = _deterministic_plan(context, phase, target_load, goal, sessions_per_week, personalized_paces)
     
-    # 9. Construire le résultat
+    # 13. Construire le résultat
     result = {
         "week": week,
         "phase": phase,
@@ -480,20 +638,29 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         "context": context,
         "plan": week_plan,
         "sessions_per_week": sessions_per_week,
+        "vma": estimated_vma,
+        "vo2max": vo2max,
+        "paces": personalized_paces,
+        "readiness_score": round(readiness_score, 1),
+        "prep_status": prep_status,
+        "adjusted_weeks": adjusted_weeks,
         "generated_at": datetime.now(timezone.utc).isoformat()
     }
     
-    # 10. Mettre à jour le cycle en base
+    # 14. Mettre à jour le cycle en base
     await db.training_cycles.update_one(
         {"user_id": user_id},
         {"$set": {
             "last_generated_week": week,
             "current_plan": week_plan,
+            "vma": estimated_vma,
+            "vo2max": vo2max,
+            "adjusted_weeks": adjusted_weeks,
             "updated_at": datetime.now(timezone.utc)
         }}
     )
     
-    # 11. Stocker en cache
+    # 15. Stocker en cache
     _plan_cache[cache_key] = (result, time.time())
     _cleanup_cache(_plan_cache)
     
@@ -503,8 +670,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     return result
 
 
-def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str, sessions_per_week: int = None) -> dict:
-    """Génère un plan déterministe de secours avec des détails enrichis, adapté au niveau de l'athlète."""
+def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str, sessions_per_week: int = None, personalized_paces: dict = None) -> dict:
+    """Génère un plan déterministe de secours avec allures personnalisées basées sur la VMA."""
     
     # Volume actuel de l'athlète (basé sur les 4 dernières semaines)
     current_weekly_km = context.get("weekly_km", 30)
@@ -546,8 +713,12 @@ def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str, 
     seuil_km = round(remaining * 0.22)
     recup_km = remaining - easy_km - tempo_km - seuil_km
     
-    # Allures de référence
-    paces = {"z1": "6:30-7:00", "z2": "5:45-6:15", "z3": "5:15-5:30", "z4": "4:45-5:00", "z5": "4:15-4:30", "semi": "5:00-5:15"}
+    # Allures personnalisées (basées sur VMA) ou valeurs par défaut
+    if personalized_paces:
+        paces = personalized_paces
+    else:
+        paces = {"z1": "6:30-7:00", "z2": "5:45-6:15", "z3": "5:15-5:30", "z4": "4:45-5:00", "z5": "4:15-4:30", "semi": "5:00-5:15", "marathon": "5:15-5:30"}
+    
     hr = {"z1": "120-135", "z2": "135-150", "z3": "150-165", "z4": "165-175", "z5": "175-185"}
     
     # Templates par phase - adapté à l'objectif

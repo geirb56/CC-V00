@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 
 class CardioCoachHiddenInsightTester:
-    def __init__(self, base_url="https://training-premium.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://cardio-dynamic.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0

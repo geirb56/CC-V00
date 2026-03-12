@@ -117,7 +117,7 @@ class TestSubscriptionEndpoints:
             f"{BASE_URL}/api/subscription/early-adopter/checkout",
             params={
                 "user_id": self.test_user_id,
-                "origin_url": "https://training-premium.preview.emergentagent.com"
+                "origin_url": "https://cardio-dynamic.preview.emergentagent.com"
             }
         )
         assert res.status_code == 200
@@ -134,7 +134,7 @@ class TestSubscriptionEndpoints:
             f"{BASE_URL}/api/subscription/early-adopter/checkout",
             params={
                 "user_id": self.test_user_id,
-                "origin_url": "https://training-premium.preview.emergentagent.com"
+                "origin_url": "https://cardio-dynamic.preview.emergentagent.com"
             }
         )
         assert res.status_code == 200
@@ -152,7 +152,7 @@ class TestSubscriptionEndpoints:
             f"{BASE_URL}/api/subscription/early-adopter/checkout",
             params={
                 "user_id": self.test_user_id,
-                "origin_url": "https://training-premium.preview.emergentagent.com"
+                "origin_url": "https://cardio-dynamic.preview.emergentagent.com"
             }
         )
         assert checkout_res.status_code == 200

@@ -224,18 +224,20 @@ async def generate_cycle_week(
     target_load: int,
     goal: str,
     user_id: str = "unknown",
-    sessions_per_week: int = None
+    sessions_per_week: int = None,
+    personalized_paces: Dict = None
 ) -> Tuple[Optional[Dict], bool, Dict]:
     """
-    Génère un plan de semaine d'entraînement structuré.
+    Génère un plan de semaine d'entraînement structuré avec allures personnalisées.
     
     Args:
-        context: Données de fitness (CTL, ATL, TSB, ACWR, weekly_km)
+        context: Données de fitness (CTL, ATL, TSB, ACWR, weekly_km, vma, vo2max, paces)
         phase: Phase actuelle (build, deload, intensification, taper, race)
         target_load: Charge cible en TSS
         goal: Objectif (5K, 10K, SEMI, MARATHON, ULTRA)
         user_id: ID utilisateur
         sessions_per_week: Nombre de séances par semaine (3, 4, 5, 6)
+        personalized_paces: Allures personnalisées basées sur la VMA (z1, z2, z3, z4, z5, marathon, semi)
         
     Returns:
         (plan_dict, success, metadata)
@@ -319,6 +321,20 @@ async def generate_cycle_week(
             ("Dimanche", "Sortie longue", "moderate")
         ]
     
+    # Utiliser les allures personnalisées ou des valeurs par défaut
+    paces = personalized_paces or context.get('paces', {})
+    z1_pace = paces.get('z1', '6:30-7:00')
+    z2_pace = paces.get('z2', '5:45-6:15')
+    z3_pace = paces.get('z3', '5:15-5:30')
+    z4_pace = paces.get('z4', '4:45-5:00')
+    z5_pace = paces.get('z5', '4:15-4:30')
+    semi_pace = paces.get('semi', '5:00-5:15')
+    marathon_pace = paces.get('marathon', '5:15-5:30')
+    
+    # VMA et VO2MAX de l'athlète
+    vma = context.get('vma', 'Non calculée')
+    vo2max = context.get('vo2max', 'Non calculé')
+    
     prompt = f"""Tu es un coach running expert élite.
 
 Objectif : {goal} ({race_km} km)
@@ -331,6 +347,8 @@ ATL: {context.get('atl', 45)}
 TSB: {context.get('tsb', -5)}
 ACWR: {round(context.get('acwr', 1.0), 2)}
 Volume hebdo ACTUEL: {current_weekly_km} km
+VMA estimée: {vma} km/h
+VO2MAX: {vo2max}
 
 PARAMÈTRES DU PLAN :
 - Nombre de séances demandé: {target_sessions} courses + {num_rest_days} repos
@@ -345,12 +363,16 @@ RÈGLES :
 4. Sortie longue dimanche: {target_long_run} km
 5. Details: distance • allure • FC cible
 
-Zones d'allure :
-- Z1: 6:30-7:00/km, FC 120-135
-- Z2: 5:45-6:15/km, FC 135-150
-- Z3: 5:15-5:30/km, FC 150-165
-- Z4: 4:45-5:00/km, FC 165-175
-- Z5: 4:15-4:30/km, FC 175-185
+ZONES D'ALLURE PERSONNALISÉES (basées sur la VMA de l'athlète) :
+- Z1 (récup): {z1_pace}/km, FC 120-135
+- Z2 (endurance): {z2_pace}/km, FC 135-150
+- Z3 (tempo): {z3_pace}/km, FC 150-165
+- Z4 (seuil): {z4_pace}/km, FC 165-175
+- Z5 (VMA): {z5_pace}/km, FC 175-185
+- Allure marathon: {marathon_pace}/km
+- Allure semi: {semi_pace}/km
+
+IMPORTANT: Utilise OBLIGATOIREMENT les allures personnalisées ci-dessus dans les détails des séances.
 
 JSON uniquement :
 
@@ -360,12 +382,12 @@ JSON uniquement :
   "weekly_km": {target_km},
   "sessions": [
     {{"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération complète", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
-    {{"day": "Mardi", "type": "Endurance", "duration": "50min", "details": "8 km • 5:45-6:15/km • FC 135-150 bpm • Zone 2", "intensity": "easy", "estimated_tss": 50, "distance_km": 8}},
-    {{"day": "Mercredi", "type": "Seuil", "duration": "40min", "details": "7 km dont 20min à 4:45-5:00/km • FC 165-175 bpm", "intensity": "hard", "estimated_tss": 55, "distance_km": 7}},
-    {{"day": "Jeudi", "type": "Récupération", "duration": "30min", "details": "5 km • 6:30-7:00/km • FC <135 bpm", "intensity": "easy", "estimated_tss": 25, "distance_km": 5}},
+    {{"day": "Mardi", "type": "Endurance", "duration": "50min", "details": "8 km • {z2_pace}/km • FC 135-150 bpm • Zone 2", "intensity": "easy", "estimated_tss": 50, "distance_km": 8}},
+    {{"day": "Mercredi", "type": "Seuil", "duration": "40min", "details": "7 km dont 20min à {z4_pace}/km • FC 165-175 bpm", "intensity": "hard", "estimated_tss": 55, "distance_km": 7}},
+    {{"day": "Jeudi", "type": "Récupération", "duration": "30min", "details": "5 km • {z1_pace}/km • FC <135 bpm", "intensity": "easy", "estimated_tss": 25, "distance_km": 5}},
     {{"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Récupération", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
-    {{"day": "Samedi", "type": "Tempo", "duration": "45min", "details": "8 km dont 25min à 5:00-5:15/km • FC 150-165 bpm", "intensity": "moderate", "estimated_tss": 60, "distance_km": 8}},
-    {{"day": "Dimanche", "type": "Sortie longue", "duration": "90min", "details": "{target_long_run} km progressif • 5:45→5:30/km • FC 135-165 bpm", "intensity": "moderate", "estimated_tss": 100, "distance_km": {target_long_run}}}
+    {{"day": "Samedi", "type": "Tempo", "duration": "45min", "details": "8 km dont 25min à {semi_pace}/km • FC 150-165 bpm", "intensity": "moderate", "estimated_tss": 60, "distance_km": 8}},
+    {{"day": "Dimanche", "type": "Sortie longue", "duration": "90min", "details": "{target_long_run} km progressif • {z2_pace}→{z3_pace}/km • FC 135-165 bpm", "intensity": "moderate", "estimated_tss": 100, "distance_km": {target_long_run}}}
   ],
   "total_tss": 290,
   "advice": "Volume: {current_weekly_km} km → {target_km} km. Min recommandé {goal}: {config['min']} km. Sortie longue: {target_long_run} km."
