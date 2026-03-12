@@ -853,6 +853,19 @@ export default function Settings() {
                     <span className="block text-lg mb-1">FR</span>
                     <span className="block text-xs">{t("settings.french")}</span>
                   </button>
+
+                  <button
+                    onClick={() => setLang("es")}
+                    data-testid="lang-es"
+                    className={`flex-1 p-4 border font-mono text-sm uppercase tracking-wider transition-colors ${
+                      lang === "es"
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                    }`}
+                  >
+                    <span className="block text-lg mb-1">ES</span>
+                    <span className="block text-xs">{t("settings.spanish")}</span>
+                  </button>
                 </div>
               </div>
             </div>

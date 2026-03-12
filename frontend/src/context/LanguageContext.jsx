@@ -1,21 +1,19 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import { translations } from "@/lib/i18n";
+import { translations, LANGUAGE_STORAGE_KEY, getAppLanguage } from "@/lib/i18n";
 
 const LanguageContext = createContext();
 
-const STORAGE_KEY = "cardiocoach_lang";
-
 export const LanguageProvider = ({ children }) => {
-  const [lang, setLang] = useState(() => {
-    if (typeof window !== "undefined") {
-      // Default to French if no preference saved
-      return localStorage.getItem(STORAGE_KEY) || "fr";
-    }
-    return "fr";
-  });
+  const [lang, setLang] = useState(() => getAppLanguage());
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, lang);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+      } catch {
+        // Ignore storage/write errors
+      }
+    }
   }, [lang]);
 
   const t = (path) => {
