@@ -265,8 +265,8 @@ def is_route_protected(path: str) -> bool:
     return False
 
 
-def get_subscription_display(subscription: Dict, lang: str = "fr") -> Dict:
-    """Retourne les informations d'affichage de l'abonnement."""
+def get_subscription_display(subscription: Dict, lang: str = "en") -> Dict:
+    """Returns subscription display information."""
     status = subscription.get("status", SubscriptionStatus.FREE)
     
     displays = {

@@ -2666,7 +2666,7 @@ DASHBOARD_CACHE_TTL = 300  # 5 minutes in seconds
 
 
 @api_router.get("/dashboard/insight")
-async def get_dashboard_insight(language: str = "fr", user_id: str = "default"):
+async def get_dashboard_insight(language: str = "en", user_id: str = "default"):
     """Get dashboard coach insight with week and month summaries and recovery score - NO LLM"""
     
     # Check cache first
@@ -2846,7 +2846,7 @@ async def analyze_with_coach(request: CoachRequest):
     from llm_coach import enrich_chat_response
     
     user_id = request.user_id or "default"
-    language = request.language or "fr"
+    language = request.language or "en"
     user_message = request.message or ""
     
     # 1. Récupérer l'historique des conversations (5 derniers messages)
@@ -3120,23 +3120,21 @@ async def analyze_with_coach(request: CoachRequest):
     })
     
     # 7. Appeler GPT-4o-mini pour générer la réponse
-    try:
-        llm_response, success, meta = await enrich_chat_response(
-            user_message=user_message,
-            context=context,
-            conversation_history=[{"role": m.get("role"), "content": m.get("content")} for m in conversation_history],
-            user_id=user_id
+    llm_response, success, meta = await enrich_chat_response(
+        user_message=user_message,
+        context=context,
+        conversation_history=[{"role": m.get("role"), "content": m.get("content")} for m in conversation_history],
+        user_id=user_id
+    )
+    
+    if not success or not llm_response:
+        logger.warning(f"LLM chat failed: {meta}")
+        raise HTTPException(
+            status_code=503,
+            detail="Le service de coaching IA n'est pas disponible actuellement." if language == "fr" else "The AI coaching service is currently unavailable."
         )
-        
-        if success and llm_response:
-            response_text = llm_response
-        else:
-            # Fallback sur réponse locale si LLM échoue
-            logger.warning(f"LLM chat failed, using fallback: {meta}")
-            response_text = _generate_fallback_chat_response(user_message, context, language)
-    except Exception as e:
-        logger.error(f"LLM chat error: {e}")
-        response_text = _generate_fallback_chat_response(user_message, context, language)
+    
+    response_text = llm_response
     
     # 8. Stocker la réponse assistant
     msg_id = str(uuid.uuid4())
@@ -3151,36 +3149,6 @@ async def analyze_with_coach(request: CoachRequest):
     
     return CoachResponse(response=response_text, message_id=msg_id)
 
-
-def _generate_fallback_chat_response(message: str, context: dict, language: str) -> str:
-    """Génère une réponse de fallback si le LLM échoue."""
-    stats_7 = context.get("stats_7j", {})
-    fitness = context.get("fitness", {})
-    
-    if language == "fr":
-        return f"""Voici un résumé de ta situation :
-
-📊 **Cette semaine** : {stats_7.get('km', 0)} km en {stats_7.get('sessions', 0)} séances
-
-💪 **État de forme** :
-- ACWR : {fitness.get('acwr', 1.0)} ({fitness.get('acwr_status', 'ok')})
-- TSB : {fitness.get('tsb', 0)} ({fitness.get('tsb_status', 'normal')})
-
-{context.get('recent_sessions', '')}
-
-Pour une analyse plus détaillée, sélectionne une séance spécifique."""
-    else:
-        return f"""Here's a summary of your situation:
-
-📊 **This week**: {stats_7.get('km', 0)} km in {stats_7.get('sessions', 0)} sessions
-
-💪 **Fitness status**:
-- ACWR: {fitness.get('acwr', 1.0)} ({fitness.get('acwr_status', 'ok')})
-- TSB: {fitness.get('tsb', 0)} ({fitness.get('tsb_status', 'normal')})
-
-{context.get('recent_sessions', '')}
-
-For a more detailed analysis, select a specific workout."""
 
 
 @api_router.get("/coach/history")
@@ -3211,7 +3179,7 @@ async def get_messages(limit: int = 20):
 async def get_adaptive_guidance(request: GuidanceRequest):
     """Generate adaptive training guidance based on recent workouts - 100% LOCAL ENGINE"""
     
-    language = request.language or "fr"
+    language = request.language or "en"
     user_id = request.user_id or "default"
     
     # Get recent workouts (last 14 days)
@@ -3512,7 +3480,7 @@ def generate_review_signals(workouts: List[dict], baseline_workouts: List[dict])
 
 
 @api_router.get("/coach/digest")
-async def get_weekly_review(user_id: str = "default", language: str = "fr"):
+async def get_weekly_review(user_id: str = "default", language: str = "en"):
     """Generate weekly training review (Bilan de la semaine) - 100% LOCAL ENGINE, NO LLM"""
     
     # Get all workouts
@@ -3898,7 +3866,7 @@ def calculate_mobile_signals(workout: dict, baseline: dict) -> dict:
 
 
 @api_router.get("/coach/workout-analysis/{workout_id}")
-async def get_mobile_workout_analysis(workout_id: str, language: str = "fr", user_id: str = "default"):
+async def get_mobile_workout_analysis(workout_id: str, language: str = "en", user_id: str = "default"):
     """Get mobile-first workout analysis with coach summary and signals - 100% LOCAL ENGINE"""
     
     # Get all workouts
@@ -4074,7 +4042,7 @@ class DetailedAnalysisResponse(BaseModel):
 
 
 @api_router.get("/coach/detailed-analysis/{workout_id}")
-async def get_detailed_analysis(workout_id: str, language: str = "fr", user_id: str = "default"):
+async def get_detailed_analysis(workout_id: str, language: str = "en", user_id: str = "default"):
     """Get card-based detailed analysis for mobile view - 100% LOCAL ENGINE"""
     
     # Get all workouts
@@ -6733,15 +6701,15 @@ class ActivateSubscriptionRequest(BaseModel):
 
 
 @api_router.get("/subscription/info")
-async def get_subscription_info(user_id: str = "default", language: str = "fr"):
+async def get_subscription_info(user_id: str = "default", language: str = "en"):
     """
-    Récupère les informations d'abonnement complètes d'un utilisateur.
+    Retrieves complete subscription information for a user.
     
-    Retourne:
+    Returns:
     - status: trial, free, early_adopter, premium
-    - display: Textes localisés pour l'UI
-    - features: Fonctionnalités accessibles
-    - trial_days_remaining: Jours restants si en essai
+    - display: Localized UI texts
+    - features: Accessible features
+    - trial_days_remaining: Remaining days if in trial
     """
     subscription = await get_user_subscription(db, user_id)
     status = subscription.get("status", SubscriptionStatus.FREE)
@@ -6846,7 +6814,7 @@ async def reset_to_trial(user_id: str = "default"):
 
 
 @api_router.get("/subscription/early-adopter-offer")
-async def get_early_adopter_offer(language: str = "fr"):
+async def get_early_adopter_offer(language: str = "en"):
     """
     Retourne les détails de l'offre Early Adopter.
     """

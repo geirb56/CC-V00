@@ -8,7 +8,7 @@ générer des analyses personnalisées et motivantes.
 Flux:
 1. Réception des données d'entraînement
 2. Envoi à GPT-4o-mini pour génération texte
-3. Fallback templates Python si erreur
+3. Erreur retournée si l'API n'est pas disponible
 """
 
 import os
@@ -28,6 +28,11 @@ EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
 LLM_MODEL = "gpt-4.1-mini"
 LLM_PROVIDER = "openai"
 LLM_TIMEOUT = 15
+
+
+def is_llm_available() -> bool:
+    """Check if the LLM API is configured and available."""
+    return bool(EMERGENT_LLM_KEY and EMERGENT_LLM_KEY.startswith("sk-emergent"))
 
 # ============================================================
 # PROMPTS SYSTÈME

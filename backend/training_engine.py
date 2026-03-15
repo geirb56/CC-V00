@@ -169,7 +169,7 @@ def determine_phase(week: int, total_weeks: int) -> str:
     return "intensification"
 
 
-def get_phase_description(phase: str, lang: str = "fr") -> Dict:
+def get_phase_description(phase: str, lang: str = "en") -> Dict:
     """Return phase description and advice in the requested language."""
     phases_fr = {
         "build": {
