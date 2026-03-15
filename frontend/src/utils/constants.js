@@ -1,4 +1,6 @@
-export const API_BASE = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_BASE_URL } from '@/config';
+
+export const API_BASE = API_BASE_URL;
 export const USER_ID = "default";
 
 export const ANIMATION_DELAYS = {
