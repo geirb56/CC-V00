@@ -95,6 +95,9 @@ from subscription_manager import (
     EARLY_ADOPTER_PRICE
 )
 
+# Import physiological engine dashboard router
+from api.dashboard import dashboard_router
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -7033,6 +7036,9 @@ async def verify_checkout_session(session_id: str, user_id: str = "default"):
 # Include the router
 app.include_router(api_router)
 
+# Include the physiological engine dashboard router
+app.include_router(dashboard_router, prefix="/api")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -7045,6 +7051,8 @@ app.add_middleware(
 @app.on_event("startup")
 async def create_db_indexes():
     """Create MongoDB indexes for common query patterns"""
+    # Expose db via app.state so sub-routers can access it via request.app.state.db
+    app.state.db = db
     try:
         # Workouts: filter + sort by user and date
         await db.workouts.create_index([("user_id", 1), ("date", -1)])
