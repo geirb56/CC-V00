@@ -367,7 +367,7 @@ def pick(templates: list) -> str:
 # GÉNÉRATEUR D'ANALYSE DE SÉANCE
 # ============================================================
 
-def generate_session_analysis(workout: dict, baseline: dict = None, language: str = "fr") -> dict:
+def generate_session_analysis(workout: dict, baseline: dict = None, language: str = "en") -> dict:
     """
     Generate complete session analysis following mandatory structure.
     PRIORITÉ FC: Si données FC disponibles → analyse physiologique
@@ -509,7 +509,7 @@ def generate_weekly_review(
     workouts: List[dict],
     previous_week_workouts: List[dict] = None,
     user_goal: dict = None,
-    language: str = "fr"
+    language: str = "en"
 ) -> dict:
     """
     Generate weekly review ("Bilan de la semaine") following mandatory 6-bloc structure.
@@ -682,7 +682,7 @@ def generate_dashboard_insight(
     week_stats: dict,
     month_stats: dict,
     recovery_score: int = None,
-    language: str = "fr"
+    language: str = "en"
 ) -> str:
     """Generate single dashboard insight sentence without LLM"""
     

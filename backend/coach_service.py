@@ -25,7 +25,6 @@ from llm_coach import (
     generate_cycle_week,
     LLM_MODEL
 )
-from chat_engine import generate_chat_response as generate_template_response
 from training_engine import (
     GOAL_CONFIG,
     compute_week_number,
@@ -279,28 +278,15 @@ async def chat_response(
             return response, True, meta
             
     except Exception as e:
-        logger.warning(f"[Coach] Chat fallback: {e}")
+        logger.warning(f"[Coach] Chat LLM error: {e}")
     
     metrics.llm_fallback += 1
-    
-    try:
-        result = await generate_template_response(
-            message=message,
-            user_id=user_id,
-            workouts=workouts or [],
-            user_goal=user_goal
-        )
-        
-        latency = (time.time() - start) * 1000
-        _update_latency(latency)
-        
-        if isinstance(result, dict):
-            return result.get("response", ""), False, {"suggestions": result.get("suggestions", [])}
-        return result, False, {}
-        
-    except Exception as e:
-        logger.error(f"[Coach] Erreur fallback: {e}")
-        return "Désolé, je n'ai pas pu traiter ta demande.", False, {}
+    language = context.get("language", "en")
+    if language == "fr":
+        error_msg = "Le service de coaching IA n'est pas disponible actuellement."
+    else:
+        error_msg = "The AI coaching service is currently unavailable."
+    return error_msg, False, {}
 
 
 # ============================================================
