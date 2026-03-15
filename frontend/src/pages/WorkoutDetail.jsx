@@ -94,7 +94,7 @@ const SplitsChart = ({ splits, lang }) => {
         <div className="flex gap-4">
           <div>
             <p className="font-mono text-[9px] text-muted-foreground uppercase">
-              {lang === "fr" ? "Plus rapide" : "Fastest"}
+              {t("workoutDetailExtended.fastest")}
             </p>
             <p className="font-mono text-xs font-semibold text-emerald-400">
               Km {splits[fastestIdx]?.km} • {splits[fastestIdx]?.pace_str}
@@ -102,7 +102,7 @@ const SplitsChart = ({ splits, lang }) => {
           </div>
           <div>
             <p className="font-mono text-[9px] text-muted-foreground uppercase">
-              {lang === "fr" ? "Plus lent" : "Slowest"}
+              {t("workoutDetailExtended.slowest")}
             </p>
             <p className="font-mono text-xs font-semibold text-orange-400">
               Km {splits[slowestIdx]?.km} • {splits[slowestIdx]?.pace_str}
@@ -110,7 +110,7 @@ const SplitsChart = ({ splits, lang }) => {
           </div>
           <div>
             <p className="font-mono text-[9px] text-muted-foreground uppercase">
-              {lang === "fr" ? "Moyenne" : "Average"}
+              {t("workoutDetailExtended.average")}
             </p>
             <p className="font-mono text-xs font-semibold">
               {formatPace(avgPace)}/km
@@ -184,7 +184,7 @@ const SplitsChart = ({ splits, lang }) => {
         
         {!showAllKm && (
           <p className="text-center font-mono text-[9px] text-muted-foreground pt-2">
-            {lang === "fr" ? `Affichage simplifié (${splits.length} km total)` : `Simplified view (${splits.length} km total)`}
+            {t("workoutDetailExtended.simplifiedView").replace("{count}", splits.length)}
           </p>
         )}
       </div>
@@ -194,19 +194,19 @@ const SplitsChart = ({ splits, lang }) => {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-2 rounded-sm bg-emerald-500" />
-            <span>{lang === "fr" ? "Rapide" : "Fast"}</span>
+            <span>{t("workoutDetailExtended.fast")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-2 rounded-sm bg-violet-500" />
-            <span>{lang === "fr" ? "Normal" : "Normal"}</span>
+            <span>{t("workoutDetailExtended.normal")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-2 rounded-sm bg-orange-500" />
-            <span>{lang === "fr" ? "Lent" : "Slow"}</span>
+            <span>{t("workoutDetailExtended.slow")}</span>
           </div>
         </div>
         <span className="text-muted-foreground/60">
-          | = {lang === "fr" ? "moy" : "avg"} ({formatPace(avgPace)})
+          | = {t("workoutDetailExtended.avg")} ({formatPace(avgPace)})
         </span>
       </div>
     </div>
@@ -359,7 +359,7 @@ export default function WorkoutDetail() {
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
           <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            {lang === "fr" ? "Analyse en cours..." : "Analyzing..."}
+            {t("workoutDetailExtended.analyzing")}
           </span>
         </div>
       </div>
@@ -552,7 +552,7 @@ export default function WorkoutDetail() {
             <div className="flex items-center gap-2 mb-3">
               <Activity className="w-4 h-4 text-violet-400" />
               <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-                {lang === "fr" ? "Allure par kilomètre" : "Pace per kilometer"}
+                {t("workoutDetailExtended.pacePerKm")}
               </span>
               <span className="ml-auto font-mono text-[10px] text-muted-foreground">
                 {workout.km_splits.length} km
@@ -570,7 +570,7 @@ export default function WorkoutDetail() {
             <div className="flex items-center gap-2 mb-2">
               <Activity className="w-4 h-4 text-muted-foreground" />
               <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-                {lang === "fr" ? "Ce que ça signifie" : "What it means"}
+                {t("workoutDetailExtended.meaning")}
               </span>
             </div>
             <p className="font-mono text-xs text-muted-foreground leading-relaxed" data-testid="meaning-text">
@@ -587,7 +587,7 @@ export default function WorkoutDetail() {
             <div className="flex items-center gap-2 mb-2">
               <AlertCircle className="w-4 h-4 text-orange-400" />
               <span className="font-mono text-[10px] uppercase tracking-widest text-orange-400">
-                {lang === "fr" ? "Récupération" : "Recovery"}
+                {t("workoutDetailExtended.recovery")}
               </span>
             </div>
             <p className="font-mono text-xs text-orange-300 leading-relaxed" data-testid="recovery-text">
@@ -604,7 +604,7 @@ export default function WorkoutDetail() {
             <div className="flex items-center gap-2 mb-2">
               <Lightbulb className="w-4 h-4 text-primary" />
               <span className="font-mono text-[10px] uppercase tracking-widest text-primary">
-                {lang === "fr" ? "Conseil coach" : "Coach advice"}
+                {t("workoutDetailExtended.coachAdvice")}
               </span>
             </div>
             <p className="font-mono text-xs text-primary leading-relaxed" data-testid="advice-text">
@@ -621,7 +621,7 @@ export default function WorkoutDetail() {
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-4 h-4 text-amber-400" />
               <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-                {lang === "fr" ? "Analyse enrichie" : "Enhanced Analysis"}
+                {t("workoutDetailExtended.enhancedAnalysis")}
               </p>
             </div>
             
@@ -636,13 +636,13 @@ export default function WorkoutDetail() {
                 <div className="flex items-center gap-2 mb-2">
                   <Activity className="w-3 h-3 text-blue-400" />
                   <span className="font-mono text-[9px] uppercase text-blue-400">
-                    {lang === "fr" ? "Analyse des Splits" : "Split Analysis"}
+                    {t("workoutDetailExtended.splitAnalysis")}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <p className="font-mono text-[10px] text-muted-foreground">
-                      {lang === "fr" ? "Km le + rapide" : "Fastest km"}
+                      {t("workoutDetailExtended.fastestKm")}
                     </p>
                     <p className="font-mono text-emerald-400 font-semibold">
                       Km {ragAnalysis.workout.split_analysis.fastest_km} 
@@ -653,7 +653,7 @@ export default function WorkoutDetail() {
                   </div>
                   <div>
                     <p className="font-mono text-[10px] text-muted-foreground">
-                      {lang === "fr" ? "Km le + lent" : "Slowest km"}
+                      {t("workoutDetailExtended.slowestKm")}
                     </p>
                     <p className="font-mono text-amber-400 font-semibold">
                       Km {ragAnalysis.workout.split_analysis.slowest_km}
@@ -664,7 +664,7 @@ export default function WorkoutDetail() {
                   </div>
                   <div>
                     <p className="font-mono text-[10px] text-muted-foreground">
-                      {lang === "fr" ? "Écart allure" : "Pace drop"}
+                      {t("workoutDetailExtended.paceDrop")}
                     </p>
                     <p className="font-mono font-semibold">
                       {ragAnalysis.workout.split_analysis.pace_drop > 0 ? '+' : ''}{Math.round(ragAnalysis.workout.split_analysis.pace_drop * 60)}s/km
@@ -672,7 +672,7 @@ export default function WorkoutDetail() {
                   </div>
                   <div>
                     <p className="font-mono text-[10px] text-muted-foreground">
-                      {lang === "fr" ? "Régularité" : "Consistency"}
+                      {t("workoutDetailExtended.consistency")}
                     </p>
                     <p className={`font-mono font-semibold ${
                       ragAnalysis.workout.split_analysis.consistency_score >= 80 ? 'text-emerald-400' :
@@ -685,7 +685,7 @@ export default function WorkoutDetail() {
                 {ragAnalysis.workout.split_analysis.negative_split && (
                   <div className="mt-2 px-2 py-1 bg-emerald-500/20 rounded-sm">
                     <p className="font-mono text-[10px] text-emerald-400 font-semibold">
-                      ✨ Negative Split - {lang === "fr" ? "Tu as accéléré en fin de sortie !" : "You sped up at the end!"}
+                      ✨ Negative Split - {t("workoutDetailExtended.negativeSplitMessage")}
                     </p>
                   </div>
                 )}
@@ -698,7 +698,7 @@ export default function WorkoutDetail() {
                 <div className="flex items-center gap-2 mb-2">
                   <Heart className="w-3 h-3 text-red-400" />
                   <span className="font-mono text-[9px] uppercase text-red-400">
-                    {lang === "fr" ? "Analyse Cardiaque" : "Heart Rate Analysis"}
+                    {t("workoutDetailExtended.heartRateAnalysis")}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
@@ -718,7 +718,7 @@ export default function WorkoutDetail() {
                 {ragAnalysis.workout.hr_analysis.hr_drift !== 0 && (
                   <div className="mt-2">
                     <p className="font-mono text-[10px] text-muted-foreground">
-                      {lang === "fr" ? "Dérive cardiaque" : "HR Drift"}
+                      {t("workoutDetailExtended.hrDrift")}
                     </p>
                     <p className={`font-mono text-xs font-semibold ${
                       Math.abs(ragAnalysis.workout.hr_analysis.hr_drift) > 10 ? 'text-amber-400' : 'text-muted-foreground'
@@ -726,7 +726,7 @@ export default function WorkoutDetail() {
                       {ragAnalysis.workout.hr_analysis.hr_drift > 0 ? '+' : ''}{ragAnalysis.workout.hr_analysis.hr_drift} bpm
                       {Math.abs(ragAnalysis.workout.hr_analysis.hr_drift) > 10 && (
                         <span className="ml-2 text-[10px]">
-                          ({lang === "fr" ? "Hydratation à surveiller" : "Watch hydration"})
+                          ({t("workoutDetailExtended.watchHydration")})
                         </span>
                       )}
                     </p>
@@ -741,11 +741,11 @@ export default function WorkoutDetail() {
                 <div className="flex items-center gap-2 mb-1">
                   <History className="w-3 h-3 text-muted-foreground" />
                   <span className="font-mono text-[9px] uppercase text-muted-foreground">
-                    {lang === "fr" ? "Comparaison" : "Comparison"}
+                    {t("workoutDetailExtended.comparison")}
                   </span>
                 </div>
                 <p className="font-mono text-xs">
-                  {ragAnalysis.comparison.similar_found} {lang === "fr" ? "séances similaires" : "similar workouts"}
+                  {ragAnalysis.comparison.similar_found} {t("workoutDetailExtended.similarWorkouts")}
                 </p>
                 {ragAnalysis.comparison.progression && (
                   <p className={`font-mono text-xs mt-1 ${
@@ -764,7 +764,7 @@ export default function WorkoutDetail() {
                 {ragAnalysis.comparison.date_precedente && (
                   <p className="font-mono text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    {lang === "fr" ? "vs" : "vs"} {ragAnalysis.comparison.date_precedente}
+                    {t("workoutDetailExtended.vs")} {ragAnalysis.comparison.date_precedente}
                   </p>
                 )}
               </div>
@@ -801,7 +801,7 @@ export default function WorkoutDetail() {
               data-testid="advanced-toggle"
             >
               <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                {lang === "fr" ? "Pour aller plus loin" : "Go further"}
+                {t("workoutDetailExtended.goFurther")}
               </span>
               {showAdvanced ? (
                 <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -828,7 +828,7 @@ export default function WorkoutDetail() {
           className="w-full bg-primary text-white hover:bg-primary/90 rounded-none h-10 font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-2"
         >
           <MessageSquare className="w-3.5 h-3.5" />
-          {lang === "fr" ? "Poser une question au coach" : "Ask the coach"}
+          {t("workoutDetailExtended.askCoach")}
         </Button>
       </div>
     </div>

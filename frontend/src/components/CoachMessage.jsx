@@ -19,7 +19,7 @@ export const UserMessage = ({ content, workoutId, lang, t, index }) => (
             <div className="mt-3 flex items-center gap-1.5 text-primary pt-3 border-t border-border/50">
               <Activity className="w-3 h-3 flex-shrink-0" />
               <span className="font-mono text-[9px] uppercase tracking-wider">
-                {lang === "fr" ? "Seance analysee" : "Workout analyzed"}
+                {t("coachExtended.workoutAnalyzed")}
               </span>
             </div>
           )}
@@ -42,7 +42,7 @@ export const AssistantMessage = ({ content, isLoading, lang, t, index }) => (
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
           <span className="font-mono text-xs text-muted-foreground">
-            {lang === "fr" ? "Réflexion..." : "Thinking..."}
+            {t("coachExtended.thinking")}
           </span>
         </div>
       ) : (

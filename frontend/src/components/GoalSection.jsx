@@ -40,7 +40,7 @@ export const GoalSection = ({ goal, lang, t, onUpdate }) => {
 
   const handleSave = async () => {
     if (!eventName.trim() || !eventDate || !distanceType) {
-      toast.error(lang === "fr" ? "Remplis tous les champs" : "Fill all required fields");
+      toast.error(t("settingsExtended.fillRequiredFields"));
       return;
     }
 
@@ -63,7 +63,7 @@ export const GoalSection = ({ goal, lang, t, onUpdate }) => {
       setIsEditing(false);
       toast.success(t("settings.goalSaved"));
     } catch (error) {
-      toast.error(lang === "fr" ? "Erreur" : "Error");
+      toast.error(t("common.error"));
     } finally {
       setSaving(false);
     }
@@ -75,7 +75,7 @@ export const GoalSection = ({ goal, lang, t, onUpdate }) => {
       onUpdate(null);
       toast.success(t("settings.goalDeleted"));
     } catch (error) {
-      toast.error(lang === "fr" ? "Erreur" : "Error");
+      toast.error(t("common.error"));
     }
   };
 
@@ -174,7 +174,7 @@ export const GoalSection = ({ goal, lang, t, onUpdate }) => {
                   <Input
                     value={eventName}
                     onChange={(e) => setEventName(e.target.value)}
-                    placeholder={lang === "fr" ? "Ex: Marathon de Paris" : "Ex: Paris Marathon"}
+                    placeholder={t("settingsExtended.placeholderGoalExample")}
                     className="bg-muted border-border font-mono text-sm"
                   />
                 </div>

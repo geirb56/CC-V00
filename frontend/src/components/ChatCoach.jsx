@@ -89,7 +89,8 @@ const ChatCoach = ({ isOpen, onClose, userId = "default" }) => {
       const res = await axios.post(`${API}/chat/send`, {
         message: userMessage,
         user_id: userId,
-        use_local_llm: false
+        use_local_llm: false,
+        language: lang
       });
 
       // Add assistant response with suggestions
@@ -114,7 +115,7 @@ const ChatCoach = ({ isOpen, onClose, userId = "default" }) => {
 
     } catch (err) {
       console.error("Error sending message:", err);
-      const errorMsg = err.response?.data?.detail || "Erreur de connexion";
+      const errorMsg = err.response?.data?.detail || t("chat.connectionError");
       
       const errorResponse = {
         id: `error-${Date.now()}`,
@@ -157,7 +158,7 @@ const ChatCoach = ({ isOpen, onClose, userId = "default" }) => {
 
   const canSendMessages = subscriptionStatus && subscriptionStatus.messages_remaining > 0;
   const tier = subscriptionStatus?.tier || "free";
-  const tierName = subscriptionStatus?.tier_name || "Gratuit";
+  const tierName = subscriptionStatus?.tier_name || t("subscription.free");
   const isUnlimited = subscriptionStatus?.is_unlimited || false;
   const isPremium = tier !== "free";
 
@@ -172,14 +173,14 @@ const ChatCoach = ({ isOpen, onClose, userId = "default" }) => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-semibold text-sm">Chat Coach</h2>
+                <h2 className="font-semibold text-sm">{t("chat.title")}</h2>
                 {isPremium && (
                   <Badge className="text-[8px] bg-amber-500">{tierName}</Badge>
                 )}
               </div>
               <p className="text-[10px] text-muted-foreground">
                 {isUnlimited 
-                  ? "Illimité" 
+                  ? t("chat.unlimited") 
                   : `${subscriptionStatus?.messages_remaining || 0}/${subscriptionStatus?.messages_limit || 10} messages`
                 }
               </p>
@@ -189,7 +190,7 @@ const ChatCoach = ({ isOpen, onClose, userId = "default" }) => {
             {/* Status indicator - instant responses */}
             <div 
               className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10" 
-              title="Réponses instantanées (<1s)"
+              title={t("chat.instantResponsesTitle")}
             >
               <Zap className="w-3 h-3 text-green-500" />
               <span className="text-[9px] text-green-500">Instant</span>
@@ -200,7 +201,7 @@ const ChatCoach = ({ isOpen, onClose, userId = "default" }) => {
                 size="icon" 
                 onClick={clearHistory}
                 className="h-8 w-8"
-                title="Effacer l'historique"
+                title={t("chat.clearHistory")}
               >
                 <Trash2 className="w-4 h-4 text-muted-foreground" />
               </Button>
@@ -229,19 +230,19 @@ const ChatCoach = ({ isOpen, onClose, userId = "default" }) => {
               {messages.length === 0 ? (
                 <div className="text-center text-muted-foreground text-sm py-8">
                   <MessageCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>Pose ta première question !</p>
+                  <p>{t("chat.firstQuestion")}</p>
                   <p className="text-xs mt-1 text-muted-foreground/70">
-                    Ex: "Comment je récupère ?" ou "Analyse ma semaine"
+                    {t("chat.examplePrompt")}
                   </p>
                   <div className="mt-4 p-3 bg-muted/50 rounded-lg text-xs">
                     <p className="flex items-center justify-center gap-1">
                       <Zap className="w-3 h-3 text-green-500" />
-                      Réponses instantanées et personnalisées
+                      {t("chat.personalizedResponses")}
                     </p>
                   </div>
                   {/* Initial suggestions */}
                   <div className="mt-4 space-y-2">
-                    {["Tu me fais un plan pour la semaine ?", "Comment je récupère mieux ?", "Analyse mes dernières sorties"].map((suggestion, idx) => (
+                    {[t("chat.suggestion1"), t("chat.suggestion2"), t("chat.suggestion3")].map((suggestion, idx) => (
                       <button
                         key={idx}
                         onClick={() => handleSuggestionClick(suggestion)}
@@ -339,7 +340,7 @@ const ChatCoach = ({ isOpen, onClose, userId = "default" }) => {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Pose ta question..."
+                    placeholder={t("chat.placeholder")}
                     className="flex-1"
                     disabled={loading}
                     data-testid="chat-input"

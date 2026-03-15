@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import { useLanguage } from "@/context/LanguageContext";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const USER_ID = "default";
@@ -7,19 +8,20 @@ const USER_ID = "default";
 const SubscriptionContext = createContext(null);
 
 export function SubscriptionProvider({ children }) {
+  const { lang } = useLanguage();
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchSubscription = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/subscription/info?user_id=${USER_ID}&language=fr`);
+      const res = await axios.get(`${API}/subscription/info?user_id=${USER_ID}&language=${lang}`);
       setSubscription(res.data);
       setError(null);
     } catch (err) {
       console.error("Error fetching subscription:", err);
       setError(err);
-      // Default to trial on error
+      // Default to trial on error (display labels translated in consuming components via t())
       setSubscription({
         status: "trial",
         features: {
@@ -32,15 +34,15 @@ export function SubscriptionProvider({ children }) {
           full_access: true
         },
         display: {
-          label: "Essai gratuit",
-          badge: "ESSAI",
+          label: lang === "fr" ? "Essai gratuit" : "Free trial",
+          badge: lang === "fr" ? "ESSAI" : "TRIAL",
           badge_color: "blue"
         }
       });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     fetchSubscription();

@@ -20,44 +20,14 @@ import { formatDistance, formatPace as formatPaceUnits } from "@/utils/units";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Workout type configuration
+// Workout type configuration (labels from t("workoutTypes.*"))
 const WORKOUT_TYPES = {
-  fractionne: { 
-    label: "Fractionné", 
-    color: "#8b5cf6",
-    bgClass: "workout-icon fractionne",
-    icon: Zap
-  },
-  endurance: { 
-    label: "Endurance", 
-    color: "#3b82f6",
-    bgClass: "workout-icon endurance",
-    icon: Activity
-  },
-  seuil: { 
-    label: "Seuil", 
-    color: "#f97316",
-    bgClass: "workout-icon seuil",
-    icon: Flame
-  },
-  recuperation: { 
-    label: "Récupération", 
-    color: "#14b8a6",
-    bgClass: "workout-icon recuperation",
-    icon: Heart
-  },
-  run: { 
-    label: "Course", 
-    color: "#3b82f6",
-    bgClass: "workout-icon endurance",
-    icon: Activity
-  },
-  cycle: { 
-    label: "Vélo", 
-    color: "#f97316",
-    bgClass: "workout-icon seuil",
-    icon: Bike
-  }
+  fractionne: { color: "#8b5cf6", bgClass: "workout-icon fractionne", icon: Zap },
+  endurance: { color: "#3b82f6", bgClass: "workout-icon endurance", icon: Activity },
+  seuil: { color: "#f97316", bgClass: "workout-icon seuil", icon: Flame },
+  recuperation: { color: "#14b8a6", bgClass: "workout-icon recuperation", icon: Heart },
+  run: { color: "#3b82f6", bgClass: "workout-icon endurance", icon: Activity },
+  cycle: { color: "#f97316", bgClass: "workout-icon seuil", icon: Bike },
 };
 
 const formatDuration = (minutes) => {
@@ -68,22 +38,14 @@ const formatDuration = (minutes) => {
   return `${mins}min`;
 };
 
-const getRelativeDate = (dateStr, lang) => {
+const getRelativeDate = (dateStr, t, locale) => {
   const date = new Date(dateStr);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  
-  if (date.toDateString() === today.toDateString()) {
-    return lang === "fr" ? "Aujourd'hui" : "Today";
-  }
-  if (date.toDateString() === yesterday.toDateString()) {
-    return lang === "fr" ? "Hier" : "Yesterday";
-  }
-  return date.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", { 
-    day: "numeric", 
-    month: "short" 
-  });
+  if (date.toDateString() === today.toDateString()) return t("dashboard.today");
+  if (date.toDateString() === yesterday.toDateString()) return t("dashboard.yesterday");
+  return date.toLocaleDateString(locale, { day: "numeric", month: "short" });
 };
 
 // Circular Gauge Component
@@ -244,7 +206,7 @@ export default function Dashboard() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
         <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--accent-violet)" }} />
         <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
-          {lang === "fr" ? "Chargement..." : "Loading..."}
+          {t("common.loading")}
         </p>
       </div>
     );
@@ -269,14 +231,14 @@ export default function Dashboard() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-xs uppercase tracking-wider mb-2" style={{ color: "var(--text-tertiary)" }}>
-              {lang === "fr" ? "Forme actuelle" : "Current Form"}
+              {t("dashboard.currentForm")}
             </p>
             <div className="flex items-baseline">
               <span className="form-score-value">{recovery?.score || 75}</span>
               <span className="form-score-unit">pts</span>
             </div>
             <p className="form-score-change mt-1">
-              ↑ +3 {lang === "fr" ? "cette semaine" : "this week"}
+              ↑ +3 {t("dashboard.thisWeekCompact")}
             </p>
           </div>
           <CircularGauge value={recovery?.score || 75} />
@@ -290,7 +252,7 @@ export default function Dashboard() {
         <div className="metric-card-modern animate-in" style={{ animationDelay: "50ms" }}>
           <div className="metric-label">
             <Zap className="w-4 h-4" style={{ color: "var(--accent-violet)" }} />
-            <span>{lang === "fr" ? "Cette semaine" : "This week"}</span>
+            <span>{t("dashboard.thisWeek")}</span>
           </div>
           <div className="flex items-baseline">
             <span className="metric-value">
@@ -309,7 +271,7 @@ export default function Dashboard() {
         <div className="metric-card-modern animate-in" style={{ animationDelay: "100ms" }}>
           <div className="metric-label">
             <TrendingUp className="w-4 h-4" style={{ color: "var(--accent-pink)" }} />
-            <span>{lang === "fr" ? "Charge 28j" : "28d Load"}</span>
+            <span>{t("dashboard.load28Label")}</span>
           </div>
           <div className="flex items-baseline">
             <span className="metric-value">
@@ -317,7 +279,7 @@ export default function Dashboard() {
             </span>
           </div>
           <p className="metric-objective">
-            {lang === "fr" ? "Base chronique" : "Chronic base"}
+            {t("dashboard.load28Subtitle")}
           </p>
         </div>
       </div>
@@ -339,7 +301,7 @@ export default function Dashboard() {
             )}
           </div>
           <p className="metric-objective" style={{ color: getAcwrColor(trainingMetrics?.acwr_status) }}>
-            {trainingMetrics?.acwr_label || "Zone optimale"}
+            {trainingMetrics?.acwr_status ? t(`dashboard.acwr_status.${trainingMetrics.acwr_status}`) : t("dashboard.acwr_status.optimal")}
           </p>
         </div>
 
@@ -362,25 +324,23 @@ export default function Dashboard() {
 
       {/* TODAY'S WORKOUT */}
       <div className="today-workout-card animate-in" style={{ animationDelay: "150ms" }} data-testid="today-workout-card">
-        <p className="today-label">{lang === "fr" ? "AUJOURD'HUI" : "TODAY"}</p>
+        <p className="today-label">{t("dashboard.todayLabel")}</p>
         {todaySession ? (
           todaySession.type?.toLowerCase().includes("repos") || todaySession.type?.toLowerCase() === "rest" ? (
-            // Jour de repos
             <>
               <h3 className="today-title" style={{ color: "var(--text-secondary)" }}>
-                {lang === "fr" ? "Jour de repos" : "Rest Day"}
+                {t("dashboard.todayRestTitle")}
               </h3>
               <p className="today-meta" style={{ opacity: 0.7 }}>
-                {todaySession.details || (lang === "fr" ? "Récupération active ou repos complet" : "Active recovery or complete rest")}
+                {todaySession.details || t("dashboard.todayRestDescription")}
               </p>
               <div className="today-details">
                 <span style={{ color: "var(--accent-teal)" }}>
-                  {lang === "fr" ? "Profite de ta récup' 💪" : "Enjoy your recovery 💪"}
+                  {t("dashboard.todayRestTagline")}
                 </span>
               </div>
             </>
           ) : (
-            // Séance d'entraînement
             <>
               <h3 className="today-title">{todaySession.type}</h3>
               <p className="today-meta">
@@ -401,10 +361,10 @@ export default function Dashboard() {
           // Aucun plan disponible
           <>
             <h3 className="today-title" style={{ color: "var(--text-secondary)" }}>
-              {lang === "fr" ? "Pas de séance planifiée" : "No session planned"}
+              {t("dashboard.todayNoSessionTitle")}
             </h3>
             <p className="today-meta" style={{ opacity: 0.7 }}>
-              {lang === "fr" ? "Génère ton plan dans l'onglet Plan" : "Generate your plan in the Plan tab"}
+              {t("dashboard.todayNoSessionSubtitle")}
             </p>
             <Link to="/plan" className="play-button" style={{ textDecoration: "none" }}>
               <ChevronRight className="w-5 h-5" />
@@ -416,7 +376,7 @@ export default function Dashboard() {
       {/* DERNIÈRES SORTIES */}
       <div className="animate-in" style={{ animationDelay: "200ms" }}>
         <h2 className="section-header">
-          {lang === "fr" ? "DERNIÈRES SORTIES" : "RECENT WORKOUTS"}
+          {t("dashboard.recentWorkouts")}
         </h2>
         
         <div className="space-y-2">
@@ -481,7 +441,7 @@ export default function Dashboard() {
                 </div>
                 
                 <span className="workout-date">
-                  {getRelativeDate(workout.date, lang)}
+                  {getRelativeDate(workout.date, t, lang === "fr" ? "fr-FR" : "en-US")}
                 </span>
                 
                 <ChevronRight className="workout-arrow w-4 h-4" />

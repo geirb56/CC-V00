@@ -71,14 +71,14 @@ const SESSION_STYLES = {
 };
 
 const getSessionStyleKey = (type, intensity) => {
-  const typeLower = type?.toLowerCase() || "";
+  const typeLower = (type && typeof type === "string" ? type : "").toLowerCase();
   
   if (typeLower.includes("repos") || typeLower === "rest") return "repos";
-  if (typeLower.includes("endurance") || typeLower.includes("easy")) return "endurance";
-  if (typeLower.includes("seuil") || typeLower.includes("threshold") || typeLower.includes("tempo")) return "seuil";
-  if (typeLower.includes("récup") || typeLower.includes("recup") || typeLower.includes("recovery")) return "recuperation";
-  if (typeLower.includes("sortie longue") || typeLower.includes("long")) return "sortie_longue";
-  if (typeLower.includes("fractionn") || typeLower.includes("interval") || typeLower.includes("fartlek")) return "fractionne";
+  if (typeLower.includes("endurance") || typeLower === "easy" || typeLower === "short_easy" || typeLower === "easy_run") return "endurance";
+  if (typeLower.includes("seuil") || typeLower.includes("threshold") || typeLower === "tempo") return "seuil";
+  if (typeLower.includes("récup") || typeLower.includes("recup") || typeLower === "recovery" || typeLower === "activation") return "recuperation";
+  if (typeLower.includes("sortie longue") || typeLower === "long_run" || typeLower.includes("long")) return "sortie_longue";
+  if (typeLower.includes("fractionn") || typeLower.includes("interval") || typeLower === "fartlek" || typeLower === "speed_reminder" || typeLower === "race") return "fractionne";
   
   return intensity || "endurance";
 };
@@ -99,7 +99,7 @@ export default function TrainingPlan() {
     try {
       const [planRes, cycleRes] = await Promise.all([
         axios.get(`${API}/training/plan`, { headers: { "X-User-Id": USER_ID } }),
-        axios.get(`${API}/training/full-cycle`, { headers: { "X-User-Id": USER_ID } })
+        axios.get(`${API}/training/full-cycle`, { params: { lang }, headers: { "X-User-Id": USER_ID } })
       ]);
       setPlan(planRes.data);
       setFullCycle(cycleRes.data);
@@ -117,7 +117,7 @@ export default function TrainingPlan() {
       if (err.response?.status === 403 && err.response?.data?.error === "subscription_required") {
         setApiError("subscription_required");
       } else {
-        toast.error(lang === "fr" ? "Erreur de chargement" : "Loading error");
+        toast.error(t("trainingPlanExtended.loadingError"));
       }
     } finally {
       setLoading(false);
@@ -137,11 +137,11 @@ export default function TrainingPlan() {
       });
       setPlan(res.data);
       // Refresh full cycle too
-      const cycleRes = await axios.get(`${API}/training/full-cycle`, { headers: { "X-User-Id": USER_ID } });
+      const cycleRes = await axios.get(`${API}/training/full-cycle`, { params: { lang }, headers: { "X-User-Id": USER_ID } });
       setFullCycle(cycleRes.data);
-      toast.success(lang === "fr" ? "Plan mis à jour" : "Plan updated");
+      toast.success(t("trainingPlanExtended.planUpdated"));
     } catch (err) {
-      toast.error(lang === "fr" ? "Erreur" : "Error");
+      toast.error(t("common.error"));
     } finally {
       setRefreshing(false);
     }
@@ -186,9 +186,9 @@ export default function TrainingPlan() {
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-blue-400" />
             <span className="text-sm text-blue-300">
-              {lang === "fr" 
-                ? `Essai gratuit : ${trialDaysRemaining} jour${trialDaysRemaining > 1 ? 's' : ''} restant${trialDaysRemaining > 1 ? 's' : ''}`
-                : `Free trial: ${trialDaysRemaining} day${trialDaysRemaining > 1 ? 's' : ''} remaining`}
+              {trialDaysRemaining === 1
+                ? t("trainingPlanExtended.trialBannerOne")
+                : t("trainingPlanExtended.trialBanner").replace("{days}", trialDaysRemaining)}
             </span>
           </div>
           <a 
@@ -196,7 +196,7 @@ export default function TrainingPlan() {
             className="text-xs font-medium px-3 py-1 rounded-full"
             style={{ background: "rgba(59,130,246,0.3)", color: "#93c5fd" }}
           >
-            {lang === "fr" ? "S'abonner" : "Subscribe"}
+            {t("trainingPlanExtended.subscribe")}
           </a>
         </div>
       )}
@@ -205,12 +205,12 @@ export default function TrainingPlan() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold uppercase tracking-tight text-white">
-            {lang === "fr" ? "Plan d'Entraînement" : "Training Plan"}
+            {t("trainingPlanExtended.planTitle")}
           </h1>
           <p className="text-sm font-mono" style={{ color: "var(--text-tertiary)" }}>
-            {lang === "fr" ? "Semaine" : "Week"} {currentWeek} / {totalWeeks}
+            {t("trainingPlanExtended.weekLabel")} {currentWeek} / {totalWeeks}
             {" • "}
-            <span className="capitalize">{fullCycle?.goal_description || "Semi-marathon"}</span>
+            <span className="capitalize">{fullCycle?.goal ? t(`settings.distances.${fullCycle.goal.toLowerCase()}`) : t("settings.distances.semi")}</span>
           </p>
         </div>
         <Button 
@@ -222,7 +222,7 @@ export default function TrainingPlan() {
           data-testid="refresh-plan-btn"
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
-          {lang === "fr" ? "Actualiser" : "Refresh"}
+          {t("trainingPlanExtended.refresh")}
         </Button>
       </div>
 
@@ -232,7 +232,7 @@ export default function TrainingPlan() {
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4" style={{ color: "#f59e0b" }} />
             <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
-              {lang === "fr" ? "Progression du cycle" : "Cycle Progress"}
+              {t("trainingPlanExtended.cycleProgress")}
             </span>
           </div>
           <span className="text-sm font-bold text-white">
@@ -249,7 +249,7 @@ export default function TrainingPlan() {
           />
         </div>
         <div className="flex justify-between mt-2 text-xs" style={{ color: "var(--text-tertiary)" }}>
-          <span>{lang === "fr" ? "Début" : "Start"}</span>
+          <span>{t("trainingPlanExtended.startLabel")}</span>
           <span>{fullCycle?.goal || "SEMI"}</span>
         </div>
       </div>
@@ -260,7 +260,7 @@ export default function TrainingPlan() {
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4" style={{ color: "var(--text-tertiary)" }} />
             <span className="text-xs font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
-              {lang === "fr" ? "Cycle complet" : "Full Cycle"} • {totalWeeks} {lang === "fr" ? "semaines" : "weeks"}
+              {t("trainingPlanExtended.fullCycleLabel")} • {totalWeeks} {t("trainingPlanExtended.weeksSuffix")}
             </span>
           </div>
           <button
@@ -269,7 +269,7 @@ export default function TrainingPlan() {
             style={{ color: "var(--text-secondary)", background: "var(--bg-secondary)" }}
           >
             {showAllWeeks ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            {showAllWeeks ? (lang === "fr" ? "Réduire" : "Collapse") : (lang === "fr" ? "Voir tout" : "Show all")}
+            {showAllWeeks ? t("trainingPlanExtended.collapse") : t("trainingPlanExtended.showAll")}
           </button>
         </div>
 
@@ -318,11 +318,11 @@ export default function TrainingPlan() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className={`font-semibold text-sm ${isCompleted ? "line-through" : ""}`} style={{ color: isCompleted ? "var(--text-tertiary)" : "white" }}>
-                          {lang === "fr" ? "Semaine" : "Week"} {week.week}
+                          {t("trainingPlanExtended.weekLabel")} {week.week}
                         </span>
                         {isCurrent && (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500 text-white">
-                            {lang === "fr" ? "EN COURS" : "CURRENT"}
+                            {t("trainingPlanExtended.currentBadge")}
                           </span>
                         )}
                         {week.phase === "race" && (
@@ -359,7 +359,7 @@ export default function TrainingPlan() {
                 {isExpanded && (
                   <div className="px-3 pb-3 space-y-2">
                     <div className="text-xs p-2 rounded-lg" style={{ background: "rgba(0,0,0,0.2)", color: "var(--text-secondary)" }}>
-                      <strong>{lang === "fr" ? "Focus:" : "Focus:"}</strong> {week.phase_focus}
+                      <strong>{t("trainingPlanExtended.focus")}</strong> {week.phase_focus}
                     </div>
                     
                     {/* Session types for this week */}
@@ -367,13 +367,16 @@ export default function TrainingPlan() {
                       {week.session_types?.map((type, i) => {
                         const styleKey = getSessionStyleKey(type);
                         const style = SESSION_STYLES[styleKey] || SESSION_STYLES.endurance;
+                        const label = typeof type === "string" && type === type.toLowerCase() && type.indexOf(" ") === -1
+                          ? t(`trainingPlanSessionType.${type}`)
+                          : type;
                         return (
                           <span 
                             key={i}
                             className="px-2 py-1 rounded-full text-[10px] font-medium"
                             style={{ background: style.badge, color: style.badgeText }}
                           >
-                            {type}
+                            {label}
                           </span>
                         );
                       })}
@@ -383,7 +386,7 @@ export default function TrainingPlan() {
                     {isCurrent && sessions.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
                         <span className="text-[10px] font-mono uppercase" style={{ color: "var(--text-tertiary)" }}>
-                          {lang === "fr" ? "Détail de la semaine" : "Week Details"}
+                          {t("trainingPlanExtended.weekDetails")}
                         </span>
                         {sessions.map((session, sidx) => {
                           const styleKey = getSessionStyleKey(session.type, session.intensity);
@@ -453,7 +456,7 @@ export default function TrainingPlan() {
             </div>
             <div>
               <p className="text-xs font-mono uppercase mb-1" style={{ color: "var(--text-tertiary)" }}>
-                {lang === "fr" ? "Conseil du coach" : "Coach advice"}
+                {t("trainingPlanExtended.coachAdvice")}
               </p>
               <p className="text-sm text-white">{plan.plan.advice}</p>
             </div>

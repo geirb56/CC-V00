@@ -11,12 +11,14 @@
 
 import { useState, useEffect } from 'react';
 import { X, Share } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 const STORAGE_KEY = 'cardiocoach_ios_pwa_hint_dismissed';
 const MIN_VISITS_BEFORE_SHOW = 2; // Afficher après 2 visites
 const VISIT_COUNT_KEY = 'cardiocoach_visit_count';
 
 export const IOSPWAHint = () => {
+  const { t } = useLanguage();
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -79,16 +81,16 @@ export const IOSPWAHint = () => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-foreground mb-1">
-              Installer CardioCoach
+              {t("pwa.installTitle")}
             </p>
             <p className="text-[10px] text-muted-foreground leading-relaxed">
-              Appuie sur <Share className="w-3 h-3 inline mx-0.5" /> puis "Sur l'écran d'accueil"
+              {t("pwa.installMessage")}
             </p>
           </div>
           <button
             onClick={dismiss}
             className="flex-shrink-0 p-1 hover:bg-muted rounded-full transition-colors"
-            aria-label="Fermer"
+            aria-label={t("pwa.close")}
           >
             <X className="w-4 h-4 text-muted-foreground" />
           </button>

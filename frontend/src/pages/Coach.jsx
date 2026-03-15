@@ -75,9 +75,7 @@ export default function Coach() {
       workoutName = workoutId;
     }
 
-    const analysisMessage = lang === "fr" 
-      ? `Analyse approfondie de la seance: ${workoutName}`
-      : `Deep analysis of workout: ${workoutName}`;
+    const analysisMessage = t("coachExtended.analysisPrompt").replace("{name}", workoutName);
 
     setMessages(prev => [...prev, { role: "user", content: analysisMessage, workout_id: workoutId }]);
 
@@ -144,9 +142,9 @@ export default function Coach() {
     try {
       await axios.delete(`${API}/coach/history?user_id=${USER_ID}`);
       setMessages([]);
-      toast.success(lang === "fr" ? "Historique efface" : "History cleared");
+      toast.success(t("coachExtended.historyCleared"));
     } catch (error) {
-      toast.error(lang === "fr" ? "Erreur" : "Error");
+      toast.error(t("common.error"));
     }
   };
 
@@ -159,15 +157,9 @@ export default function Coach() {
 
   const handleSuggestion = (key) => {
     const suggestions = {
-      trainingLoad: lang === "fr" 
-        ? "Analyse ma charge d'entrainement recente et la distribution de l'effort."
-        : "Analyze my recent training load and effort distribution.",
-      heartRate: lang === "fr"
-        ? "Quels patterns observes-tu dans mes donnees de frequence cardiaque?"
-        : "What patterns do you see in my heart rate data?",
-      paceConsistency: lang === "fr"
-        ? "Comment est ma regularite d'allure sur les courses recentes?"
-        : "How is my pace consistency across recent runs?"
+      trainingLoad: t("coachExtended.trainingLoadSuggestion"),
+      heartRate: t("coachExtended.heartRateSuggestion"),
+      paceConsistency: t("coachExtended.paceConsistencySuggestion")
     };
     setInput(suggestions[key]);
   };
@@ -259,7 +251,7 @@ export default function Coach() {
                           <div className="mt-2 flex items-center gap-1 text-primary">
                             <Activity className="w-3 h-3" />
                             <span className="font-mono text-[10px] uppercase">
-                              {lang === "fr" ? "Seance analysee" : "Workout analyzed"}
+                              {t("coachExtended.workoutAnalyzed")}
                             </span>
                           </div>
                         )}
@@ -289,8 +281,8 @@ export default function Coach() {
                   <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                   <span className="font-mono text-xs text-muted-foreground">
                     {analyzingWorkout 
-                      ? (lang === "fr" ? "Analyse en cours..." : "Analyzing...")
-                      : (lang === "fr" ? "Reflexion..." : "Thinking...")
+                      ? t("coachExtended.analyzing")
+                      : t("coachExtended.thinking")
                     }
                   </span>
                 </div>

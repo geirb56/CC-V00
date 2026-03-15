@@ -81,11 +81,11 @@ export default function Settings() {
     // Handle OAuth callback
     const stravaParam = searchParams.get("strava");
     if (stravaParam === "connected") {
-      toast.success(lang === "fr" ? "Compte connecté" : "Account connected");
+      toast.success(t("settingsExtended.accountConnected"));
       setSearchParams({});
       triggerInitialSync();
     } else if (stravaParam === "error") {
-      toast.error(lang === "fr" ? "Erreur de connexion" : "Connection failed");
+      toast.error(t("settingsExtended.connectionFailed"));
       setSearchParams({});
     }
     
@@ -99,7 +99,7 @@ export default function Settings() {
     } else if (sessionId && subscriptionParam === "early_adopter_success") {
       handlePaymentSuccess(sessionId, "early_adopter");
     } else if (premiumParam === "cancelled" || subscriptionParam === "cancelled") {
-      toast.info(lang === "fr" ? "Paiement annulé" : "Payment cancelled");
+      toast.info(t("settingsExtended.paymentCancelled"));
       setSearchParams({});
     }
   }, [searchParams]);
@@ -141,9 +141,9 @@ export default function Settings() {
         headers: { "X-User-Id": USER_ID }
       });
       setTrainingGoal(goal);
-      toast.success(lang === "fr" ? `Objectif ${goal} défini` : `Goal ${goal} set`);
+      toast.success(t("settingsExtended.goalSetWithName").replace("{goal}", goal));
     } catch (err) {
-      toast.error(lang === "fr" ? "Erreur" : "Error");
+      toast.error(t("common.error"));
     } finally {
       setUpdatingTrainingPlan(false);
     }
@@ -156,9 +156,9 @@ export default function Settings() {
         headers: { "X-User-Id": USER_ID }
       });
       setSessionsPerWeek(sessions);
-      toast.success(lang === "fr" ? `${sessions} séances/semaine` : `${sessions} sessions/week`);
+      toast.success(`${sessions} ${t("settingsExtended.sessionsPerWeekSet")}`);
     } catch (err) {
-      toast.error(lang === "fr" ? "Erreur" : "Error");
+      toast.error(t("common.error"));
     } finally {
       setUpdatingTrainingPlan(false);
     }
@@ -181,8 +181,8 @@ export default function Settings() {
         
         if (res.data.success || res.data.status === "completed" || res.data.status === "early_adopter" || res.data.payment_status === "paid") {
           const successMsg = planType === "early_adopter"
-            ? (lang === "fr" ? "🎉 Abonnement Early Adopter activé ! Prix garanti à vie." : "🎉 Early Adopter activated! Price guaranteed for life.")
-            : (lang === "fr" ? "🎉 Premium activé ! Bienvenue dans CardioCoach Pro" : "🎉 Premium activated!");
+            ? `🎉 ${t("settingsExtended.earlyAdopterActivated")}`
+            : `🎉 ${t("settingsExtended.premiumActivated")}`;
           
           toast.success(successMsg);
           
@@ -196,7 +196,7 @@ export default function Settings() {
           setSearchParams({});
           break;
         } else if (res.data.status === "expired" || res.data.error) {
-          toast.error(lang === "fr" ? "Session expirée ou erreur" : "Session expired or error");
+          toast.error(t("settingsExtended.sessionExpiredOrError"));
           setSearchParams({});
           break;
         }
@@ -206,7 +206,7 @@ export default function Settings() {
       }
     } catch (error) {
       console.error("Payment verification error:", error);
-      toast.error(lang === "fr" ? "Erreur de vérification" : "Verification error");
+      toast.error(t("settingsExtended.verificationError"));
     } finally {
       setProcessingPayment(false);
       setSearchParams({});
@@ -224,7 +224,7 @@ export default function Settings() {
       window.location.href = res.data.checkout_url;
     } catch (error) {
       console.error("Checkout error:", error);
-      toast.error(lang === "fr" ? "Erreur de paiement" : "Payment error");
+      toast.error(t("settingsExtended.paymentError"));
     }
   };
 
@@ -250,7 +250,7 @@ export default function Settings() {
 
   const handleSaveGoal = async () => {
     if (!eventName.trim() || !eventDate || !distanceType) {
-      toast.error(lang === "fr" ? "Remplis tous les champs obligatoires" : "Fill all required fields");
+      toast.error(t("settingsExtended.fillRequiredFields"));
       return;
     }
     
@@ -276,7 +276,7 @@ export default function Settings() {
       toast.success(t("settings.goalSaved"));
     } catch (error) {
       console.error("Failed to save goal:", error);
-      toast.error(lang === "fr" ? "Erreur" : "Error");
+      toast.error(t("common.error"));
     } finally {
       setSavingGoal(false);
     }
@@ -294,7 +294,7 @@ export default function Settings() {
       toast.success(t("settings.goalDeleted"));
     } catch (error) {
       console.error("Failed to delete goal:", error);
-      toast.error(lang === "fr" ? "Erreur" : "Error");
+      toast.error(t("common.error"));
     }
   };
 
@@ -303,10 +303,7 @@ export default function Settings() {
     try {
       const res = await axios.post(`${API}/strava/sync?user_id=${USER_ID}`);
       if (res.data.success) {
-        const msg = lang === "fr" 
-          ? `${res.data.synced_count} seances importees` 
-          : `${res.data.synced_count} workouts imported`;
-        toast.success(msg);
+        toast.success(t("settingsExtended.syncImported").replace("{count}", res.data.synced_count));
       }
       loadStravaStatus();
     } catch (error) {
@@ -335,7 +332,7 @@ export default function Settings() {
       window.location.href = res.data.authorization_url;
     } catch (error) {
       console.error("Failed to initiate auth:", error);
-      const message = error.response?.data?.detail || (lang === "fr" ? "Erreur de connexion" : "Connection failed");
+      const message = error.response?.data?.detail || t("settingsExtended.connectionFailed");
       toast.error(message);
       setConnecting(false);
     }
@@ -345,10 +342,10 @@ export default function Settings() {
     try {
       await axios.delete(`${API}/strava/disconnect?user_id=${USER_ID}`);
       setStravaStatus({ connected: false, last_sync: null, workout_count: 0 });
-      toast.success(lang === "fr" ? "Compte deconnecte" : "Account disconnected");
+      toast.success(t("settingsExtended.accountDisconnected"));
     } catch (error) {
       console.error("Failed to disconnect:", error);
-      toast.error(lang === "fr" ? "Erreur" : "Error");
+      toast.error(t("common.error"));
     }
   };
 
@@ -364,34 +361,26 @@ export default function Settings() {
       }
     } catch (error) {
       console.error("Failed to sync:", error);
-      toast.error(lang === "fr" ? "Erreur de synchronisation" : "Sync failed");
+      toast.error(t("settingsExtended.syncFailed"));
     } finally {
       setSyncing(false);
     }
   };
 
   const formatLastSync = (isoString) => {
-    if (!isoString) return lang === "fr" ? "Jamais" : "Never";
+    if (!isoString) return t("common.never");
     const date = new Date(isoString);
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    
-    if (lang === "fr") {
-      if (diffMins < 1) return "A l'instant";
-      if (diffMins < 60) return `Il y a ${diffMins} min`;
-      if (diffHours < 24) return `Il y a ${diffHours}h`;
-      if (diffDays < 7) return `Il y a ${diffDays}j`;
-      return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-    }
-    
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+    const locale = lang === "fr" ? "fr-FR" : "en-US";
+    if (diffMins < 1) return t("common.justNow");
+    if (diffMins < 60) return t("common.timeAgoMins").replace("{n}", diffMins);
+    if (diffHours < 24) return t("common.timeAgoHours").replace("{n}", diffHours);
+    if (diffDays < 7) return t("common.timeAgoDays").replace("{n}", diffDays);
+    return date.toLocaleDateString(locale, { day: "numeric", month: "short" });
   };
 
   const calculateDaysUntil = (dateStr) => {
@@ -434,12 +423,10 @@ export default function Settings() {
               </div>
               <div className="flex-1">
                 <h2 className="font-heading text-lg uppercase tracking-tight font-semibold mb-1">
-                  {lang === "fr" ? "Unités" : "Units"}
+                  {t("settingsExtended.units")}
                 </h2>
                 <p className="font-mono text-xs text-muted-foreground mb-4">
-                  {lang === "fr"
-                    ? "Choisis ton système d'unités pour les distances, allures et vitesses"
-                    : "Choose your unit system for distance, pace and speed"}
+                  {t("settingsExtended.unitSystemDesc")}
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -454,7 +441,7 @@ export default function Settings() {
                     data-testid="units-metric"
                   >
                     <span className="block text-xs mb-1">
-                      {lang === "fr" ? "Métrique" : "Metric"}
+                      {t("settingsExtended.metric")}
                     </span>
                     <span className="block text-lg mb-1">km, min/km</span>
                     <span className="block text-[10px] uppercase text-muted-foreground">
@@ -473,7 +460,7 @@ export default function Settings() {
                     data-testid="units-imperial"
                   >
                     <span className="block text-xs mb-1">
-                      {lang === "fr" ? "Impérial" : "Imperial"}
+                      {t("settingsExtended.imperial")}
                     </span>
                     <span className="block text-lg mb-1">mi, min/mi</span>
                     <span className="block text-[10px] uppercase text-muted-foreground">
@@ -579,7 +566,7 @@ export default function Settings() {
                         <Input
                           value={eventName}
                           onChange={(e) => setEventName(e.target.value)}
-                          placeholder={lang === "fr" ? "Ex: Marathon de Paris" : "Ex: Paris Marathon"}
+                          placeholder={t("settingsExtended.placeholderGoalExample")}
                           className="bg-muted border-border font-mono text-sm"
                           data-testid="goal-name-input"
                         />
@@ -683,10 +670,10 @@ export default function Settings() {
               </div>
               <div className="flex-1">
                 <h2 className="font-heading text-lg uppercase tracking-tight font-semibold mb-1">
-                  {lang === "fr" ? "Plan d'entraînement" : "Training Plan"}
+                  {t("settingsExtended.trainingPlan")}
                 </h2>
                 <p className="font-mono text-xs text-muted-foreground mb-4">
-                  {lang === "fr" ? "Configure ton objectif et le nombre de séances par semaine" : "Set your goal and sessions per week"}
+                  {t("settingsExtended.trainingPlanDesc")}
                 </p>
                 
                 {loadingTrainingPlan ? (
@@ -699,7 +686,7 @@ export default function Settings() {
                     {/* Objectif de distance */}
                     <div>
                       <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2 block">
-                        {lang === "fr" ? "Objectif distance" : "Distance Goal"}
+                        {t("settingsExtended.distanceGoal")}
                       </label>
                       <div className="flex flex-wrap gap-2">
                         {TRAINING_GOAL_OPTIONS.map((opt) => (
@@ -735,7 +722,7 @@ export default function Settings() {
                     {/* Séances par semaine */}
                     <div>
                       <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2 block">
-                        {lang === "fr" ? "Séances par semaine" : "Sessions per week"}
+                        {t("settingsExtended.sessionsPerWeekLabel")}
                       </label>
                       <div className="flex gap-2">
                         {SESSIONS_OPTIONS.map((num) => (
@@ -761,9 +748,7 @@ export default function Settings() {
                         ))}
                       </div>
                       <p className="font-mono text-[10px] text-muted-foreground mt-2">
-                        {lang === "fr" 
-                          ? "Le plan sera régénéré automatiquement" 
-                          : "Plan will be regenerated automatically"}
+                        {t("settingsExtended.planRegenerated")}
                       </p>
                     </div>
                   </div>
@@ -957,7 +942,7 @@ export default function Settings() {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="font-heading text-lg uppercase tracking-tight font-semibold">
-                    {lang === "fr" ? "Abonnement" : "Subscription"}
+                    {t("settingsExtended.subscription")}
                   </h2>
                   {isEarlyAdopter && (
                     <Badge className="bg-amber-500 text-white text-[9px]">EARLY ADOPTER</Badge>
@@ -972,9 +957,9 @@ export default function Settings() {
                 
                 {/* Status Display */}
                 <p className="font-mono text-sm text-foreground mb-1">
-                  {isEarlyAdopter && (lang === "fr" ? "Early Adopter — 4,99 € / mois (prix garanti à vie)" : "Early Adopter — €4.99 / month (price guaranteed for life)")}
-                  {isTrial && (lang === "fr" ? "Essai gratuit actif" : "Free trial active")}
-                  {isFree && (lang === "fr" ? "Accès limité — abonnement requis" : "Limited access — subscription required")}
+                  {isEarlyAdopter && t("settingsExtended.earlyAdopterPrice")}
+                  {isTrial && t("settingsExtended.freeTrialActive")}
+                  {isFree && t("settingsExtended.limitedAccess")}
                 </p>
                 
                 {/* Trial countdown */}
@@ -982,10 +967,10 @@ export default function Settings() {
                   <div className="mt-3 mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-mono text-xs text-muted-foreground">
-                        {lang === "fr" ? "Temps restant" : "Time remaining"}
+                        {t("settingsExtended.timeRemaining")}
                       </span>
                       <span className="font-mono text-xs font-bold text-blue-400">
-                        {trialDaysRemaining} {lang === "fr" ? "jours" : "days"}
+                        {trialDaysRemaining} {t("settingsExtended.days")}
                       </span>
                     </div>
                     <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
@@ -1001,14 +986,14 @@ export default function Settings() {
                 {isEarlyAdopter && (
                   <div className="mt-4 space-y-2">
                     <p className="font-mono text-xs text-muted-foreground mb-2">
-                      {lang === "fr" ? "Fonctionnalités incluses :" : "Features included:"}
+                      {t("settingsExtended.featuresIncluded")}
                     </p>
                     <ul className="space-y-1.5">
                       {[
-                        lang === "fr" ? "Plan d'entraînement personnalisé" : "Personalized training plan",
-                        lang === "fr" ? "Coach IA conversationnel" : "AI conversational coach",
-                        lang === "fr" ? "Analyse intelligente des séances" : "Smart session analysis",
-                        lang === "fr" ? "Prédictions de course" : "Race predictions"
+                        t("settingsExtended.personalizedPlan"),
+                        t("settingsExtended.featureConversationalCoach"),
+                        t("settingsExtended.smartAnalysis"),
+                        t("settingsExtended.racePredictions")
                       ].map((feature, idx) => (
                         <li key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Check className="w-3 h-3 text-amber-500" />
@@ -1026,20 +1011,20 @@ export default function Settings() {
                       <div className="flex items-center gap-2 mb-2">
                         <Sparkles className="w-4 h-4 text-amber-400" />
                         <span className="font-bold text-amber-400">
-                          {lang === "fr" ? "Offre Early Adopter" : "Early Adopter Offer"}
+                          {t("settingsExtended.earlyAdopterOffer")}
                         </span>
                       </div>
-                      <p className="text-2xl font-bold text-white mb-1">4,99 € <span className="text-sm font-normal text-muted-foreground">/ {lang === "fr" ? "mois" : "month"}</span></p>
-                      <p className="text-xs text-amber-300">{lang === "fr" ? "Prix garanti à vie" : "Price guaranteed for life"}</p>
+                      <p className="text-2xl font-bold text-white mb-1">4,99 € <span className="text-sm font-normal text-muted-foreground">/ {t("subscription.perMonth")}</span></p>
+                      <p className="text-xs text-amber-300">{t("settingsExtended.priceGuaranteed")}</p>
                     </div>
                     
                     <ul className="space-y-2">
                       {[
-                        lang === "fr" ? "Plan d'entraînement personnalisé" : "Personalized training plan",
-                        lang === "fr" ? "Coach IA illimité" : "Unlimited AI coach",
-                        lang === "fr" ? "Analyse intelligente des séances" : "Smart session analysis",
-                        lang === "fr" ? "Synchronisation montres/apps" : "Watch/app sync",
-                        lang === "fr" ? "Prédictions de course" : "Race predictions"
+                        t("settingsExtended.personalizedPlan"),
+                        t("settingsExtended.unlimitedCoach"),
+                        t("settingsExtended.smartAnalysis"),
+                        t("settingsExtended.watchSync"),
+                        t("settingsExtended.racePredictions")
                       ].map((feature, idx) => (
                         <li key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Sparkles className="w-3 h-3 text-amber-500" />
@@ -1061,12 +1046,12 @@ export default function Settings() {
                             // Rediriger vers Stripe Checkout
                             window.location.href = res.data.checkout_url;
                           } else {
-                            toast.error(lang === "fr" ? "Erreur de paiement" : "Payment error");
+                            toast.error(t("settingsExtended.paymentError"));
                             setProcessingPayment(false);
                           }
                         } catch (err) {
                           console.error("Checkout error:", err);
-                          toast.error(lang === "fr" ? "Erreur de paiement" : "Payment error");
+                          toast.error(t("settingsExtended.paymentError"));
                           setProcessingPayment(false);
                         }
                         // Note: pas de finally car on redirige vers Stripe
@@ -1078,12 +1063,12 @@ export default function Settings() {
                       {processingPayment ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          {lang === "fr" ? "Redirection..." : "Redirecting..."}
+                          {t("settingsExtended.redirecting")}
                         </>
                       ) : (
                         <>
                           <Crown className="w-4 h-4" />
-                          {lang === "fr" ? "Activer mon coach" : "Activate my coach"}
+                          {t("settingsExtended.activateCoach")}
                         </>
                       )}
                     </Button>

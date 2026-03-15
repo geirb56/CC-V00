@@ -170,7 +170,7 @@ def determine_phase(week: int, total_weeks: int) -> str:
 
 
 def get_phase_description(phase: str, lang: str = "fr") -> Dict:
-    """Retourne la description et conseils pour une phase."""
+    """Return phase description and advice in the requested language."""
     phases_fr = {
         "build": {
             "name": "Construction",
@@ -208,7 +208,45 @@ def get_phase_description(phase: str, lang: str = "fr") -> Dict:
             "advice": "Footing léger avant, confiance en ton travail"
         }
     }
-    return phases_fr.get(phase, phases_fr["build"])
+    phases_en = {
+        "build": {
+            "name": "Build",
+            "description": "Aerobic base development phase",
+            "focus": "Volume in fundamental endurance (Z1-Z2)",
+            "intensity_pct": 15,
+            "advice": "Prioritise long runs at comfortable pace"
+        },
+        "deload": {
+            "name": "Recovery",
+            "description": "Unload week to absorb training",
+            "focus": "Reduce volume by 20-30%",
+            "intensity_pct": 10,
+            "advice": "Short easy runs, stretching, sleep"
+        },
+        "intensification": {
+            "name": "Intensification",
+            "description": "Race-pace specific phase",
+            "focus": "Quality sessions (tempo, threshold, intervals)",
+            "intensity_pct": 25,
+            "advice": "Include sessions at race pace"
+        },
+        "taper": {
+            "name": "Taper",
+            "description": "Progressive reduction before race",
+            "focus": "Maintain intensity, reduce volume",
+            "intensity_pct": 20,
+            "advice": "Keep some speed work, rest up"
+        },
+        "race": {
+            "name": "Race",
+            "description": "Race week",
+            "focus": "Maximum freshness",
+            "intensity_pct": 0,
+            "advice": "Light run before, trust your training"
+        }
+    }
+    phases = phases_en if lang == "en" else phases_fr
+    return phases.get(phase, phases["build"])
 
 
 # ============================================================

@@ -76,10 +76,10 @@ export default function Guidance() {
         user_id: USER_ID
       });
       setGuidance(res.data);
-      toast.success(lang === "fr" ? "Recommandations generees" : "Guidance generated");
+      toast.success(t("guidanceExtended.generated"));
     } catch (error) {
       console.error("Failed to generate guidance:", error);
-      toast.error(lang === "fr" ? "Erreur de generation" : "Generation failed");
+      toast.error(t("guidanceExtended.generationFailed"));
     } finally {
       setGenerating(false);
     }
@@ -94,15 +94,9 @@ export default function Guidance() {
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
     
-    if (lang === "fr") {
-      if (diffMins < 60) return `il y a ${diffMins} min`;
-      if (diffHours < 24) return `il y a ${diffHours}h`;
-      return `il y a ${diffDays}j`;
-    }
-    
-    if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
+    if (diffMins < 60) return t("common.timeAgoMins").replace("{n}", diffMins);
+    if (diffHours < 24) return t("common.timeAgoHours").replace("{n}", diffHours);
+    return t("common.timeAgoDays").replace("{n}", diffDays);
   };
 
   if (loading) {
@@ -140,7 +134,7 @@ export default function Guidance() {
           ) : (
             <RefreshCw className="w-4 h-4" />
           )}
-          {lang === "fr" ? "Actualiser" : "Refresh"}
+          {t("guidanceExtended.refresh")}
         </Button>
       </div>
 
@@ -148,10 +142,7 @@ export default function Guidance() {
         <Card className="bg-card border-border">
           <CardContent className="p-8 text-center">
             <p className="font-mono text-sm text-muted-foreground mb-4">
-              {lang === "fr" 
-                ? "Aucune recommandation generee. Cliquez sur Actualiser pour obtenir vos suggestions d'entrainement."
-                : "No guidance generated yet. Click Refresh to get your training suggestions."
-              }
+              {t("guidanceExtended.noGuidance")}
             </p>
             <Button
               onClick={generateGuidance}
@@ -161,7 +152,7 @@ export default function Guidance() {
               {generating ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : null}
-              {lang === "fr" ? "Generer les recommandations" : "Generate Guidance"}
+              {t("guidanceExtended.generate")}
             </Button>
           </CardContent>
         </Card>

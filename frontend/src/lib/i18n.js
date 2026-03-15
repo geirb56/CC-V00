@@ -27,6 +27,8 @@ export const translations = {
       viewAll: "View All",
       recovery: "Recovery",
       recoveryScore: "Recovery Score",
+      currentForm: "Current Form",
+      currentFormDelta: "this week",
       load: {
         label: "Load",
         low: "Low",
@@ -38,13 +40,29 @@ export const translations = {
         stable: "Stable",
         down: "Down",
       },
+      today: "Today",
+      yesterday: "Yesterday",
+      todayLabel: "TODAY",
+      todayRestTitle: "Rest Day",
+      todayRestDescription: "Active recovery or complete rest",
+      todayRestTagline: "Enjoy your recovery 💪",
+      todayNoSessionTitle: "No session planned",
+      todayNoSessionSubtitle: "Generate your plan in the Plan tab",
+      recentWorkouts: "Recent Workouts",
+      thisWeekCompact: "This week",
+      load28Label: "28d Load",
+      load28Subtitle: "Chronic base",
+      acwr_status: { low: "Under-training", optimal: "Optimal zone", warning: "At risk", danger: "Danger" },
+      tsb_status: { fresh: "Very fresh", ready: "Ready", training: "In load", fatigued: "Fatigued" },
     },
-    
-    // Workout types
     workoutTypes: {
       run: "Run",
       cycle: "Cycle",
       swim: "Swim",
+      fractionne: "Intervals",
+      endurance: "Endurance",
+      seuil: "Threshold",
+      recuperation: "Recovery",
     },
     
     // Workout detail
@@ -272,8 +290,14 @@ export const translations = {
       error: "Error",
       save: "Save",
       cancel: "Cancel",
+      syncAgo: "Sync {time} ago",
+      justNow: "Just now",
+      never: "Never",
+      timeAgoMins: "{n} min ago",
+      timeAgoHours: "{n}h ago",
+      timeAgoDays: "{n}d ago",
     },
-    
+
     // Date formatting
     dateFormat: {
       locale: "en-US",
@@ -282,8 +306,65 @@ export const translations = {
       day: "numeric",
       year: "numeric",
     },
+    settingsExtended: {
+      accountConnected: "Account connected",
+      connectionFailed: "Connection failed",
+      paymentCancelled: "Payment cancelled",
+      goalSetWithName: "Goal {goal} set",
+      sessionsPerWeekSet: "sessions/week",
+      earlyAdopterActivated: "Early Adopter activated! Price guaranteed for life.",
+      premiumActivated: "Premium activated! Welcome to CardioCoach Pro.",
+      sessionExpiredOrError: "Session expired or error",
+      verificationError: "Verification error",
+      paymentError: "Payment error",
+      fillRequiredFields: "Fill all required fields",
+      syncFailed: "Sync failed",
+      syncImported: "{count} workouts imported",
+      accountDisconnected: "Account disconnected",
+      never: "Never",
+      units: "Units",
+      metric: "Metric",
+      imperial: "Imperial",
+      trainingPlan: "Training Plan",
+      trainingPlanDesc: "Set your goal and sessions per week",
+      distanceGoal: "Distance Goal",
+      sessionsPerWeekLabel: "Sessions per week",
+      planRegenerated: "Plan will be regenerated automatically",
+      subscription: "Subscription",
+      earlyAdopterOffer: "Early Adopter Offer",
+      earlyAdopterPrice: "Early Adopter — €4.99 / month (price guaranteed for life)",
+      freeTrialActive: "Free trial active",
+      limitedAccess: "Limited access — subscription required",
+      limitedBadge: "LIMITED",
+      timeRemaining: "Time remaining",
+      days: "days",
+      featuresIncluded: "Features included:",
+      personalizedPlan: "Personalized training plan",
+      smartAnalysis: "Smart session analysis",
+      racePredictions: "Race predictions",
+      priceGuaranteed: "Price guaranteed for life",
+      unlimitedCoach: "Unlimited AI coach",
+      featureConversationalCoach: "AI conversational coach",
+      watchSync: "Watch/app sync",
+      redirecting: "Redirecting...",
+      activateCoach: "Activate my coach",
+      unitSystemDesc: "Choose your unit system for distance, pace and speed",
+      placeholderGoalExample: "Ex: Paris Marathon",
+    },
+    digestExtended: { noPreviousReviews: "No previous reviews", loadMore: "Load more", history: "History", thisWeek: "This week", sessionsCount: "sessions", duration: "time", personalizedRag: "Personalized RAG Analysis" },
+    trainingPlanExtended: { planTitle: "Training Plan", planUpdated: "Plan updated", weekDetails: "Week Details", cycleProgress: "Cycle Progress", subscribe: "Subscribe", refresh: "Refresh", focus: "Focus:", loadingError: "Loading error", trialBanner: "Free trial: {days} days remaining", trialBannerOne: "Free trial: 1 day remaining", startLabel: "Start", fullCycleLabel: "Full Cycle", weeksSuffix: "weeks", collapse: "Collapse", showAll: "Show all", currentBadge: "CURRENT", coachAdvice: "Coach advice", weekLabel: "Week" },
+    trainingPlanSessionType: { endurance: "Endurance", long_run: "Long run", fartlek: "Fartlek", recovery: "Recovery", easy: "Easy", short_easy: "Short easy", tempo: "Tempo", intervals: "Intervals", speed_reminder: "Speed reminder", easy_run: "Easy run", activation: "Activation", race: "Race" },
+    workoutDetailExtended: { fastest: "Fastest", slowest: "Slowest", average: "Average", simplifiedView: "Simplified view ({count} km total)", fast: "Fast", normal: "Normal", slow: "Slow", avg: "avg", pacePerKm: "Pace per kilometer", enhancedAnalysis: "Enhanced Analysis", splitAnalysis: "Split Analysis", fastestKm: "Fastest km", slowestKm: "Slowest km", paceDrop: "Pace drop", consistency: "Consistency", negativeSplitMessage: "You sped up at the end!", heartRateAnalysis: "Heart Rate Analysis", hrDrift: "HR Drift", watchHydration: "Watch hydration", similarWorkouts: "similar workouts", comparison: "Comparison", vs: "vs", goFurther: "Go further", askCoach: "Ask the coach", meaning: "What it means", recovery: "Recovery", coachAdvice: "Coach advice", analyzing: "Analyzing..." },
+    progressExtended: { evolution12Months: "12-month evolution", sessionsCount: "sessions", sessions7d: "Sessions (7d)", km7d: "Km (7d)", km30d: "Km (30d)", basedOn6Weeks: "Based on last 6 weeks", months12: "12 months", racePredictions: "Race Predictions", basedOnVma: "Based on your VMA and volume" },
+    guidanceExtended: { generated: "Guidance generated", generationFailed: "Generation failed", refresh: "Refresh", generate: "Generate Guidance", noGuidance: "No guidance generated yet. Click Refresh to get your training suggestions." },
+    paywall: { title: "Activate your running coach", subtitle: "Your personalized training plan is ready", description: "Activate your subscription to access it.", priceDisplay: "€4.99 / month", priceGuarantee: "Price guaranteed for life", feature1: "Personalized training plan", feature2: "Automatic plan adaptation", feature3: "Smart session analysis", feature4: "AI conversational coach", feature5: "Watch/app sync", feature6: "Race predictions", ctaButton: "Activate my coach", perMonth: "month", maybeLater: "Maybe later", activating: "Activating..." },
+    subscription: { free: "Free", freeDesc: "Discovery", starter: "Starter", starterDesc: "To get started", confort: "Confort", confortDesc: "Regular use", pro: "Pro", proDesc: "Unlimited", popular: "Popular", monthly: "Monthly", yearly: "Yearly", unlimitedShort: "Unlimited", messagesShort: "msg/month", included: "Included", choose: "Choose", paymentCancelled: "Payment cancelled", subscriptionActivated: "Subscription activated!", featureMessagesPerMonth: "messages coach/month", featureAnalyses: "Session analyses", featureWeeklyReview: "Weekly review", featureDetailedAnalyses: "Detailed analyses", featureLocalCoach: "Local AI coach", featureAllAnalyses: "All analyses", featurePrioritySupport: "Priority support", featureUnlimitedMessages: "Unlimited messages", featurePriorityAccess: "Priority access", featureVipSupport: "VIP support", subscriptionsTitle: "Subscriptions", choosePlan: "Choose the plan that fits your training", perYear: "year", perMonth: "month", currentPlan: "Current plan", securePayment: "Secure payment by Stripe" },
+    coachExtended: { analysisPrompt: "Deep analysis of workout: {name}", historyCleared: "History cleared", trainingLoadSuggestion: "Analyze my recent training load and effort distribution.", heartRateSuggestion: "What patterns do you see in my heart rate data?", paceConsistencySuggestion: "How is my pace consistency across recent runs?", workoutAnalyzed: "Workout analyzed", analyzing: "Analyzing...", thinking: "Thinking..." },
+    ragSummary: { personalizedAnalysis: "Personalized Analysis" },
+    chat: { title: "Chat Coach", unlimited: "Unlimited", instantResponsesTitle: "Instant responses (<1s)", clearHistory: "Clear history", firstQuestion: "Ask your first question!", examplePrompt: "E.g. \"How do I recover?\" or \"Analyze my week\"", personalizedResponses: "Personalized instant responses", suggestion1: "Can you make me a plan for the week?", suggestion2: "How can I recover better?", suggestion3: "Analyze my recent workouts", placeholder: "Ask your question...", connectionError: "Connection error" },
+    pwa: { installTitle: "Install CardioCoach", installMessage: "Tap the share icon then \"Add to Home Screen\"", close: "Close" },
   },
-  
+
   fr: {
     // Navigation
     nav: {
@@ -310,6 +391,8 @@ export const translations = {
       viewAll: "Tout voir",
       recovery: "Recuperation",
       recoveryScore: "Score de recuperation",
+      currentForm: "Forme actuelle",
+      currentFormDelta: "cette semaine",
       load: {
         label: "Charge",
         low: "Faible",
@@ -321,16 +404,30 @@ export const translations = {
         stable: "Stable",
         down: "Baisse",
       },
+      today: "Aujourd'hui",
+      yesterday: "Hier",
+      todayLabel: "AUJOURD'HUI",
+      todayRestTitle: "Jour de repos",
+      todayRestDescription: "Récupération active ou repos complet",
+      todayRestTagline: "Profite de ta récup' 💪",
+      todayNoSessionTitle: "Pas de séance planifiée",
+      todayNoSessionSubtitle: "Génère ton plan dans l'onglet Plan",
+      recentWorkouts: "Séances récentes",
+      thisWeekCompact: "Cette semaine",
+      load28Label: "Charge 28j",
+      load28Subtitle: "Base chronique",
+      acwr_status: { low: "Sous-entraînement", optimal: "Zone optimale", warning: "Zone à risque", danger: "Danger" },
+      tsb_status: { fresh: "Très frais", ready: "Prêt", training: "En charge", fatigued: "Fatigué" },
     },
-    
-    // Workout types
     workoutTypes: {
       run: "Course",
       cycle: "Velo",
       swim: "Natation",
+      fractionne: "Fractionné",
+      endurance: "Endurance",
+      seuil: "Seuil",
+      recuperation: "Récupération",
     },
-    
-    // Workout detail
     workout: {
       back: "Retour",
       avgHeartRate: "FC Moyenne",
@@ -555,8 +652,10 @@ export const translations = {
       error: "Erreur",
       save: "Enregistrer",
       cancel: "Annuler",
+      syncAgo: "Il y a {time}",
+      justNow: "À l'instant",
     },
-    
+
     // Date formatting
     dateFormat: {
       locale: "fr-FR",
@@ -613,14 +712,77 @@ export const translations = {
         ultra: "Ultra Trail",
       },
     },
+    settingsExtended: {
+      accountConnected: "Compte connecté",
+      connectionFailed: "Échec de connexion",
+      paymentCancelled: "Paiement annulé",
+      goalSetWithName: "Objectif {goal} défini",
+      sessionsPerWeekSet: "séances/semaine",
+      earlyAdopterActivated: "Early Adopter activé ! Prix garanti à vie.",
+      premiumActivated: "Premium activé ! Bienvenue sur CardioCoach Pro.",
+      sessionExpiredOrError: "Session expirée ou erreur",
+      verificationError: "Erreur de vérification",
+      paymentError: "Erreur de paiement",
+      fillRequiredFields: "Remplis tous les champs obligatoires",
+      syncFailed: "Échec de synchronisation",
+      syncImported: "{count} séances importées",
+      accountDisconnected: "Compte déconnecté",
+      never: "Jamais",
+      units: "Unités",
+      metric: "Métrique",
+      imperial: "Impérial",
+      trainingPlan: "Plan d'entraînement",
+      trainingPlanDesc: "Définis ton objectif et tes séances par semaine",
+      distanceGoal: "Objectif de distance",
+      sessionsPerWeekLabel: "Séances par semaine",
+      planRegenerated: "Le plan sera régénéré automatiquement",
+      subscription: "Abonnement",
+      earlyAdopterOffer: "Offre Early Adopter",
+      earlyAdopterPrice: "Early Adopter — 4,99 €/mois (prix garanti à vie)",
+      freeTrialActive: "Essai gratuit actif",
+      limitedAccess: "Accès limité — abonnement requis",
+      limitedBadge: "LIMITÉ",
+      timeRemaining: "Temps restant",
+      days: "jours",
+      featuresIncluded: "Fonctionnalités incluses :",
+      personalizedPlan: "Plan d'entraînement personnalisé",
+      smartAnalysis: "Analyse intelligente des séances",
+      racePredictions: "Prédictions de course",
+      priceGuaranteed: "Prix garanti à vie",
+      unlimitedCoach: "Coach IA illimité",
+      featureConversationalCoach: "Coach IA conversationnel",
+      watchSync: "Sync montre/appli",
+      redirecting: "Redirection...",
+      activateCoach: "Activer mon coach",
+      unitSystemDesc: "Choisis le système d'unités pour distance, allure et vitesse",
+      placeholderGoalExample: "Ex: Marathon de Paris",
+    },
+    digestExtended: { noPreviousReviews: "Aucun bilan précédent", loadMore: "Charger plus", history: "Historique", thisWeek: "Cette semaine", sessionsCount: "séances", duration: "durée", personalizedRag: "Analyse RAG personnalisée" },
+    trainingPlanExtended: { planTitle: "Plan d'Entraînement", planUpdated: "Plan mis à jour", weekDetails: "Détail de la semaine", cycleProgress: "Progression du cycle", subscribe: "S'abonner", refresh: "Actualiser", focus: "Focus :", loadingError: "Erreur de chargement", trialBanner: "Essai gratuit : {days} jours restants", trialBannerOne: "Essai gratuit : 1 jour restant", startLabel: "Début", fullCycleLabel: "Cycle complet", weeksSuffix: "semaines", collapse: "Réduire", showAll: "Voir tout", currentBadge: "EN COURS", coachAdvice: "Conseil du coach", weekLabel: "Semaine" },
+    trainingPlanSessionType: { endurance: "Endurance", long_run: "Sortie longue", fartlek: "Fartlek", recovery: "Récupération", easy: "Endurance facile", short_easy: "Endurance courte", tempo: "Seuil/Tempo", intervals: "Fractionné", speed_reminder: "Rappel vitesse", easy_run: "Footing", activation: "Activation", race: "Course" },
+    workoutDetailExtended: { fastest: "Plus rapide", slowest: "Plus lent", average: "Moyenne", simplifiedView: "Affichage simplifié ({count} km total)", fast: "Rapide", normal: "Normal", slow: "Lent", avg: "moy", pacePerKm: "Allure par kilomètre", enhancedAnalysis: "Analyse enrichie", splitAnalysis: "Analyse des Splits", fastestKm: "Km le + rapide", slowestKm: "Km le + lent", paceDrop: "Écart allure", consistency: "Régularité", negativeSplitMessage: "Tu as accéléré à la fin !", heartRateAnalysis: "Analyse cardiaque", hrDrift: "Dérive cardiaque", watchHydration: "Hydratation à surveiller", similarWorkouts: "séances similaires", comparison: "Comparaison", vs: "vs", goFurther: "Pour aller plus loin", askCoach: "Poser une question au coach", meaning: "Ce que ça signifie", recovery: "Récupération", coachAdvice: "Conseil coach", analyzing: "Analyse en cours..." },
+    progressExtended: { evolution12Months: "Évolution sur 12 mois", sessionsCount: "séances", sessions7d: "Séances (7j)", km7d: "Km (7j)", km30d: "Km (30j)", basedOn6Weeks: "Basé sur les 6 dernières semaines", months12: "12 mois", racePredictions: "Prédictions de course", basedOnVma: "Basées sur ta VMA et ton volume" },
+    guidanceExtended: { generated: "Recommandations générées", generationFailed: "Erreur de génération", refresh: "Actualiser", generate: "Générer les recommandations", noGuidance: "Aucune recommandation générée. Cliquez sur Actualiser pour obtenir vos suggestions d'entraînement." },
+    paywall: { title: "Active ton coach running", subtitle: "Ton plan personnalisé est prêt", description: "Active ton abonnement pour y accéder.", priceDisplay: "4,99 € / mois", priceGuarantee: "Prix garanti à vie", feature1: "Plan d'entraînement personnalisé", feature2: "Adaptation automatique du plan", feature3: "Analyse intelligente des séances", feature4: "Coach conversationnel IA", feature5: "Sync montre/appli", feature6: "Prédictions de course", ctaButton: "Activer mon coach", perMonth: "mois", maybeLater: "Plus tard", activating: "Activation..." },
+    subscription: { free: "Gratuit", freeDesc: "Découverte", starter: "Starter", starterDesc: "Pour démarrer", confort: "Confort", confortDesc: "Usage régulier", pro: "Pro", proDesc: "Illimité", popular: "Populaire", monthly: "Mensuel", yearly: "Annuel", unlimitedShort: "Illimité", messagesShort: "msg/mois", included: "Inclus", choose: "Choisir", paymentCancelled: "Paiement annulé", subscriptionActivated: "Abonnement activé !", featureMessagesPerMonth: "messages coach/mois", featureAnalyses: "Analyses de séances", featureWeeklyReview: "Bilan hebdo", featureDetailedAnalyses: "Analyses détaillées", featureLocalCoach: "Coach IA local", featureAllAnalyses: "Toutes les analyses", featurePrioritySupport: "Support prioritaire", featureUnlimitedMessages: "Messages illimités", featurePriorityAccess: "Accès prioritaire", featureVipSupport: "Support VIP", subscriptionsTitle: "Abonnement", choosePlan: "Choisis le plan qui correspond à ton entraînement", perYear: "an", perMonth: "mois", currentPlan: "Plan actuel", securePayment: "Paiement sécurisé Stripe" },
+    coachExtended: { analysisPrompt: "Analyse approfondie de la séance : {name}", historyCleared: "Historique effacé", trainingLoadSuggestion: "Analyse ma charge d'entraînement récente et la distribution de l'effort.", heartRateSuggestion: "Quels patterns observes-tu dans mes données de fréquence cardiaque ?", paceConsistencySuggestion: "Comment est ma régularité d'allure sur les courses récentes ?", workoutAnalyzed: "Séance analysée", analyzing: "Analyse en cours...", thinking: "Réflexion..." },
+    ragSummary: { personalizedAnalysis: "Analyse personnalisée" },
+    chat: { title: "Chat Coach", unlimited: "Illimité", instantResponsesTitle: "Réponses instantanées (<1s)", clearHistory: "Effacer l'historique", firstQuestion: "Pose ta première question !", examplePrompt: "Ex. \"Comment récupérer ?\" ou \"Analyse ma semaine\"", personalizedResponses: "Réponses instantanées personnalisées", suggestion1: "Peux-tu me faire un plan pour la semaine ?", suggestion2: "Comment mieux récupérer ?", suggestion3: "Analyse mes séances récentes", placeholder: "Pose ta question...", connectionError: "Erreur de connexion" },
+    pwa: { installTitle: "Installer CardioCoach", installMessage: "Appuie sur … puis Sur l'écran d'accueil", close: "Fermer" },
     common: {
-      loading: "Loading...",
-      error: "Error",
-      save: "Save",
-      cancel: "Cancel",
+      loading: "Chargement...",
+      error: "Erreur",
+      save: "Enregistrer",
+      cancel: "Annuler",
+      syncAgo: "Il y a {time}",
+      justNow: "À l'instant",
+      never: "Jamais",
+      timeAgoMins: "Il y a {n} min",
+      timeAgoHours: "Il y a {n}h",
+      timeAgoDays: "Il y a {n}j",
     },
     dateFormat: {
-      locale: "en-US",
+      locale: "fr-FR",
       weekday: "long",
       month: "short",
       day: "numeric",
@@ -630,7 +792,7 @@ export const translations = {
 };
 
 export const getAppLanguage = () => {
-  // 1) User preference (localStorage)
+  // 1) User preference (localStorage) — only this overrides default
   if (typeof window !== "undefined") {
     try {
       const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
@@ -638,19 +800,10 @@ export const getAppLanguage = () => {
         return stored;
       }
     } catch {
-      // Ignore storage errors and continue to detection
+      // Ignore storage errors
     }
-
-    // 2) Device / browser language
-    const browserLang =
-      (window.navigator.language || window.navigator.userLanguage || "").toLowerCase();
-
-    if (browserLang.startsWith("fr")) return "fr";
-    if (browserLang.startsWith("es")) return "es";
-    if (browserLang.startsWith("en")) return "en";
+    // 2) No stored preference: default to English (no browser detection)
   }
-
-  // 3) Default to English
   return "en";
 };
 

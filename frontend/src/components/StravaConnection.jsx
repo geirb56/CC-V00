@@ -36,7 +36,7 @@ export const StravaConnection = ({ lang, t, onStatusChange }) => {
       window.location.href = res.data.authorization_url;
     } catch (error) {
       console.error("Failed to connect:", error);
-      toast.error(error.response?.data?.detail || (lang === "fr" ? "Erreur de connexion" : "Connection failed"));
+      toast.error(error.response?.data?.detail || t("settingsExtended.connectionFailed"));
       setConnecting(false);
     }
   };
@@ -46,14 +46,11 @@ export const StravaConnection = ({ lang, t, onStatusChange }) => {
     try {
       const res = await axios.post(`${API_BASE}/strava/sync?user_id=default`);
       if (res.data.success) {
-        const msg = lang === "fr" 
-          ? `${res.data.synced_count} seances importees` 
-          : `${res.data.synced_count} workouts imported`;
-        toast.success(msg);
+        toast.success(t("settingsExtended.syncImported").replace("{count}", res.data.synced_count));
       }
       loadStatus();
     } catch (error) {
-      toast.error(lang === "fr" ? "Erreur de synchronisation" : "Sync failed");
+      toast.error(t("settingsExtended.syncFailed"));
     } finally {
       setSyncing(false);
     }
@@ -63,34 +60,26 @@ export const StravaConnection = ({ lang, t, onStatusChange }) => {
     try {
       await axios.delete(`${API_BASE}/strava/disconnect?user_id=default`);
       setStatus({ connected: false });
-      toast.success(lang === "fr" ? "Compte déconnecté" : "Account disconnected");
+      toast.success(t("settingsExtended.accountDisconnected"));
     } catch (error) {
-      toast.error(lang === "fr" ? "Erreur" : "Error");
+      toast.error(t("common.error"));
     }
   };
 
   const formatLastSync = (isoString) => {
-    if (!isoString) return lang === "fr" ? "Jamais" : "Never";
+    if (!isoString) return t("common.never");
     const date = new Date(isoString);
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-
-    if (lang === "fr") {
-      if (diffMins < 1) return "À l'instant";
-      if (diffMins < 60) return `Il y a ${diffMins} min`;
-      if (diffHours < 24) return `Il y a ${diffHours}h`;
-      if (diffDays < 7) return `Il y a ${diffDays}j`;
-      return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-    }
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins} min ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+    const locale = lang === "fr" ? "fr-FR" : "en-US";
+    if (diffMins < 1) return t("common.justNow");
+    if (diffMins < 60) return t("common.timeAgoMins").replace("{n}", diffMins);
+    if (diffHours < 24) return t("common.timeAgoHours").replace("{n}", diffHours);
+    if (diffDays < 7) return t("common.timeAgoDays").replace("{n}", diffDays);
+    return date.toLocaleDateString(locale, { day: "numeric", month: "short" });
   };
 
   if (loading) {

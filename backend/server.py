@@ -4965,6 +4965,7 @@ class ChatRequest(BaseModel):
     message: str
     user_id: str = "default"
     use_local_llm: bool = False  # True if using WebLLM on client
+    language: Optional[str] = "en"  # Response language: "en" or "fr"
 
 
 class ChatResponse(BaseModel):
@@ -5775,10 +5776,13 @@ async def get_vma_history(user: dict = Depends(auth_user)):
 
 
 @api_router.get("/training/full-cycle")
-async def get_full_training_cycle(user: dict = Depends(auth_user)):
+async def get_full_training_cycle(
+    user: dict = Depends(auth_user),
+    lang: str = Query("en", description="Language for phase and session labels (en, fr)")
+):
     """
-    Retourne l'aperçu complet du cycle d'entraînement avec toutes les semaines.
-    Chaque semaine inclut: numéro, phase, volume cible, type de séances.
+    Returns the full training cycle overview with all weeks.
+    Phase names/focus and session type keys are returned; frontend translates keys via i18n.
     """
     # Récupérer le cycle utilisateur
     cycle = await db.training_cycles.find_one({"user_id": user["id"]})
@@ -5831,41 +5835,40 @@ async def get_full_training_cycle(user: dict = Depends(auth_user)):
     
     for week_num in range(1, total_weeks + 1):
         phase = determine_phase(week_num, total_weeks)
-        phase_info = get_phase_description(phase, "fr")
+        phase_info = get_phase_description(phase, lang)
         
-        # Calculer le volume cible selon la phase et la progression
-        progression_factor = 1 + (week_num / total_weeks) * 0.3  # +30% max sur le cycle
+        # Target volume by phase and progression
+        progression_factor = 1 + (week_num / total_weeks) * 0.3  # +30% max over cycle
         
         if phase == "build":
             volume_factor = 1.0 * progression_factor
         elif phase == "deload":
-            volume_factor = 0.7  # -30% en décharge
+            volume_factor = 0.7  # -30% deload
         elif phase == "intensification":
             volume_factor = 1.1 * progression_factor
         elif phase == "taper":
-            # Réduction progressive: -40% à -60%
             weeks_to_race = total_weeks - week_num
             volume_factor = 0.6 - (0.1 * (2 - weeks_to_race))
         elif phase == "race":
-            volume_factor = 0.3  # Très peu de volume
+            volume_factor = 0.3
         else:
             volume_factor = 1.0
         
         target_km = round(base_weekly_km * volume_factor)
         
-        # Types de séances selon la phase
+        # Session type keys (frontend translates via i18n trainingPlan.sessionType.*)
         if phase == "build":
-            session_types = ["Endurance", "Endurance", "Sortie longue"] if sessions_per_week <= 3 else ["Endurance", "Endurance", "Fartlek", "Sortie longue"]
+            session_types = ["endurance", "endurance", "long_run"] if sessions_per_week <= 3 else ["endurance", "endurance", "fartlek", "long_run"]
         elif phase == "deload":
-            session_types = ["Récupération", "Endurance facile", "Endurance courte"]
+            session_types = ["recovery", "easy", "short_easy"]
         elif phase == "intensification":
-            session_types = ["Endurance", "Seuil/Tempo", "Fractionné", "Sortie longue"]
+            session_types = ["endurance", "tempo", "intervals", "long_run"]
         elif phase == "taper":
-            session_types = ["Endurance facile", "Rappel vitesse", "Footing"]
+            session_types = ["easy", "speed_reminder", "easy_run"]
         elif phase == "race":
-            session_types = ["Activation", "COURSE"]
+            session_types = ["activation", "race"]
         else:
-            session_types = ["Endurance", "Sortie longue"]
+            session_types = ["endurance", "long_run"]
         
         weeks_overview.append({
             "week": week_num,
@@ -6555,7 +6558,11 @@ async def send_chat_message(request: ChatRequest):
         response_text = ""  # Client will generate this
     else:
         # Construire le contexte pour le LLM/RAG
+        language = (request.language or "en").lower()
+        if language not in ("en", "fr"):
+            language = "en"
         context = build_chat_context(workouts, user_goal)
+        context["language"] = language
         
         # Récupérer l'historique de conversation récent
         recent_messages = await db.chat_messages.find(
@@ -6577,14 +6584,23 @@ async def send_chat_message(request: ChatRequest):
         if isinstance(llm_metadata, dict):
             suggestions = llm_metadata.get("suggestions", [])
         
-        # Générer des suggestions si LLM utilisé et pas de suggestions
+        # Fallback suggestions in user language if LLM gave none
         if used_llm and not suggestions:
-            suggestions = [
-                "Comment équilibrer mes zones d'entraînement ?",
-                f"Comment améliorer mon allure de {context.get('allure', '6:00')}/km ?",
-                "Quels exercices de renforcement faire ?",
-                "Comment travailler plus en endurance fondamentale ?"
-            ]
+            allure = context.get("allure", "6:00")
+            if language == "fr":
+                suggestions = [
+                    "Comment équilibrer mes zones d'entraînement ?",
+                    f"Comment améliorer mon allure de {allure}/km ?",
+                    "Quels exercices de renforcement faire ?",
+                    "Comment travailler plus en endurance fondamentale ?",
+                ]
+            else:
+                suggestions = [
+                    "How do I balance my training zones?",
+                    f"How can I improve my {allure}/km pace?",
+                    "What strength exercises should I do?",
+                    "How to train more in base endurance?",
+                ]
     
     # Store user message
     user_msg_id = str(uuid.uuid4())

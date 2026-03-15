@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/context/LanguageContext";
 import { 
   Lock, 
   Sparkles, 
@@ -29,10 +30,12 @@ const FEATURE_ICONS = {
 export default function Paywall({ 
   onClose, 
   userId = "default", 
-  language = "fr",
+  language: languageProp,
   returnPath = "/training"
 }) {
   const navigate = useNavigate();
+  const { t, lang } = useLanguage();
+  const language = languageProp ?? lang;
   const [offer, setOffer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activating, setActivating] = useState(false);
@@ -47,24 +50,23 @@ export default function Paywall({
       setOffer(res.data);
     } catch (err) {
       console.error("Error fetching offer:", err);
-      // Fallback offer
       setOffer({
-        title: language === "fr" ? "Active ton coach running" : "Activate your running coach",
-        subtitle: language === "fr" ? "Ton plan d'entraînement personnalisé est prêt" : "Your personalized training plan is ready",
-        description: language === "fr" ? "Active ton abonnement pour y accéder." : "Activate your subscription to access it.",
+        title: t("paywall.title"),
+        subtitle: t("paywall.subtitle"),
+        description: t("paywall.description"),
         offer_name: "Early Adopter",
         price: 4.99,
-        price_display: language === "fr" ? "4,99 € / mois" : "€4.99 / month",
-        price_guarantee: language === "fr" ? "Prix garanti à vie" : "Price guaranteed for life",
+        price_display: t("paywall.priceDisplay"),
+        price_guarantee: t("paywall.priceGuarantee"),
         features: [
-          language === "fr" ? "Plan d'entraînement personnalisé" : "Personalized training plan",
-          language === "fr" ? "Adaptation automatique du plan" : "Automatic plan adaptation",
-          language === "fr" ? "Analyse intelligente des séances" : "Smart session analysis",
-          language === "fr" ? "Coach IA conversationnel" : "AI conversational coach",
-          language === "fr" ? "Synchronisation montres/apps" : "Watch/app sync",
-          language === "fr" ? "Prédictions de course" : "Race predictions"
+          t("paywall.feature1"),
+          t("paywall.feature2"),
+          t("paywall.feature3"),
+          t("paywall.feature4"),
+          t("paywall.feature5"),
+          t("paywall.feature6")
         ],
-        cta_button: language === "fr" ? "Activer mon coach" : "Activate my coach"
+        cta_button: t("paywall.ctaButton")
       });
     } finally {
       setLoading(false);
@@ -95,7 +97,7 @@ export default function Paywall({
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.9)" }}>
-        <div className="animate-pulse text-white">Chargement...</div>
+        <div className="animate-pulse text-white">{t("common.loading")}</div>
       </div>
     );
   }
@@ -155,7 +157,7 @@ export default function Paywall({
           {/* Price */}
           <div className="text-center py-2">
             <span className="text-4xl font-bold text-white">{offer?.price_display?.split('/')[0]}</span>
-            <span className="text-lg text-slate-400">/ {language === "fr" ? "mois" : "month"}</span>
+            <span className="text-lg text-slate-400">/ {t("paywall.perMonth")}</span>
           </div>
 
           {/* Features */}
@@ -191,7 +193,7 @@ export default function Paywall({
           {activating ? (
             <span className="flex items-center gap-2">
               <span className="animate-spin">⏳</span>
-              {language === "fr" ? "Activation..." : "Activating..."}
+              {t("paywall.activating")}
             </span>
           ) : (
             <span className="flex items-center gap-2">
@@ -207,7 +209,7 @@ export default function Paywall({
             onClick={onClose}
             className="w-full text-center text-sm text-slate-500 hover:text-slate-300 transition-colors"
           >
-            {language === "fr" ? "Plus tard" : "Maybe later"}
+            {t("paywall.maybeLater")}
           </button>
         )}
       </div>

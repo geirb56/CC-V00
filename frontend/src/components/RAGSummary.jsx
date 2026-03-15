@@ -1,7 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, Target, AlertTriangle } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
-export const RAGSummary = ({ rag, lang }) => {
+export const RAGSummary = ({ rag }) => {
+  const { t } = useLanguage();
   if (!rag?.rag_summary) return null;
 
   return (
@@ -10,7 +12,7 @@ export const RAGSummary = ({ rag, lang }) => {
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0" />
           <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-            {lang === "fr" ? "Analyse personnalisée" : "Personalized Analysis"}
+            {t("ragSummary.personalizedAnalysis")}
           </p>
         </div>
 

@@ -118,7 +118,7 @@ export default function Progress() {
             <div className="flex items-center gap-2 mb-2">
               <Activity className="w-4 h-4 text-primary" />
               <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {lang === "fr" ? "Séances (7j)" : "Sessions (7d)"}
+                {t("progressExtended.sessions7d")}
               </span>
             </div>
             <p className="font-heading text-3xl font-bold text-white">
@@ -133,7 +133,7 @@ export default function Progress() {
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="w-4 h-4 text-emerald-500" />
               <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {lang === "fr" ? "Km (7j)" : "Km (7d)"}
+                {t("progressExtended.km7d")}
               </span>
             </div>
             <p className="font-heading text-3xl font-bold text-white">
@@ -148,7 +148,7 @@ export default function Progress() {
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="w-4 h-4 text-violet-500" />
               <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {lang === "fr" ? "Km (30j)" : "Km (30d)"}
+                {t("progressExtended.km30d")}
               </span>
             </div>
             <p className="font-heading text-3xl font-bold text-white">
@@ -178,7 +178,7 @@ export default function Progress() {
                       <span className="text-sm text-muted-foreground">ml/kg/min</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {lang === "fr" ? "Basé sur les 6 dernières semaines" : "Based on last 6 weeks"}
+                      {t("progressExtended.basedOn6Weeks")}
                     </p>
                   </div>
                 </div>
@@ -195,7 +195,7 @@ export default function Progress() {
                       {vmaHistory.trend > 0 ? '+' : ''}{vmaHistory.trend}
                     </span>
                     <span className="text-xs text-muted-foreground ml-1">
-                      ({lang === "fr" ? "12 mois" : "12 months"})
+                      ({t("progressExtended.months12")})
                     </span>
                   </div>
                 )}
@@ -205,7 +205,7 @@ export default function Progress() {
               {vmaHistory?.history && vmaHistory.history.length > 0 && (
                 <div className="mt-4">
                   <p className="text-[10px] font-mono uppercase text-muted-foreground mb-3">
-                    {lang === "fr" ? "Évolution sur 12 mois" : "12-month evolution"}
+                    {t("progressExtended.evolution12Months")}
                   </p>
                   <div className="h-36">
                     <ResponsiveContainer width="100%" height="100%">
@@ -237,7 +237,7 @@ export default function Progress() {
                                     {data.month_label} {data.half === 1 ? "(1-15)" : "(16-fin)"}
                                   </p>
                                   <p className="font-bold text-white">{data.vo2max} ml/kg/min</p>
-                                  <p className="text-[10px] text-muted-foreground">{data.sessions} séances</p>
+                                  <p className="text-[10px] text-muted-foreground">{data.sessions} {t("progressExtended.sessionsCount")}</p>
                                 </div>
                               );
                             }
@@ -285,10 +285,10 @@ export default function Progress() {
                   </div>
                   <div>
                     <h2 className="font-heading text-lg uppercase tracking-tight font-semibold">
-                      {lang === "fr" ? "Prédictions de course" : "Race Predictions"}
+                      {t("progressExtended.racePredictions")}
                     </h2>
                     <p className="font-mono text-xs text-muted-foreground">
-                      {lang === "fr" ? "Basées sur ta VMA et ton volume" : "Based on your VMA and volume"}
+                      {t("progressExtended.basedOnVma")}
                     </p>
                   </div>
                 </div>

@@ -40,11 +40,11 @@ export const Layout = () => {
   }, []);
 
   const navItems = [
-    { path: "/", icon: Home, labelKey: "Accueil" },
-    { path: "/training", icon: CalendarDays, labelKey: "Plan" },
-    { path: "/progress", icon: TrendingUp, labelKey: "Progression" },
-    { path: "/coach", icon: MessageCircle, labelKey: "Coach" },
-    { path: "/settings", icon: Settings, labelKey: "Réglages" },
+    { path: "/", icon: Home, labelKey: "nav.dashboard" },
+    { path: "/training", icon: CalendarDays, labelKey: "nav.training" },
+    { path: "/progress", icon: TrendingUp, labelKey: "nav.progress" },
+    { path: "/coach", icon: MessageCircle, labelKey: "nav.coach" },
+    { path: "/settings", icon: Settings, labelKey: "nav.settings" },
   ];
 
   return (
@@ -63,7 +63,7 @@ export const Layout = () => {
             {lastSync && (
               <div className="sync-status">
                 <span className="sync-dot" />
-                <span>Sync il y a {lastSync}</span>
+                <span>{t("common.syncAgo").replace("{time}", lastSync)}</span>
               </div>
             )}
           </div>
@@ -106,7 +106,7 @@ export const Layout = () => {
                   />
                 )}
               </div>
-              <span className="nav-label text-[9px]">{item.labelKey}</span>
+              <span className="nav-label text-[9px]">{t(item.labelKey)}</span>
             </NavLink>
           );
         })}

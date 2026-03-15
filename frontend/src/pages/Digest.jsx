@@ -219,7 +219,7 @@ export default function Digest() {
         <div className="text-center py-12">
           <History className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
           <p className="text-muted-foreground text-sm">
-            {lang === "fr" ? "Aucun bilan précédent" : "No previous reviews"}
+            {t("digestExtended.noPreviousReviews")}
           </p>
         </div>
       );
@@ -249,7 +249,7 @@ export default function Digest() {
                   <div>
                     <p className="font-mono text-sm font-bold">{digest.metrics?.total_sessions || 0}</p>
                     <p className="font-mono text-[8px] uppercase text-muted-foreground">
-                      {lang === "fr" ? "séances" : "sessions"}
+                      {t("digestExtended.sessionsCount")}
                     </p>
                   </div>
                   <div>
@@ -280,7 +280,7 @@ export default function Digest() {
             {historyLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              lang === "fr" ? "Charger plus" : "Load more"
+              t("digestExtended.loadMore")
             )}
           </Button>
         )}
@@ -326,7 +326,7 @@ export default function Digest() {
           data-testid="tab-current"
         >
           <Calendar className="w-4 h-4 mr-2" />
-          {lang === "fr" ? "Cette semaine" : "This week"}
+          {t("digestExtended.thisWeek")}
         </Button>
         <Button
           variant={activeTab === "history" ? "default" : "outline"}
@@ -336,7 +336,7 @@ export default function Digest() {
           data-testid="tab-history"
         >
           <History className="w-4 h-4 mr-2" />
-          {lang === "fr" ? "Historique" : "History"}
+          {t("digestExtended.history")}
         </Button>
       </div>
 
@@ -358,7 +358,7 @@ export default function Digest() {
                   </p>
                   <p className="font-mono text-[10px] text-muted-foreground">
                     {formatDistance(userGoal.distance_km, { unitSystem })} • {daysUntil}{" "}
-                    {lang === "fr" ? "jours" : "days"}
+                    {t("settingsExtended.days")}
                   </p>
                 </div>
               </div>
@@ -506,7 +506,7 @@ export default function Digest() {
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-4 h-4 text-amber-400" />
               <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-                {lang === "fr" ? "Analyse RAG personnalisée" : "Personalized RAG Analysis"}
+                {t("digestExtended.personalizedRag")}
               </p>
             </div>
             
@@ -529,7 +529,7 @@ export default function Digest() {
                 <div className="text-center">
                   <p className="font-mono text-sm font-bold">{ragReview.metrics.nb_seances}</p>
                   <p className="font-mono text-[8px] text-muted-foreground uppercase">
-                    {lang === "fr" ? "séances" : "sessions"}
+                    {t("digestExtended.sessionsCount")}
                   </p>
                 </div>
                 <div className="text-center">
@@ -539,7 +539,7 @@ export default function Digest() {
                 <div className="text-center">
                   <p className="font-mono text-sm font-bold">{ragReview.metrics.duree_totale}</p>
                   <p className="font-mono text-[8px] text-muted-foreground uppercase">
-                    {lang === "fr" ? "durée" : "time"}
+                    {t("digestExtended.duration")}
                   </p>
                 </div>
               </div>
