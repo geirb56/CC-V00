@@ -31,7 +31,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
 
   useEffect(() => {
     loadStatus();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadStatus = async () => {
     try {

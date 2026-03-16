@@ -321,7 +321,7 @@ export default function WorkoutDetail() {
 
   useEffect(() => {
     loadWorkout();
-  }, [id, lang]);
+  }, [id, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadWorkout = async () => {
     setLoading(true);

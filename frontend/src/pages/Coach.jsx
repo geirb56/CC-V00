@@ -53,7 +53,7 @@ export default function Coach() {
       // Clear the param after triggering
       setSearchParams({});
     }
-  }, [searchParams, initialLoading]);
+  }, [searchParams, initialLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to bottom on new messages
   useEffect(() => {

@@ -100,13 +100,13 @@ export default function Digest() {
 
   useEffect(() => {
     loadReview();
-  }, [lang]);
+  }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activeTab === "history" && history.length === 0) {
       loadHistory();
     }
-  }, [activeTab]);
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadReview = async (forceRefresh = false) => {
     if (forceRefresh) {
