@@ -5155,6 +5155,273 @@ async def get_terra_daily_metrics(user_id: str = "default"):
     }
 
 
+# ========== CARDIO COACH RUNNING SCREEN ==========
+
+# Mock data returned when Terra is not connected (graceful degradation).
+_CARDIO_COACH_MOCK_DATA = {
+    "mock": True,
+    "recommendation": "RUN HARD",
+    "recommendation_emoji": "🟢",
+    "recommendation_color": "green",
+    "next_workout": {"label": "Intervals – 6 x 800 m", "icon": "run"},
+    "metrics": {
+        "hrv_today": 58.0,
+        "hrv_baseline": 55.0,
+        "hrv_delta": -3.0,
+        "hrv_status": "green",
+        "rhr_today": 48.0,
+        "rhr_baseline": 50.0,
+        "rhr_delta": -2.0,
+        "rhr_status": "green",
+        "sleep_hours": 7.5,
+        "sleep_efficiency": 0.88,
+        "sleep_score": 0.74,
+        "sleep_status": "yellow",
+        "training_load": 1.05,
+        "training_load_status": "green",
+        "fatigue_physio": 0.0,
+        "fatigue_ratio": 0.70,
+        "fatigue_status": "green",
+    },
+    "reasons": [
+        "HRV deviation −3.0 ms vs baseline → today above baseline (good recovery)",
+        "RHR −2.0 bpm vs baseline → rested",
+        "Sleep 7.5 h at 88% efficiency",
+        "Training load (ACWR) 1.05 → optimal",
+        "Fatigue Ratio 0.70 → ready to perform",
+    ],
+    "history": [
+        {"day": "Mon", "hrv": 52, "training_load": 1.1, "fatigue_ratio": 0.85},
+        {"day": "Tue", "hrv": 55, "training_load": 1.05, "fatigue_ratio": 0.80},
+        {"day": "Wed", "hrv": 50, "training_load": 1.2, "fatigue_ratio": 1.10},
+        {"day": "Thu", "hrv": 48, "training_load": 1.3, "fatigue_ratio": 1.30},
+        {"day": "Fri", "hrv": 54, "training_load": 1.0, "fatigue_ratio": 0.90},
+        {"day": "Sat", "hrv": 57, "training_load": 0.9, "fatigue_ratio": 0.75},
+        {"day": "Sun", "hrv": 58, "training_load": 1.05, "fatigue_ratio": 0.70},
+    ],
+}
+
+
+def _metric_status(value: float, green_max: float, yellow_max: float) -> str:
+    """Classify a numeric metric into green / yellow / red."""
+    if value <= green_max:
+        return "green"
+    if value <= yellow_max:
+        return "yellow"
+    return "red"
+
+
+@api_router.get("/cardio-coach")
+async def get_cardio_coach(user_id: str = "default"):
+    """Return the full CardioCoach running-screen payload.
+
+    Computes physiological fatigue metrics from Terra data and determines
+    today's training recommendation (RUN HARD / EASY RUN / REST).
+
+    Falls back to embedded mock data when no Terra token is configured.
+    """
+    today = datetime.now(timezone.utc).date()
+    today_iso = today.isoformat()
+
+    # ----------------------------------------------------------------
+    # Load Terra token — fall back to mock data when absent.
+    # ----------------------------------------------------------------
+    token_doc = await db.terra_tokens.find_one({"user_id": user_id}, {"_id": 0})
+    if not token_doc:
+        return _CARDIO_COACH_MOCK_DATA
+
+    # ----------------------------------------------------------------
+    # Daily metrics (sync today's if not yet stored).
+    # ----------------------------------------------------------------
+    daily_doc = await db.daily_metrics.find_one({"user_id": user_id, "date": today_iso})
+    if not daily_doc:
+        synced = await syncDailyMetrics(user_id, db)
+        daily_doc = await db.daily_metrics.find_one({"user_id": user_id, "date": today_iso}) or {}
+
+    hrv_today: Optional[float] = daily_doc.get("hrv")
+    rhr_today: Optional[float] = daily_doc.get("rhr")
+    raw_sleep_hours: Optional[float] = daily_doc.get("sleep_hours")
+    # sleep_quality stored as 0-100 score or 0-1 fraction.
+    raw_sleep_quality: Optional[float] = daily_doc.get("sleep_quality")
+
+    # Normalise sleep efficiency to a 0-1 fraction.
+    if raw_sleep_quality is not None:
+        sleep_efficiency = raw_sleep_quality / 100.0 if raw_sleep_quality > 1.0 else raw_sleep_quality
+    else:
+        sleep_efficiency = 0.80  # Reasonable default
+
+    sleep_hours = raw_sleep_hours or 7.0
+
+    # ----------------------------------------------------------------
+    # Baselines.
+    # ----------------------------------------------------------------
+    baseline_doc = await db.baselines.find_one({"user_id": user_id}) or {}
+    hrv_baseline: Optional[float] = baseline_doc.get("baseline_hrv")
+    rhr_baseline: Optional[float] = baseline_doc.get("baseline_rhr")
+
+    # Use rolling 30-day mean from stored daily_metrics when no explicit baseline.
+    if hrv_baseline is None or rhr_baseline is None:
+        thirty_days_ago = (today - timedelta(days=30)).isoformat()
+        hist_cursor = db.daily_metrics.find(
+            {"user_id": user_id, "date": {"$gte": thirty_days_ago, "$lt": today_iso}},
+            {"hrv": 1, "rhr": 1, "_id": 0},
+        )
+        hist_docs = await hist_cursor.to_list(30)
+        if hist_docs:
+            hrv_vals = [d["hrv"] for d in hist_docs if d.get("hrv") is not None]
+            rhr_vals = [d["rhr"] for d in hist_docs if d.get("rhr") is not None]
+            if hrv_baseline is None and hrv_vals:
+                hrv_baseline = sum(hrv_vals) / len(hrv_vals)
+            if rhr_baseline is None and rhr_vals:
+                rhr_baseline = sum(rhr_vals) / len(rhr_vals)
+
+    # Final fallbacks to sensible population averages.
+    hrv_baseline = hrv_baseline or 55.0
+    rhr_baseline = rhr_baseline or 55.0
+    hrv_today = hrv_today or hrv_baseline
+
+    # ----------------------------------------------------------------
+    # Training load (ACWR).
+    # ----------------------------------------------------------------
+    load_doc = await db.training_load.find_one({"user_id": user_id, "date": today_iso})
+    if not load_doc:
+        load_doc = await computeTrainingLoad(user_id, db)
+    acwr: float = float(load_doc.get("acwr") or 1.0)
+    # Clamp to 0.1 minimum: prevents division-by-zero in fatigue_ratio and
+    # avoids wild amplification from spuriously low ACWR readings.
+    training_load = max(0.1, acwr)
+
+    # ----------------------------------------------------------------
+    # Fatigue computations (as specified).
+    # hrv_delta: positive value means HRV dropped below baseline (worse recovery).
+    # rhr_delta: positive value means RHR rose above baseline (more fatigued).
+    # ----------------------------------------------------------------
+    hrv_delta = float(hrv_baseline) - float(hrv_today)            # positive → HRV below baseline (bad)
+    rhr_delta = float(rhr_today) - float(rhr_baseline)            # positive → RHR above baseline (bad)
+    sleep_score = max(0.0, 8.0 - sleep_hours) + (1.0 - sleep_efficiency) * 2.0
+    fatigue_physio = 0.5 * hrv_delta + 0.3 * rhr_delta + 0.2 * sleep_score
+    fatigue_ratio = fatigue_physio / training_load
+
+    # ----------------------------------------------------------------
+    # Recommendation.
+    # ----------------------------------------------------------------
+    if fatigue_ratio > 1.5:
+        recommendation = "REST"
+        recommendation_emoji = "🔴"
+        recommendation_color = "red"
+        next_workout_label = "Rest Day – Active Recovery"
+        next_workout_icon = "rest"
+    elif fatigue_ratio > 1.2:
+        recommendation = "EASY RUN"
+        recommendation_emoji = "🟡"
+        recommendation_color = "yellow"
+        next_workout_label = "Easy Run – 45 min Z2"
+        next_workout_icon = "run"
+    else:
+        recommendation = "RUN HARD"
+        recommendation_emoji = "🟢"
+        recommendation_color = "green"
+        next_workout_label = "Intervals – 6 x 800 m"
+        next_workout_icon = "run"
+
+    # ----------------------------------------------------------------
+    # Per-metric status colours.
+    # ----------------------------------------------------------------
+    hrv_status = "green" if hrv_delta <= 5 else ("yellow" if hrv_delta <= 10 else "red")
+    rhr_status = "green" if rhr_delta <= 3 else ("yellow" if rhr_delta <= 7 else "red")
+    sleep_status = "green" if sleep_score <= 1.0 else ("yellow" if sleep_score <= 2.5 else "red")
+    load_status = "green" if 0.8 <= acwr <= 1.3 else ("yellow" if acwr <= 1.5 else "red")
+    fatigue_status = "green" if fatigue_ratio <= 1.2 else ("yellow" if fatigue_ratio <= 1.5 else "red")
+
+    # ----------------------------------------------------------------
+    # Human-readable reasons.
+    # ----------------------------------------------------------------
+    hrv_prefix = "+" if hrv_delta >= 0 else ""  # "+" = below baseline; "-" = above baseline
+    rhr_prefix = "+" if rhr_delta >= 0 else ""  # "+" = above baseline
+    reasons = [
+        f"HRV deviation {hrv_prefix}{hrv_delta:.1f} ms vs baseline",
+        f"RHR {rhr_prefix}{rhr_delta:.1f} bpm vs baseline",
+        f"Sleep {sleep_hours:.1f} h at {sleep_efficiency * 100:.0f}% efficiency",
+        f"Training Load (ACWR) {acwr:.2f}",
+        f"Fatigue Ratio {fatigue_ratio:.2f}",
+    ]
+
+    # ----------------------------------------------------------------
+    # 7-day history from daily_metrics.
+    # ----------------------------------------------------------------
+    seven_days_ago = (today - timedelta(days=7)).isoformat()
+    hist_cursor = db.daily_metrics.find(
+        {"user_id": user_id, "date": {"$gte": seven_days_ago, "$lte": today_iso}},
+        {"date": 1, "hrv": 1, "rhr": 1, "sleep_hours": 1, "sleep_quality": 1, "_id": 0},
+    ).sort("date", 1)
+    hist_docs = await hist_cursor.to_list(7)
+
+    history = []
+    day_abbrevs = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    for doc in hist_docs:
+        doc_date = doc.get("date", "")
+        try:
+            d = datetime.fromisoformat(doc_date)
+            day_label = day_abbrevs[d.weekday()]
+        except Exception:
+            day_label = doc_date[-2:] if doc_date else "?"
+
+        doc_hrv = doc.get("hrv") or hrv_baseline
+        doc_hrv_delta = float(hrv_baseline) - float(doc_hrv)
+        doc_rhr = doc.get("rhr") or rhr_baseline
+        doc_rhr_delta = float(doc_rhr) - float(rhr_baseline)
+        doc_sleep = doc.get("sleep_hours") or 7.0
+        doc_sq = doc.get("sleep_quality")
+        if doc_sq is not None:
+            doc_eff = doc_sq / 100.0 if doc_sq > 1.0 else doc_sq
+        else:
+            doc_eff = 0.80
+        doc_sleep_score = max(0.0, 8.0 - doc_sleep) + (1.0 - doc_eff) * 2.0
+        doc_fatigue_physio = 0.5 * doc_hrv_delta + 0.3 * doc_rhr_delta + 0.2 * doc_sleep_score
+        doc_fatigue_ratio = doc_fatigue_physio / training_load
+
+        history.append({
+            "day": day_label,
+            "date": doc_date,
+            "hrv": round(float(doc_hrv), 1),
+            "training_load": round(training_load, 2),
+            "fatigue_ratio": round(doc_fatigue_ratio, 2),
+        })
+
+    # Pad history with mock-style entries if fewer than 7 days of data.
+    if not history:
+        history = _CARDIO_COACH_MOCK_DATA["history"]
+
+    return {
+        "mock": False,
+        "recommendation": recommendation,
+        "recommendation_emoji": recommendation_emoji,
+        "recommendation_color": recommendation_color,
+        "next_workout": {"label": next_workout_label, "icon": next_workout_icon},
+        "metrics": {
+            "hrv_today": round(float(hrv_today), 1),
+            "hrv_baseline": round(float(hrv_baseline), 1),
+            "hrv_delta": round(hrv_delta, 1),
+            "hrv_status": hrv_status,
+            "rhr_today": round(float(rhr_today), 1),
+            "rhr_baseline": round(float(rhr_baseline), 1),
+            "rhr_delta": round(rhr_delta, 1),
+            "rhr_status": rhr_status,
+            "sleep_hours": round(sleep_hours, 1),
+            "sleep_efficiency": round(sleep_efficiency, 2),
+            "sleep_score": round(sleep_score, 2),
+            "sleep_status": sleep_status,
+            "training_load": round(acwr, 2),
+            "training_load_status": load_status,
+            "fatigue_physio": round(fatigue_physio, 2),
+            "fatigue_ratio": round(fatigue_ratio, 2),
+            "fatigue_status": fatigue_status,
+        },
+        "reasons": reasons,
+        "history": history,
+    }
+
+
 # ========== PREMIUM SUBSCRIPTION (STRIPE) ==========
 
 

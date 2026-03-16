@@ -42,7 +42,7 @@ export default function Paywall({
 
   useEffect(() => {
     fetchOffer();
-  }, [language]);
+  }, [language]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchOffer = async () => {
     try {

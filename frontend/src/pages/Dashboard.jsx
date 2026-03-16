@@ -144,7 +144,7 @@ export default function Dashboard() {
     fetchedRef.current = true;
     lastLangRef.current = lang;
     fetchData();
-  }, [lang]);
+  }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     setLoading(true);

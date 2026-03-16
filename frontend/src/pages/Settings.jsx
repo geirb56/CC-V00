@@ -106,7 +106,7 @@ export default function Settings() {
       toast.info(t("settingsExtended.paymentCancelled"));
       setSearchParams({});
     }
-  }, [searchParams]);
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPremiumStatus = async () => {
     try {

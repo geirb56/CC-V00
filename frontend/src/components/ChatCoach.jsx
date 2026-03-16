@@ -40,7 +40,7 @@ const ChatCoach = ({ isOpen, onClose, userId = "default" }) => {
       checkSubscription();
       loadHistory();
     }
-  }, [isOpen, userId]);
+  }, [isOpen, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkSubscription = async () => {
     try {

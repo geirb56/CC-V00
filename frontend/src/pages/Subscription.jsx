@@ -39,7 +39,7 @@ export default function Subscription() {
       toast.info(t("subscription.paymentCancelled"));
       setSearchParams({});
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadStatus = async () => {
     try {

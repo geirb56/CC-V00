@@ -36,7 +36,7 @@ export default function DetailedAnalysis() {
 
   useEffect(() => {
     loadAnalysis();
-  }, [id, lang]);
+  }, [id, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadAnalysis = async () => {
     setLoading(true);

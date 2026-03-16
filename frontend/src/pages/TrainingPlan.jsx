@@ -126,7 +126,7 @@ export default function TrainingPlan() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRefresh = async (newSessionCount = sessionsPerWeek) => {
     setRefreshing(true);

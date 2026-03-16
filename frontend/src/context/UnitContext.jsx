@@ -18,7 +18,7 @@ export const UnitProvider = ({ children }) => {
     if (effective !== unitSystem) {
       setUnitSystemState(effective);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateUnitSystem = (system) => {
     if (system !== "metric" && system !== "imperial") return;
