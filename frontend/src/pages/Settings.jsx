@@ -11,6 +11,7 @@ import { useSubscription } from "@/context/SubscriptionContext";
 import { useUnitSystem } from "@/context/UnitContext";
 import { Globe, Info, Link2, Loader2, Check, X, RefreshCw, Target, Calendar, Trash2, Clock, Route, Crown, Sparkles, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
+import { TerraConnection } from "@/components/TerraConnection";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const USER_ID = "default";
@@ -50,6 +51,9 @@ export default function Settings() {
   const [loadingStrava, setLoadingStrava] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [connecting, setConnecting] = useState(false);
+
+  // Terra state
+  const [terraStatus, setTerraStatus] = useState(null);
   
   // Premium state
   const [premiumStatus, setPremiumStatus] = useState(null);
@@ -859,6 +863,9 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Terra Wearables Integration */}
+        <TerraConnection lang={lang} t={t} onStatusChange={setTerraStatus} />
 
         {/* Language Setting */}
         <Card className="bg-card border-border">

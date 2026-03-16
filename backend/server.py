@@ -98,6 +98,17 @@ from subscription_manager import (
 # Import physiological engine dashboard router
 from api.dashboard import dashboard_router
 
+# Import Terra integration module
+from terra_integration import (
+    syncDailyMetrics,
+    computeRecoveryScore,
+    computeTrainingLoad,
+    generateWorkoutRecommendation,
+    syncTerraWorkouts,
+    fetch_terra_user,
+    TERRA_API_BASE,
+)
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -156,6 +167,11 @@ GARMIN_REDIRECT_URI = os.environ.get('GARMIN_REDIRECT_URI', '')
 STRAVA_CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID', '')
 STRAVA_CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET', '')
 STRAVA_REDIRECT_URI = os.environ.get('STRAVA_REDIRECT_URI', '')
+
+# Terra API Configuration
+# Override TERRA_API_BASE in .env to switch from mock to production.
+TERRA_API_KEY = os.environ.get('TERRA_API_KEY', '')
+TERRA_DEV_ID = os.environ.get('TERRA_DEV_ID', '')
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
@@ -4906,7 +4922,241 @@ async def delete_strava_webhook_subscription(subscription_id: int):
         return {"success": False, "message": str(e)}
 
 
+# ========== TERRA INTEGRATION ENDPOINTS ==========
+# Terra is the primary wearable data aggregator replacing Strava.
+# Mock API base: https://75a7f7fa-10fe-44f4-ab33-67ba6b373709.mock.pstmn.io
+
+class TerraConnectionStatus(BaseModel):
+    connected: bool
+    last_sync: Optional[str] = None
+    workout_count: int = 0
+    terra_user_id: Optional[str] = None
+
+
+class TerraSyncResult(BaseModel):
+    success: bool
+    synced_count: int
+    message: str
+
+
+class TerraConnectRequest(BaseModel):
+    token: str
+    terra_user_id: Optional[str] = None
+
+
+@api_router.get("/terra/status")
+async def get_terra_status(user_id: str = "default"):
+    """Get Terra connection status for a user."""
+    token_doc = await db.terra_tokens.find_one({"user_id": user_id}, {"_id": 0})
+
+    if not token_doc:
+        return TerraConnectionStatus(connected=False)
+
+    sync_info = await db.sync_history.find_one(
+        {"user_id": user_id, "source": "terra"},
+        {"_id": 0},
+        sort=[("synced_at", -1)],
+    )
+
+    workout_count = await db.workouts.count_documents({
+        "data_source": "terra",
+        "user_id": user_id,
+    })
+
+    return TerraConnectionStatus(
+        connected=True,
+        last_sync=sync_info.get("synced_at") if sync_info else None,
+        workout_count=workout_count,
+        terra_user_id=token_doc.get("terra_user_id"),
+    )
+
+
+@api_router.post("/terra/connect")
+async def terra_connect(req: TerraConnectRequest, user_id: str = "default"):
+    """Save a Terra access token for a user (token-based auth flow).
+
+    In production, replace this with a full Terra OAuth widget flow.
+    The client obtains a Terra user token via the Terra Connect Widget and
+    posts it here to persist the connection.
+    """
+    if not req.token:
+        raise HTTPException(status_code=400, detail="Terra token is required")
+
+    # Optionally verify the token by fetching the Terra user profile.
+    terra_user = await fetch_terra_user(req.token)
+    terra_user_id = req.terra_user_id or terra_user.get("user_id") or terra_user.get("id")
+
+    await db.terra_tokens.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "user_id": user_id,
+            "access_token": req.token,
+            "terra_user_id": terra_user_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+
+    logger.info("Terra connected for user: %s (terra_user_id=%s)", user_id, terra_user_id)
+    return {"success": True, "message": "Terra connected successfully", "terra_user_id": terra_user_id}
+
+
+@api_router.post("/terra/sync", response_model=TerraSyncResult)
+async def sync_terra(user_id: str = "default"):
+    """Sync all Terra data for a user: workouts + daily metrics.
+
+    Calls syncTerraWorkouts and syncDailyMetrics then regenerates the
+    recovery score, training load, and workout recommendation.
+    """
+    token_doc = await db.terra_tokens.find_one({"user_id": user_id}, {"_id": 0})
+    if not token_doc:
+        return TerraSyncResult(success=False, synced_count=0, message="Not connected to Terra")
+
+    try:
+        # Sync workouts from Terra
+        workout_result = await syncTerraWorkouts(user_id, db)
+
+        # Sync daily metrics (HRV, RHR, sleep)
+        await syncDailyMetrics(user_id, db)
+
+        # Recompute derived scores
+        await computeTrainingLoad(user_id, db)
+        await computeRecoveryScore(user_id, db)
+        await generateWorkoutRecommendation(user_id, db)
+
+        logger.info("Terra full sync completed for user: %s", user_id)
+        return TerraSyncResult(
+            success=True,
+            synced_count=workout_result.get("synced_count", 0),
+            message=workout_result.get("message", "Sync completed"),
+        )
+    except Exception as exc:
+        logger.error("Terra sync error for user %s: %s", user_id, exc)
+        return TerraSyncResult(success=False, synced_count=0, message=f"Sync failed: {exc}")
+
+
+@api_router.post("/terra/sync-daily")
+async def sync_terra_daily(user_id: str = "default"):
+    """Sync daily health metrics from Terra (HRV, RHR, sleep).
+
+    Useful for a lightweight, metrics-only refresh without re-importing workouts.
+    """
+    token_doc = await db.terra_tokens.find_one({"user_id": user_id}, {"_id": 0})
+    if not token_doc:
+        raise HTTPException(status_code=400, detail="Not connected to Terra")
+
+    try:
+        metrics = await syncDailyMetrics(user_id, db)
+        recovery = await computeRecoveryScore(user_id, db)
+        recommendation = await generateWorkoutRecommendation(user_id, db)
+
+        return {
+            "success": True,
+            "metrics": metrics,
+            "recovery_score": recovery.get("recovery_score"),
+            "fatigue_score": recovery.get("fatigue_score"),
+            "recommendation": {
+                "type": recommendation.get("type"),
+                "duration": recommendation.get("duration"),
+                "intensity": recommendation.get("intensity"),
+            },
+        }
+    except Exception as exc:
+        logger.error("Terra daily sync error for user %s: %s", user_id, exc)
+        raise HTTPException(status_code=500, detail=f"Daily sync failed: {exc}")
+
+
+@api_router.delete("/terra/disconnect")
+async def disconnect_terra(user_id: str = "default"):
+    """Disconnect Terra for a user (remove stored token)."""
+    await db.terra_tokens.delete_one({"user_id": user_id})
+    logger.info("Terra disconnected for user: %s", user_id)
+    return {"success": True, "message": "Terra disconnected"}
+
+
+@api_router.get("/terra/recovery")
+async def get_terra_recovery(user_id: str = "default"):
+    """Return the latest persisted recovery score for a user.
+
+    If no score exists for today, triggers a fresh computation.
+    """
+    today = datetime.now(timezone.utc).date().isoformat()
+    doc = await db.recovery_scores.find_one({"user_id": user_id, "date": today}, {"_id": 0})
+
+    if not doc:
+        # Try to compute if Terra is connected.
+        token_doc = await db.terra_tokens.find_one({"user_id": user_id})
+        if token_doc:
+            doc = await computeRecoveryScore(user_id, db)
+        else:
+            return {"recovery_score": None, "fatigue_score": None, "status": "no_data"}
+
+    return {
+        "recovery_score": doc.get("recovery_score"),
+        "fatigue_score": doc.get("fatigue_score"),
+        "readiness": doc.get("readiness"),
+        "status": doc.get("status"),
+        "hrv_available": doc.get("hrv_available", False),
+        "computed_at": doc.get("computed_at"),
+    }
+
+
+@api_router.get("/terra/recommendation")
+async def get_terra_recommendation(user_id: str = "default"):
+    """Return today's workout recommendation derived from Terra data.
+
+    Triggers computation if no recommendation exists for today.
+    """
+    today = datetime.now(timezone.utc).date().isoformat()
+    doc = await db.workout_recommendations.find_one(
+        {"user_id": user_id, "date": today}, {"_id": 0}
+    )
+
+    if not doc:
+        token_doc = await db.terra_tokens.find_one({"user_id": user_id})
+        if token_doc:
+            doc = await generateWorkoutRecommendation(user_id, db)
+        else:
+            return {"type": None, "duration": None, "intensity": None, "status": "no_data"}
+
+    return {
+        "type": doc.get("type"),
+        "duration": doc.get("duration"),
+        "intensity": doc.get("intensity"),
+        "recovery_score": doc.get("recovery_score"),
+        "acwr": doc.get("acwr"),
+        "readiness": doc.get("readiness"),
+        "computed_at": doc.get("computed_at"),
+    }
+
+
+@api_router.get("/terra/daily-metrics")
+async def get_terra_daily_metrics(user_id: str = "default"):
+    """Return the latest daily metrics (HRV, RHR, sleep) for a user."""
+    today = datetime.now(timezone.utc).date().isoformat()
+    doc = await db.daily_metrics.find_one({"user_id": user_id, "date": today}, {"_id": 0})
+
+    if not doc:
+        # Attempt sync if connected.
+        token_doc = await db.terra_tokens.find_one({"user_id": user_id})
+        if token_doc:
+            doc = await syncDailyMetrics(user_id, db)
+        else:
+            return {"hrv": None, "rhr": None, "sleep_hours": None, "status": "no_data"}
+
+    return {
+        "date": doc.get("date"),
+        "hrv": doc.get("hrv"),
+        "rhr": doc.get("rhr"),
+        "avg_hr": doc.get("avg_hr"),
+        "sleep_hours": doc.get("sleep_hours"),
+        "sleep_quality": doc.get("sleep_quality"),
+        "synced_at": doc.get("synced_at"),
+    }
+
+
 # ========== PREMIUM SUBSCRIPTION (STRIPE) ==========
+
 
 class SubscriptionStatusResponse(BaseModel):
     tier: str = "free"
@@ -7067,6 +7317,13 @@ async def create_db_indexes():
         await db.subscriptions.create_index("user_id", sparse=True)
         await db.strava_tokens.create_index("user_id", sparse=True)
         await db.garmin_tokens.create_index("user_id", sparse=True)
+        # Terra integration collections
+        await db.terra_tokens.create_index("user_id", sparse=True)
+        await db.daily_metrics.create_index([("user_id", 1), ("date", -1)])
+        await db.baselines.create_index("user_id", sparse=True)
+        await db.training_load.create_index([("user_id", 1), ("date", -1)])
+        await db.recovery_scores.create_index([("user_id", 1), ("date", -1)])
+        await db.workout_recommendations.create_index([("user_id", 1), ("date", -1)])
         logger.info("MongoDB indexes created")
     except Exception as e:
         logger.warning(f"Could not create some MongoDB indexes: {e}")
