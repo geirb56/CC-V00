@@ -9,7 +9,8 @@ import { Send, Loader2, Trash2, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/context/LanguageContext";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_BASE_URL } from "@/config";
+const API = API_BASE_URL;
 const USER_ID = "default"; // In production, this would be the authenticated user ID
 
 export default function Coach() {

@@ -9,7 +9,8 @@ import { useLanguage } from "@/context/LanguageContext";
 import { Crown, Check, Loader2, MessageCircle, Zap, Shield } from "lucide-react";
 import { toast } from "sonner";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_BASE_URL } from "@/config";
+const API = API_BASE_URL;
 const USER_ID = "default";
 
 export default function Subscription() {

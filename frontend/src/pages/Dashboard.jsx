@@ -18,7 +18,8 @@ import {
 import { useUnitSystem } from "@/context/UnitContext";
 import { formatDistance, formatPace as formatPaceUnits } from "@/utils/units";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_BASE_URL } from "@/config";
+const API = API_BASE_URL;
 
 // Workout type configuration (labels from t("workoutTypes.*"))
 const WORKOUT_TYPES = {

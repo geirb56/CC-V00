@@ -12,7 +12,8 @@ import { toast } from "sonner";
 import axios from "axios";
 import Paywall from "@/components/Paywall";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_BASE_URL } from "@/config";
+const API = API_BASE_URL;
 const USER_ID = "default";
 
 // Couleurs par phase

@@ -13,7 +13,8 @@ import { Globe, Info, Link2, Loader2, Check, X, RefreshCw, Target, Calendar, Tra
 import { toast } from "sonner";
 import { TerraConnection } from "@/components/TerraConnection";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_BASE_URL } from "@/config";
+const API = API_BASE_URL;
 const USER_ID = "default";
 
 const DISTANCE_OPTIONS = ["5k", "10k", "semi", "marathon", "ultra"];

@@ -6,7 +6,8 @@ import { useAutoSync } from "@/hooks/useAutoSync";
 import ChatCoach from "@/components/ChatCoach";
 import axios from "axios";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_BASE_URL } from "@/config";
+const API = API_BASE_URL;
 
 export const Layout = () => {
   const location = useLocation();

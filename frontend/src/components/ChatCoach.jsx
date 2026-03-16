@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_BASE_URL } from "@/config";
+const API = API_BASE_URL;
 
 /**
  * ChatCoach - 100% Python Backend + RAG

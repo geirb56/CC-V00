@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 import axios from "axios";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API_BASE_URL } from "@/config";
+const API = API_BASE_URL;
 
 const FEATURE_ICONS = {
   0: Target,
