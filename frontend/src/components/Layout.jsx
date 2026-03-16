@@ -44,6 +44,7 @@ export const Layout = () => {
     { path: "/", icon: Home, labelKey: "nav.dashboard" },
     { path: "/training", icon: CalendarDays, labelKey: "nav.training" },
     { path: "/coach", icon: MessageCircle, labelKey: "nav.coach" },
+    { path: "/cardio-coach", icon: Activity, labelKey: "nav.cardioCoach" },
     { path: "/progress", icon: TrendingUp, labelKey: "nav.progress" },
     { path: "/settings", icon: Settings, labelKey: "nav.settings" },
   ];
