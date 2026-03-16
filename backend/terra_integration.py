@@ -233,7 +233,7 @@ def convert_terra_workout_to_internal(terra_workout: dict, user_id: str) -> dict
         or terra_workout.get("duration")
         or 0
     )
-    duration_minutes = round(duration_seconds / 60, 1) if duration_seconds > 60 else float(duration_seconds)
+    duration_minutes = round(duration_seconds / 60, 1) if duration_seconds >= 60 else round(float(duration_seconds) / 60, 1)
 
     # Distance: convert from metres if value is large, else assume km already
     distance_raw = terra_workout.get("distance", terra_workout.get("distance_km", 0)) or 0
@@ -411,13 +411,17 @@ async def computeRecoveryScore(user_id: str, db) -> dict:
     training_load_score = load_result.get("training_load_score", 70.0)
 
     # --- HRV score (0-100): normalise relative to baseline ---
+    # At baseline → 100; below baseline → proportionally lower; above baseline → up to 120 (rewarded) but clamped to 100.
     hrv_score: Optional[float] = None
     if hrv is not None:
         baseline_hrv = baseline_doc.get("baseline_hrv")
-        if baseline_hrv and baseline_hrv > 0:
-            hrv_score = min(100.0, max(0.0, (float(hrv) / float(baseline_hrv)) * 100.0))
+        if baseline_hrv and float(baseline_hrv) > 0:
+            # Ratio > 1 means HRV is above baseline (good recovery) → score > 100 → clamped at 100.
+            # Ratio < 1 means below baseline (fatigue) → score drops proportionally.
+            ratio = float(hrv) / float(baseline_hrv)
+            hrv_score = min(100.0, max(0.0, ratio * 100.0))
         else:
-            # Absolute HRV: map typical 20-80 ms range to 0-100
+            # No baseline: map typical 20-80 ms absolute HRV range to 0-100.
             hrv_score = min(100.0, max(0.0, (float(hrv) - 20.0) / 60.0 * 100.0))
 
     # --- Readiness score ---
@@ -498,6 +502,12 @@ async def computeTrainingLoad(user_id: str, db) -> dict:
         },
         {"date": 1, "duration_minutes": 1, "distance_km": 1, "_id": 0},
     ).to_list(500)
+
+    if len(workouts) == 500:
+        logger.warning(
+            "computeTrainingLoad: reached 500-document limit for user %s — results may be truncated",
+            user_id,
+        )
 
     acwr = compute_acwr(workouts)
     training_load_score = compute_training_load_score(acwr)
