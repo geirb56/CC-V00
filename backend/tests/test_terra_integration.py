@@ -5,7 +5,7 @@ Tests: Terra connection endpoints, daily metrics sync, recovery scores,
        training load, workout recommendations.
 
 All tests target the running backend via HTTP.  The Terra mock API
-(https://75a7f7fa-10fe-44f4-ab33-67ba6b373709.mock.pstmn.io) is used
+(https://b2871f69-4cec-49c8-b471-6fdf1569c41b.mock.pstmn.io) is used
 indirectly through the backend sync endpoints.
 """
 

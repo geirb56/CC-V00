@@ -3,7 +3,7 @@ Terra Integration Module for CardioCoach
 =========================================
 Replaces the Strava integration for wearable data aggregation.
 
-Uses the Terra API (mock: https://75a7f7fa-10fe-44f4-ab33-67ba6b373709.mock.pstmn.io)
+Uses the Terra API (mock: https://b2871f69-4cec-49c8-b471-6fdf1569c41b.mock.pstmn.io)
 
 Terra endpoints consumed:
   GET /users      → create and retrieve Terra user profiles
@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # Mock API base URL — swap for the real Terra base URL in production.
-TERRA_API_BASE = "https://75a7f7fa-10fe-44f4-ab33-67ba6b373709.mock.pstmn.io"
+TERRA_API_BASE = "https://b2871f69-4cec-49c8-b471-6fdf1569c41b.mock.pstmn.io"
 
 # HTTP timeout (seconds) for Terra API requests.
 TERRA_TIMEOUT = 20.0

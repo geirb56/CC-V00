@@ -4924,7 +4924,7 @@ async def delete_strava_webhook_subscription(subscription_id: int):
 
 # ========== TERRA INTEGRATION ENDPOINTS ==========
 # Terra is the primary wearable data aggregator replacing Strava.
-# Mock API base: https://75a7f7fa-10fe-44f4-ab33-67ba6b373709.mock.pstmn.io
+# Mock API base: https://b2871f69-4cec-49c8-b471-6fdf1569c41b.mock.pstmn.io
 
 class TerraConnectionStatus(BaseModel):
     connected: bool
