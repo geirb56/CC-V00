@@ -27,20 +27,12 @@ from analysis_engine import (
     generate_session_analysis,
     generate_weekly_review,
     generate_dashboard_insight,
-    calculate_intensity_level,
     format_duration,
     format_pace
 )
 
-# Import the chat engine (NO LLM dependencies)
-from chat_engine import (
-    generate_chat_response,
-    check_message_limit,
-    get_remaining_messages
-)
-
 # Import LLM coach module (GPT-4o-mini)
-from llm_coach import LLM_MODEL, LLM_PROVIDER, generate_cycle_week
+from llm_coach import LLM_MODEL, generate_cycle_week
 
 # Import coach service (stratégie cascade)
 from coach_service import (
@@ -65,29 +57,22 @@ from rag_engine import (
 from training_engine import (
     GOAL_CONFIG,
     compute_week_number,
-    compute_acwr,
     determine_phase,
     get_phase_description,
-    build_training_context,
-    generate_week_recommendation
 )
 
 # Import Stripe integration
 from emergentintegrations.payments.stripe.checkout import (
     StripeCheckout, 
-    CheckoutSessionResponse, 
-    CheckoutStatusResponse, 
     CheckoutSessionRequest
 )
 
 # Import subscription manager
 from subscription_manager import (
     get_user_subscription,
-    create_trial_subscription,
     activate_early_adopter,
     cancel_subscription,
     get_trial_days_remaining,
-    has_feature_access,
     is_route_protected,
     get_subscription_display,
     SubscriptionStatus,
@@ -106,7 +91,6 @@ from terra_integration import (
     generateWorkoutRecommendation,
     syncTerraWorkouts,
     fetch_terra_user,
-    TERRA_API_BASE,
 )
 
 ROOT_DIR = Path(__file__).parent
@@ -153,10 +137,6 @@ SUBSCRIPTION_TIERS = {
     }
 }
 
-def get_message_limit(tier: str) -> int:
-    """Get message limit for a subscription tier"""
-    tier_config = SUBSCRIPTION_TIERS.get(tier, SUBSCRIPTION_TIERS["free"])
-    return tier_config.get("messages_limit", 10)
 
 # Garmin OAuth Configuration (placeholder - replace with real credentials)
 GARMIN_CLIENT_ID = os.environ.get('GARMIN_CLIENT_ID', '')
@@ -167,11 +147,6 @@ GARMIN_REDIRECT_URI = os.environ.get('GARMIN_REDIRECT_URI', '')
 STRAVA_CLIENT_ID = os.environ.get('STRAVA_CLIENT_ID', '')
 STRAVA_CLIENT_SECRET = os.environ.get('STRAVA_CLIENT_SECRET', '')
 STRAVA_REDIRECT_URI = os.environ.get('STRAVA_REDIRECT_URI', '')
-
-# Terra API Configuration
-# Override TERRA_API_BASE in .env to switch from mock to production.
-TERRA_API_KEY = os.environ.get('TERRA_API_KEY', '')
-TERRA_DEV_ID = os.environ.get('TERRA_DEV_ID', '')
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
