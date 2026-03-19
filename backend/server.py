@@ -1392,9 +1392,6 @@ TON:
 
 REGLE D'OR:
 Si ta reponse ressemble a un rapport ou a une analyse ecrite, elle est FAUSSE et doit etre simplifiee.
-
-100% FRANCAIS. Aucun mot anglais autorise."""
-
 DEEP_ANALYSIS_PROMPT_EN = """Provide a deep technical analysis of this workout WITH CONTEXTUAL COMPARISON to the athlete's recent baseline.
 
 You have access to:
