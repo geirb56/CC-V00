@@ -1393,6 +1393,8 @@ TON:
 
 REGLE D'OR:
 Si ta reponse ressemble a un rapport ou a une analyse ecrite, elle est FAUSSE et doit etre simplifiee.
+"""
+
 DEEP_ANALYSIS_PROMPT_EN = """Provide a deep technical analysis of this workout WITH CONTEXTUAL COMPARISON to the athlete's recent baseline.
 
 You have access to:
@@ -5289,13 +5291,7 @@ async def get_cardio_coach(user_id: str = "default"):
         recommendation = "REST"
         recommendation_emoji = "🔴"
         recommendation_color = "red"
-    return {
-    "today": final_workout,
-    "next_workout": final_workout,
-    "fatigue_ratio": fatigue_ratio,
-    "recommendation": recommendation
-    }
-        elif fatigue_ratio > 1.2:
+    elif fatigue_ratio > 1.2:
         recommendation = "EASY RUN"
         recommendation_emoji = "🟡"
         recommendation_color = "yellow"
@@ -5307,6 +5303,13 @@ async def get_cardio_coach(user_id: str = "default"):
         recommendation_color = "green"
         next_workout_label = "Intervals – 6 x 800 m"
         next_workout_icon = "run"
+
+    return {
+    "today": final_workout,
+    "next_workout": final_workout,
+    "fatigue_ratio": fatigue_ratio,
+    "recommendation": recommendation
+    }
 
     # ----------------------------------------------------------------
     # Per-metric status colours.
