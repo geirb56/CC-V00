@@ -1,3 +1,4 @@
+from services.adaptation_engine import adapt_workout_advanced
 from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, Header
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.middleware.gzip import GZipMiddleware
