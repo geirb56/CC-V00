@@ -5274,7 +5274,14 @@ async def get_cardio_coach(user_id: str = "default"):
     sleep_score = max(0.0, 8.0 - sleep_hours) + (1.0 - sleep_efficiency) * 2.0
     fatigue_physio = 0.5 * hrv_delta + 0.3 * rhr_delta + 0.2 * sleep_score
     fatigue_ratio = fatigue_physio / training_load
+    planned_workout = get_today_workout(user)  # ou ton équivalent
+    user_goal = user.get("goal", "fitness")
 
+    final_workout = adapt_workout_advanced(
+    planned_workout,
+    fatigue_ratio,
+    user_goal
+    )
     # ----------------------------------------------------------------
     # Recommendation.
     # ----------------------------------------------------------------
@@ -5282,9 +5289,13 @@ async def get_cardio_coach(user_id: str = "default"):
         recommendation = "REST"
         recommendation_emoji = "🔴"
         recommendation_color = "red"
-        next_workout_label = "Rest Day – Active Recovery"
-        next_workout_icon = "rest"
-    elif fatigue_ratio > 1.2:
+    return {
+    "today": final_workout,
+    "next_workout": final_workout,
+    "fatigue_ratio": fatigue_ratio,
+    "recommendation": recommendation
+    }
+        elif fatigue_ratio > 1.2:
         recommendation = "EASY RUN"
         recommendation_emoji = "🟡"
         recommendation_color = "yellow"
