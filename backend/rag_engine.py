@@ -25,413 +25,413 @@ KNOWLEDGE_BASE = load_knowledge_base()
 
 
 # ============================================================
-# TEMPLATES RAG - DASHBOARD (Résumé global)
+# RAG TEMPLATES - DASHBOARD (Overall Summary)
 # ============================================================
 
 DASHBOARD_TEMPLATES = {
     "intros_good": [
-        "T'es sur une super lancée ! 💪",
-        "Super mois, on voit les progrès !",
-        "T'as été régulier, c'est top !",
-        "Belle constance ces dernières semaines !",
-        "T'assures grave en ce moment 🔥",
-        "La forme est là, ça se voit !",
-        "T'es dans une bonne dynamique !",
-        "Bravo, t'es vraiment régulier !",
-        "Les efforts payent, continue !",
-        "T'es sur la bonne voie !",
-        "Chapeau pour la régularité !",
-        "T'as trouvé ton rythme !",
+        "You're on a great roll! 💪",
+        "Great month, we can see the progress!",
+        "You've been consistent, that's awesome!",
+        "Nice consistency these past weeks!",
+        "You're crushing it right now 🔥",
+        "You're in great shape, it shows!",
+        "You're in good momentum!",
+        "Bravo, you're really consistent!",
+        "The efforts are paying off, keep it up!",
+        "You're on the right track!",
+        "Hat's off for the consistency!",
+        "You've found your rhythm!",
     ],
     "intros_moderate": [
-        "Mois correct, y'a du positif !",
-        "T'as maintenu le cap, c'est bien !",
-        "Pas mal du tout ce mois-ci !",
-        "Bilan mitigé mais du potentiel !",
-        "Y'a eu des hauts et des bas, normal !",
-        "Mois en demi-teinte mais ça compte !",
-        "T'as fait ce que tu pouvais, respect !",
-        "Pas ton meilleur mois mais t'es là !",
-        "C'est ok, la constance viendra !",
-        "Mois de transition, c'est normal !",
+        "Decent month, there's good stuff!",
+        "You held the line, that's good!",
+        "Not bad at all this month!",
+        "Mixed results but potential!",
+        "There were ups and downs, that's normal!",
+        "Half-and-half month but it counts!",
+        "You did what you could, respect!",
+        "Not your best month but you're here!",
+        "It's ok, consistency will come!",
+        "Transition month, that's normal!",
     ],
     "intros_low": [
-        "Petit mois côté volume, mais chaque km compte !",
-        "Mois calme, parfois c'est nécessaire !",
-        "T'as ralenti mais c'est pas grave !",
-        "Volume réduit, écoute ton corps !",
-        "Mois tranquille, ça arrive !",
-        "Pause relative ce mois, c'est ok !",
-        "Moins de sorties mais tu reviens !",
-        "C'est calme mais tu restes dans le game !",
+        "Light month volume-wise, but every km counts!",
+        "Quiet month, sometimes it's necessary!",
+        "You slowed down but that's fine!",
+        "Reduced volume, listen to your body!",
+        "Quiet month, it happens!",
+        "Relative break this month, it's ok!",
+        "Fewer runs but you're coming back!",
+        "It's calm but you're staying in the game!",
     ],
     "analyses": [
-        "{km_mois} km sur le mois en {nb_seances} séances, allure moyenne {allure_moy} → {tendance_allure} par rapport au mois dernier.",
-        "Volume de {km_mois} km ce mois ({nb_seances} sorties). {analyse_volume}",
-        "Tu as parcouru {km_mois} km avec une allure moyenne de {allure_moy}. {commentaire_allure}",
-        "Ce mois : {km_mois} km, {nb_seances} séances. {analyse_charge}",
-        "{nb_seances} sorties pour {km_mois} km, moyenne de {km_par_seance} km/sortie. {verdict}",
-        "Bilan chiffré : {km_mois} km en {nb_seances} séances, {allure_moy} de moyenne. {interpretation}",
-        "Le mois affiche {km_mois} km sur {nb_seances} entraînements. {analyse_globale}",
-        "Volume mensuel de {km_mois} km ({variation_volume}). Allure : {allure_moy} ({variation_allure}).",
-        "Tu cumules {km_mois} km ce mois, c'est {comparaison_mois_precedent}.",
-        "Stats du mois : {km_mois} km, {duree_totale} d'effort, {nb_seances} sorties.",
+        "{km_mois} km this month in {nb_seances} sessions, average pace {allure_moy} → {tendance_allure} compared to last month.",
+        "Volume of {km_mois} km this month ({nb_seances} runs). {analyse_volume}",
+        "You covered {km_mois} km with an average pace of {allure_moy}. {commentaire_allure}",
+        "This month: {km_mois} km, {nb_seances} sessions. {analyse_charge}",
+        "{nb_seances} runs for {km_mois} km, average of {km_par_seance} km/run. {verdict}",
+        "Stats: {km_mois} km in {nb_seances} sessions, {allure_moy} average. {interpretation}",
+        "The month shows {km_mois} km over {nb_seances} workouts. {analyse_globale}",
+        "Monthly volume of {km_mois} km ({variation_volume}). Pace: {allure_moy} ({variation_allure}).",
+        "You're totaling {km_mois} km this month, that's {comparaison_mois_precedent}.",
+        "Month stats: {km_mois} km, {duree_totale} of effort, {nb_seances} runs.",
     ],
     "points_forts": [
-        "Points forts : {point_fort_1}, {point_fort_2}.",
-        "Ce qui va bien : {point_fort_1}. Continue !",
-        "T'excelles sur : {point_fort_1}, {point_fort_2}.",
-        "Tes forces : {point_fort_1} et {point_fort_2}.",
-        "Bien joué sur : {point_fort_1}.",
-        "Top niveau sur : {point_fort_1}, garde ça !",
-        "Forces identifiées : {point_fort_1}, {point_fort_2}.",
-        "T'es bon sur : {point_fort_1}. {point_fort_2} aussi !",
+        "Strengths: {point_fort_1}, {point_fort_2}.",
+        "What's going well: {point_fort_1}. Keep it up!",
+        "You excel at: {point_fort_1}, {point_fort_2}.",
+        "Your strengths: {point_fort_1} and {point_fort_2}.",
+        "Well done on: {point_fort_1}.",
+        "Top level on: {point_fort_1}, keep that up!",
+        "Identified strengths: {point_fort_1}, {point_fort_2}.",
+        "You're good at: {point_fort_1}. {point_fort_2} too!",
     ],
     "points_ameliorer": [
-        "À surveiller : {point_ameliorer}.",
-        "Axe d'amélioration : {point_ameliorer}.",
-        "Piste de progrès : {point_ameliorer}.",
-        "Tu pourrais bosser : {point_ameliorer}.",
-        "Point à travailler : {point_ameliorer}.",
-        "Attention à : {point_ameliorer}.",
-        "Focus suggéré : {point_ameliorer}.",
-        "Marge de progression sur : {point_ameliorer}.",
+        "Watch out for: {point_ameliorer}.",
+        "Improvement area: {point_ameliorer}.",
+        "Progress opportunity: {point_ameliorer}.",
+        "You could work on: {point_ameliorer}.",
+        "Point to work on: {point_ameliorer}.",
+        "Pay attention to: {point_ameliorer}.",
+        "Suggested focus: {point_ameliorer}.",
+        "Room for improvement on: {point_ameliorer}.",
     ],
     "conseils": [
-        "Continue comme ça, mais ajoute un jour récup si la charge monte.",
-        "Maintiens ce volume et cette régularité, c'est la clé !",
-        "Pour progresser encore, varie un peu plus les intensités.",
-        "Ajoute une sortie longue par semaine si t'en fais pas déjà.",
-        "Pense à intégrer du travail spécifique 1x/semaine.",
-        "La constance paie, reste sur cette lancée !",
-        "Si t'as un objectif, commence à planifier maintenant.",
-        "Écoute ton corps, la progression vient avec la patience.",
-        "Vise la qualité sur certaines séances, pas que le volume.",
-        "Un peu plus de récup active t'aiderait à mieux absorber.",
-        "Pense à varier les parcours pour stimuler différemment.",
-        "La régularité bat l'intensité, rappelle-toi ça.",
+        "Keep it up, but add a recovery day if the load increases.",
+        "Maintain this volume and consistency, that's the key!",
+        "To progress further, vary the intensities a bit more.",
+        "Add a long run per week if you're not already doing one.",
+        "Consider adding specific work 1x/week.",
+        "Consistency pays off, stay on this path!",
+        "If you have a goal, start planning now.",
+        "Listen to your body, progress comes with patience.",
+        "Aim for quality on certain sessions, not just volume.",
+        "A bit more active recovery would help you absorb better.",
+        "Consider varying routes to stimulate differently.",
+        "Consistency beats intensity, remember that.",
     ],
     "relances": [
-        "Tu veux voir un plan pour le mois prochain ?",
-        "Comment tu te sens globalement ?",
-        "T'as un objectif en vue ?",
-        "Besoin d'ajuster quelque chose ?",
-        "Tu veux qu'on parle de ta prochaine course ?",
-        "Des douleurs ou gênes à signaler ?",
-        "Tu veux creuser un aspect en particulier ?",
-        "Ça te dit un bilan plus détaillé ?",
-        "T'as des questions sur ta progression ?",
-        "On planifie la suite ensemble ?",
+        "Want to see a plan for next month?",
+        "How are you feeling overall?",
+        "Do you have a goal in sight?",
+        "Need to adjust something?",
+        "Want to talk about your next race?",
+        "Any pain or discomfort to report?",
+        "Want to dig deeper into a particular aspect?",
+        "How about a more detailed review?",
+        "Any questions about your progress?",
+        "Shall we plan the next steps together?",
     ],
 }
 
 # Conditional templates for dashboard
 DASHBOARD_CONDITIONALS = {
     "ratio_high": [
-        "⚠️ Attention, ta charge est élevée (ratio {ratio}). Prévois plus de récup cette semaine !",
-        "⚠️ Ratio charge/récup à {ratio}, c'est haut. Lève le pied un peu !",
-        "⚠️ Surcharge détectée (ratio {ratio}). Ajoute des jours off !",
+        "⚠️ Warning, your load is high (ratio {ratio}). Plan more recovery this week!",
+        "⚠️ Load/recovery ratio at {ratio}, that's high. Take it easier!",
+        "⚠️ Overload detected (ratio {ratio}). Add rest days!",
     ],
     "progression_allure": [
-        "🚀 T'as gagné {progression}% sur l'allure vs le mois dernier, c'est énorme !",
-        "🚀 Progression de {progression}% en allure, bravo !",
-        "🚀 +{progression}% sur l'allure moyenne, t'es en feu !",
+        "🚀 You gained {progression}% on pace vs last month, that's huge!",
+        "🚀 Progression of {progression}% in pace, bravo!",
+        "🚀 +{progression}% on average pace, you're on fire!",
     ],
     "charge_low": [
-        "💡 Volume un peu bas ce mois. Tu pourrais augmenter progressivement.",
-        "💡 Charge légère, y'a de la marge pour monter si tu te sens bien.",
-        "💡 Mois calme côté volume, prêt à intensifier ?",
+        "💡 Volume a bit low this month. You could increase progressively.",
+        "💡 Light load, there's room to increase if you feel good.",
+        "💡 Quiet month volume-wise, ready to intensify?",
     ],
     "objectif_proche": [
-        "🎯 Plus que {jours} jours avant ta course ! On est dans la dernière ligne droite.",
-        "🎯 J-{jours} avant l'objectif ! Focus et confiance.",
-        "🎯 Ta course approche ({jours} jours), c'est le moment de peaufiner.",
+        "🎯 Only {jours} days until your race! We're in the home stretch.",
+        "🎯 D-{jours} before the goal! Focus and confidence.",
+        "🎯 Your race is approaching ({jours} days), time to polish.",
     ],
     "fatigue_detected": [
-        "😴 Fatigue détectée sur tes dernières séances. Pense sommeil et hydratation !",
-        "😴 Les données montrent de la fatigue. Accorde-toi du repos !",
-        "😴 Signes de fatigue visibles. Récup prioritaire !",
+        "😴 Fatigue detected in your recent sessions. Think sleep and hydration!",
+        "😴 The data shows fatigue. Give yourself some rest!",
+        "😴 Visible signs of fatigue. Recovery is priority!",
     ],
 }
 
 
 # ============================================================
-# TEMPLATES RAG - WEEKLY REVIEW (Bilan hebdomadaire)
+# RAG TEMPLATES - WEEKLY REVIEW (Weekly Summary)
 # ============================================================
 
 WEEKLY_TEMPLATES = {
     "intros_good": [
-        "T'as une semaine solide derrière toi ! 💪",
-        "Super bilan, on voit les progrès !",
-        "T'as bien bossé, respect !",
-        "Semaine au top, bravo !",
-        "Belle semaine d'entraînement !",
-        "T'as assuré cette semaine !",
-        "Semaine réussie, chapeau !",
-        "T'as été régulier, c'est la clé !",
-        "Bonne semaine, continue !",
-        "Semaine maîtrisée, bien joué !",
-        "T'es dans le rythme !",
-        "Super discipline cette semaine !",
+        "You had a solid week behind you! 💪",
+        "Great review, we can see the progress!",
+        "You worked hard, respect!",
+        "Top week, bravo!",
+        "Great training week!",
+        "You delivered this week!",
+        "Successful week, hats off!",
+        "You've been consistent, that's the key!",
+        "Good week, keep it up!",
+        "Week under control, well done!",
+        "You're in the rhythm!",
+        "Great discipline this week!",
     ],
     "intros_moderate": [
-        "Semaine correcte, y'a du bon !",
-        "Pas mal cette semaine !",
-        "Bilan mitigé mais positif !",
-        "Semaine en demi-teinte, ça arrive !",
-        "T'as maintenu, c'est déjà bien !",
-        "Semaine ok, on peut améliorer !",
-        "Pas ta meilleure mais t'es là !",
-        "Semaine de transition !",
-        "Bilan correct, pas de stress !",
-        "Y'a eu mieux mais c'est ok !",
+        "Decent week, there's good stuff!",
+        "Not bad this week!",
+        "Mixed results but positive!",
+        "Half-and-half week, it happens!",
+        "You maintained, that's already good!",
+        "Week is ok, we can improve!",
+        "Not your best but you're here!",
+        "Transition week!",
+        "Decent review, no stress!",
+        "There's been better but it's ok!",
     ],
     "intros_light": [
-        "Semaine légère, parfois c'est nécessaire !",
-        "Semaine calme mais chaque km compte !",
-        "T'as ralenti, écoute ton corps !",
-        "Semaine tranquille, c'est ok !",
-        "Volume réduit mais tu restes actif !",
-        "Petite semaine, ça arrive !",
-        "Semaine de récup naturelle !",
-        "Moins de sorties mais c'est pas grave !",
+        "Light week, sometimes it's necessary!",
+        "Quiet week but every km counts!",
+        "You slowed down, listen to your body!",
+        "Quiet week, it's ok!",
+        "Reduced volume but you stay active!",
+        "Small week, it happens!",
+        "Natural recovery week!",
+        "Fewer runs but that's fine!",
     ],
     "analyses": [
-        "{km_semaine} km en {nb_seances} séances, allure moyenne {allure_moy}. {comparaison_semaine_precedente}",
-        "Volume de {km_semaine} km cette semaine ({nb_seances} sorties). {analyse_tendance}",
-        "Bilan : {km_semaine} km, {duree_totale} de course. {verdict_charge}",
-        "Tu as parcouru {km_semaine} km à {allure_moy} de moyenne. {interpretation}",
-        "{nb_seances} sorties pour {km_semaine} km. {commentaire_regularite}",
-        "Semaine à {km_semaine} km, ratio charge/récup de {ratio}. {ratio_interpretation}",
-        "Stats hebdo : {km_semaine} km, {nb_seances} séances, {allure_moy}. {synthese}",
-        "Cette semaine : {km_semaine} km ({variation_volume} vs semaine dernière).",
-        "Tu cumules {km_semaine} km sur {nb_seances} entraînements. {analyse_globale}",
-        "Volume hebdo de {km_semaine} km. {zones_resume}",
+        "{km_semaine} km in {nb_seances} sessions, average pace {allure_moy}. {comparaison_semaine_precedente}",
+        "Volume of {km_semaine} km this week ({nb_seances} runs). {analyse_tendance}",
+        "Review: {km_semaine} km, {duree_totale} of running. {verdict_charge}",
+        "You covered {km_semaine} km at {allure_moy} average. {interpretation}",
+        "{nb_seances} runs for {km_semaine} km. {commentaire_regularite}",
+        "Week at {km_semaine} km, load/recovery ratio of {ratio}. {ratio_interpretation}",
+        "Weekly stats: {km_semaine} km, {nb_seances} sessions, {allure_moy}. {synthese}",
+        "This week: {km_semaine} km ({variation_volume} vs last week).",
+        "You're totaling {km_semaine} km over {nb_seances} workouts. {analyse_globale}",
+        "Weekly volume of {km_semaine} km. {zones_resume}",
     ],
     "comparaisons": [
-        "Comparé à la semaine dernière, {comparaison_detail}.",
-        "Vs S-1 : {comparaison_volume}, {comparaison_intensite}.",
-        "Par rapport à il y a 4 semaines, {evolution_4w}.",
-        "Tendance sur 4 semaines : {tendance_4w}.",
-        "Évolution : {evolution_detail}.",
-        "En regardant les 4 dernières semaines, {synthese_4w}.",
-        "Progression vs mois dernier : {progression_mensuelle}.",
-        "Comparatif : {comparatif_detail}.",
+        "Compared to last week, {comparaison_detail}.",
+        "Vs W-1: {comparaison_volume}, {comparaison_intensite}.",
+        "Compared to 4 weeks ago, {evolution_4w}.",
+        "4-week trend: {tendance_4w}.",
+        "Evolution: {evolution_detail}.",
+        "Looking at the last 4 weeks, {synthese_4w}.",
+        "Progression vs last month: {progression_mensuelle}.",
+        "Comparison: {comparatif_detail}.",
     ],
     "points_forts": [
-        "Points forts : {point_fort_1}, {point_fort_2}.",
-        "Ce qui va bien : {point_fort_1}.",
-        "T'excelles sur : {point_fort_1}.",
-        "Tes forces cette semaine : {point_fort_1}.",
-        "Bien joué sur : {point_fort_1}, {point_fort_2}.",
-        "Top niveau sur : {point_fort_1}.",
-        "Tu gères bien : {point_fort_1}.",
-        "Positif : {point_fort_1}.",
+        "Strengths: {point_fort_1}, {point_fort_2}.",
+        "What's going well: {point_fort_1}.",
+        "You excel at: {point_fort_1}.",
+        "Your strengths this week: {point_fort_1}.",
+        "Well done on: {point_fort_1}, {point_fort_2}.",
+        "Top level on: {point_fort_1}.",
+        "You're handling well: {point_fort_1}.",
+        "Positive: {point_fort_1}.",
     ],
     "points_ameliorer": [
-        "À surveiller : {point_ameliorer}.",
-        "Axe d'amélioration : {point_ameliorer}.",
-        "Piste de progrès : {point_ameliorer}.",
-        "Tu pourrais bosser : {point_ameliorer}.",
-        "Point à travailler : {point_ameliorer}.",
-        "Focus suggéré : {point_ameliorer}.",
-        "Marge de progression : {point_ameliorer}.",
-        "À améliorer : {point_ameliorer}.",
+        "Watch out for: {point_ameliorer}.",
+        "Improvement area: {point_ameliorer}.",
+        "Progress opportunity: {point_ameliorer}.",
+        "You could work on: {point_ameliorer}.",
+        "Point to work on: {point_ameliorer}.",
+        "Suggested focus: {point_ameliorer}.",
+        "Room for improvement: {point_ameliorer}.",
+        "To improve: {point_ameliorer}.",
     ],
     "conseils": [
-        "Pour la semaine prochaine : vise {volume_cible} km avec plus de récup si besoin.",
-        "Semaine prochaine : maintiens ce rythme et ajoute une sortie facile.",
-        "Objectif S+1 : {objectif_semaine_prochaine}.",
-        "Conseil : {conseil_specifique}.",
-        "Pour progresser : {piste_progression}.",
-        "Ma recommandation : {recommandation}.",
-        "Prochaine étape : {prochaine_etape}.",
-        "Focus S+1 : {focus_semaine}.",
-        "Je te conseille : {conseil_perso}.",
-        "Suggestion : {suggestion}.",
+        "For next week: aim for {volume_cible} km with more recovery if needed.",
+        "Next week: maintain this rhythm and add an easy run.",
+        "W+1 goal: {objectif_semaine_prochaine}.",
+        "Advice: {conseil_specifique}.",
+        "To progress: {piste_progression}.",
+        "My recommendation: {recommandation}.",
+        "Next step: {prochaine_etape}.",
+        "W+1 focus: {focus_semaine}.",
+        "I recommend: {conseil_perso}.",
+        "Suggestion: {suggestion}.",
     ],
     "relances": [
-        "Tu veux un plan détaillé pour la prochaine ?",
-        "Comment tu te sens après cette semaine ?",
-        "Des douleurs ou gênes à signaler ?",
-        "T'as des questions ?",
-        "On ajuste quelque chose ?",
-        "Tu veux qu'on parle d'un point précis ?",
-        "Besoin d'un focus particulier ?",
-        "Ça te dit un plan personnalisé ?",
-        "Comment sont tes sensations ?",
-        "Prêt pour la semaine prochaine ?",
+        "Want a detailed plan for the next one?",
+        "How are you feeling after this week?",
+        "Any pain or discomfort to report?",
+        "Any questions?",
+        "Shall we adjust something?",
+        "Want to talk about a specific point?",
+        "Need a particular focus?",
+        "How about a personalized plan?",
+        "How are your sensations?",
+        "Ready for next week?",
     ],
 }
 
 WEEKLY_CONDITIONALS = {
     "ratio_high": [
-        "⚠️ Ratio {ratio} élevé → petite surcharge. Comme la semaine 3 où t'avais ralenti et gagné en allure après, prends du recul.",
-        "⚠️ Attention, ratio à {ratio}. La fatigue s'accumule, prévoie plus de récup.",
-        "⚠️ Surcharge détectée (ratio {ratio}). Réduis l'intensité les prochains jours.",
+        "⚠️ Ratio {ratio} elevated → slight overload. Like week 3 where you slowed down and gained pace after, take a step back.",
+        "⚠️ Warning, ratio at {ratio}. Fatigue is accumulating, plan more recovery.",
+        "⚠️ Overload detected (ratio {ratio}). Reduce intensity in the coming days.",
     ],
     "progression_good": [
-        "🚀 Allure en hausse de {progression}%, t'es en progression !",
-        "🚀 +{progression}% sur l'allure moyenne, belle évolution !",
-        "🚀 Tu progresses : {progression}% plus rapide vs S-1 !",
+        "🚀 Pace up by {progression}%, you're progressing!",
+        "🚀 +{progression}% on average pace, nice evolution!",
+        "🚀 You're progressing: {progression}% faster vs W-1!",
     ],
     "volume_up": [
-        "📈 Volume en hausse de {augmentation}% cette semaine. Attention à ne pas trop monter d'un coup.",
-        "📈 +{augmentation}% de volume, c'est bien mais reste vigilant.",
+        "📈 Volume up by {augmentation}% this week. Be careful not to increase too much at once.",
+        "📈 +{augmentation}% volume, that's good but stay vigilant.",
     ],
     "volume_down": [
-        "📉 Volume en baisse de {baisse}%, semaine de récup ?",
-        "📉 -{baisse}% de km, parfois nécessaire pour mieux rebondir.",
+        "📉 Volume down by {baisse}%, recovery week?",
+        "📉 -{baisse}% km, sometimes necessary to bounce back better.",
     ],
     "regularity_good": [
-        "✅ Régularité top avec {nb_seances} séances bien espacées.",
-        "✅ Belle constance : {nb_seances} sorties cette semaine.",
+        "✅ Top consistency with {nb_seances} well-spaced sessions.",
+        "✅ Great consistency: {nb_seances} runs this week.",
     ],
 }
 
 
 # ============================================================
-# TEMPLATES RAG - WORKOUT ANALYSIS (Analyse de séance)
+# RAG TEMPLATES - WORKOUT ANALYSIS (Workout Analysis)
 # ============================================================
 
 WORKOUT_TEMPLATES = {
     "intros_great": [
-        "T'as géré cette sortie ! 🔥",
-        "Super run, t'as tenu le rythme !",
-        "Bravo pour l'effort !",
-        "Belle séance, respect !",
-        "T'as assuré sur celle-là !",
-        "Sortie réussie, bien joué !",
-        "T'as tout donné, chapeau !",
-        "Run solide, continue !",
-        "Super effort aujourd'hui !",
-        "T'es en forme, ça se voit !",
-        "Séance maîtrisée !",
-        "T'as fait le job !",
+        "You handled this run! 🔥",
+        "Great run, you held the pace!",
+        "Bravo for the effort!",
+        "Nice session, respect!",
+        "You delivered on this one!",
+        "Successful run, well done!",
+        "You gave it your all, hats off!",
+        "Solid run, keep it up!",
+        "Great effort today!",
+        "You're in shape, it shows!",
+        "Session under control!",
+        "You did the job!",
     ],
     "intros_good": [
-        "Bonne sortie !",
-        "Séance correcte !",
-        "Pas mal cette sortie !",
-        "T'as fait ce qu'il fallait !",
-        "Sortie ok !",
-        "Séance dans les clous !",
-        "Run honnête !",
-        "T'as maintenu, c'est bien !",
-        "Sortie standard mais utile !",
-        "Séance efficace !",
+        "Good run!",
+        "Decent session!",
+        "Not bad this run!",
+        "You did what was needed!",
+        "Run is ok!",
+        "Session on track!",
+        "Honest run!",
+        "You maintained, that's good!",
+        "Standard but useful run!",
+        "Effective session!",
     ],
     "intros_tough": [
-        "Sortie difficile mais t'as tenu !",
-        "Pas la plus facile mais t'as fini !",
-        "Séance dure, respect pour l'effort !",
-        "T'as bataillé mais t'es allé au bout !",
-        "Run compliqué mais c'est dans la boîte !",
-        "Séance exigeante, bravo !",
-        "T'as souffert mais t'as pas lâché !",
-        "Sortie challenging mais faite !",
+        "Tough run but you held on!",
+        "Not the easiest but you finished!",
+        "Hard session, respect for the effort!",
+        "You struggled but went all the way!",
+        "Complicated run but it's done!",
+        "Demanding session, bravo!",
+        "You suffered but didn't quit!",
+        "Challenging run but completed!",
     ],
     "analyses": [
-        "{km_total} km en {duree}, allure moyenne {allure_moy}, cadence {cadence_moy} spm. {analyse_technique}",
-        "Distance : {km_total} km, durée : {duree}, pace : {allure_moy}. {commentaire_allure}",
-        "Séance de {km_total} km à {allure_moy} de moyenne. {interpretation}",
-        "Run de {duree} pour {km_total} km. {analyse_effort}",
-        "{km_total} km parcourus, cadence de {cadence_moy}. {commentaire_cadence}",
-        "Stats : {km_total} km, {allure_moy}, {cadence_moy} spm. {synthese}",
-        "Bilan technique : {km_total} km en {duree}, {allure_moy} de moyenne. {detail}",
-        "Cette sortie : {km_total} km, allure {allure_moy}, cadence {cadence_moy}. {verdict}",
+        "{km_total} km in {duree}, average pace {allure_moy}, cadence {cadence_moy} spm. {analyse_technique}",
+        "Distance: {km_total} km, duration: {duree}, pace: {allure_moy}. {commentaire_allure}",
+        "Session of {km_total} km at {allure_moy} average. {interpretation}",
+        "Run of {duree} for {km_total} km. {analyse_effort}",
+        "{km_total} km covered, cadence of {cadence_moy}. {commentaire_cadence}",
+        "Stats: {km_total} km, {allure_moy}, {cadence_moy} spm. {synthese}",
+        "Technical review: {km_total} km in {duree}, {allure_moy} average. {detail}",
+        "This run: {km_total} km, pace {allure_moy}, cadence {cadence_moy}. {verdict}",
     ],
     "comparaisons": [
-        "Comparé à ta sortie similaire du {date_precedente}, {comparaison_detail}.",
-        "Vs ta dernière sortie de {km_similaire} km, {evolution}.",
-        "Par rapport à tes runs de même distance, {positionnement}.",
-        "En comparant avec tes dernières séances, {tendance}.",
-        "Évolution : {evolution_detail}.",
-        "Ta progression sur ce type de sortie : {progression_detail}.",
-        "Historique : {historique_resume}.",
-        "Sur ce format, t'es {comparatif}.",
+        "Compared to your similar run on {date_precedente}, {comparaison_detail}.",
+        "Vs your last {km_similaire} km run, {evolution}.",
+        "Compared to your runs of similar distance, {positionnement}.",
+        "Comparing with your recent sessions, {tendance}.",
+        "Evolution: {evolution_detail}.",
+        "Your progression on this type of run: {progression_detail}.",
+        "History: {historique_resume}.",
+        "On this format, you're {comparatif}.",
     ],
     "zones_analysis": [
-        "Répartition zones : {z1_z2}% facile, {z3}% tempo, {z4_z5}% intense. {zones_verdict}",
-        "Effort majoritairement en Z{zone_principale} ({pct_principale}%). {interpretation_zones}",
-        "Zones cardio : {zones_resume}. {commentaire_zones}",
-        "FC moyenne de {fc_moy} bpm, {zones_interpretation}.",
-        "Distribution de l'effort : {distribution_detail}.",
+        "Zone breakdown: {z1_z2}% easy, {z3}% tempo, {z4_z5}% intense. {zones_verdict}",
+        "Effort mainly in Z{zone_principale} ({pct_principale}%). {interpretation_zones}",
+        "Heart rate zones: {zones_resume}. {commentaire_zones}",
+        "Average HR of {fc_moy} bpm, {zones_interpretation}.",
+        "Effort distribution: {distribution_detail}.",
     ],
     "points_forts": [
-        "Points forts : {point_fort}.",
-        "Ce qui va bien : {point_fort}.",
-        "Positif : {point_fort}.",
-        "T'as bien géré : {point_fort}.",
-        "Force de cette séance : {point_fort}.",
-        "Bien joué sur : {point_fort}.",
-        "Top : {point_fort}.",
+        "Strengths: {point_fort}.",
+        "What's going well: {point_fort}.",
+        "Positive: {point_fort}.",
+        "You handled well: {point_fort}.",
+        "Strength of this session: {point_fort}.",
+        "Well done on: {point_fort}.",
+        "Top: {point_fort}.",
     ],
     "points_ameliorer": [
-        "À améliorer : {point_ameliorer}.",
-        "Point à travailler : {point_ameliorer}.",
-        "Axe de progression : {point_ameliorer}.",
-        "Tu pourrais bosser : {point_ameliorer}.",
-        "Marge de progrès : {point_ameliorer}.",
-        "Focus suggéré : {point_ameliorer}.",
-        "À surveiller : {point_ameliorer}.",
+        "To improve: {point_ameliorer}.",
+        "Point to work on: {point_ameliorer}.",
+        "Progress area: {point_ameliorer}.",
+        "You could work on: {point_ameliorer}.",
+        "Room for improvement: {point_ameliorer}.",
+        "Suggested focus: {point_ameliorer}.",
+        "Watch out for: {point_ameliorer}.",
     ],
     "conseils": [
-        "Pour la prochaine : vise {allure_cible} sur les portions spécifiques.",
-        "Conseil : {conseil_specifique}.",
-        "Ma recommandation : {recommandation}.",
-        "Prochaine séance : {suggestion_prochaine}.",
-        "Pour progresser : {piste_progression}.",
-        "Je te conseille : {conseil_perso}.",
-        "Objectif prochaine sortie : {objectif}.",
-        "Focus pour la suite : {focus}.",
-        "Suggestion : {suggestion}.",
-        "Piste : {piste}.",
+        "For next time: aim for {allure_cible} on specific portions.",
+        "Advice: {conseil_specifique}.",
+        "My recommendation: {recommandation}.",
+        "Next session: {suggestion_prochaine}.",
+        "To progress: {piste_progression}.",
+        "I recommend: {conseil_perso}.",
+        "Next run goal: {objectif}.",
+        "Focus going forward: {focus}.",
+        "Suggestion: {suggestion}.",
+        "Track: {piste}.",
     ],
     "relances": [
-        "Tu as senti quoi de particulier sur cette sortie ?",
-        "Tu veux ajuster le plan pour la suite ?",
-        "Comment t'as vécu cette séance ?",
-        "Des sensations particulières ?",
-        "C'était comment niveau jambes ?",
-        "Tu veux qu'on analyse un autre aspect ?",
-        "Questions sur cette sortie ?",
-        "Besoin de conseils pour la prochaine ?",
-        "Comment tu te sens après ?",
-        "T'as ressenti de la fatigue ?",
+        "What did you feel in particular on this run?",
+        "Want to adjust the plan going forward?",
+        "How did you experience this session?",
+        "Any particular sensations?",
+        "How were your legs?",
+        "Want us to analyze another aspect?",
+        "Questions about this run?",
+        "Need advice for the next one?",
+        "How are you feeling after?",
+        "Did you feel fatigue?",
     ],
 }
 
 WORKOUT_CONDITIONALS = {
     "fatigue_end": [
-        "Fatigue en fin de séance détectée. {interpretation}",
-        "Décrochage d'allure sur la fin → signe de fatigue accumulée.",
-        "La fin était plus dure, le corps montre des signes de fatigue.",
+        "Fatigue at end of session detected. {interpretation}",
+        "Pace drop at the end → sign of accumulated fatigue.",
+        "The finish was harder, the body shows signs of fatigue.",
     ],
     "cadence_low": [
-        "💡 Cadence de {cadence} spm, c'est un peu bas. Vise {cadence_cible} pour plus d'efficacité.",
-        "💡 Ta cadence ({cadence}) pourrait monter à {cadence_cible} spm pour réduire l'impact.",
-        "💡 Cadence à améliorer : {cadence} → {cadence_cible} spm serait mieux.",
+        "💡 Cadence of {cadence} spm, that's a bit low. Aim for {cadence_cible} for more efficiency.",
+        "💡 Your cadence ({cadence}) could increase to {cadence_cible} spm to reduce impact.",
+        "💡 Cadence to improve: {cadence} → {cadence_cible} spm would be better.",
     ],
     "allure_improved": [
-        "🚀 T'as gagné {progression} sur l'allure vs ta dernière sortie similaire !",
-        "🚀 Progression de {progression} sur le pace, bravo !",
-        "🚀 +{progression} en allure par rapport à avant, t'es en forme !",
+        "🚀 You gained {progression} on pace vs your last similar run!",
+        "🚀 Progression of {progression} on pace, bravo!",
+        "🚀 +{progression} in pace compared to before, you're in shape!",
     ],
     "intensity_high": [
-        "⚠️ Séance très intense ({pct_intense}% en Z4-Z5). Récup nécessaire demain.",
-        "⚠️ Intensité élevée, laisse le corps absorber avant la prochaine grosse séance.",
-        "⚠️ Beaucoup de temps en zones hautes, pense à récupérer.",
+        "⚠️ Very intense session ({pct_intense}% in Z4-Z5). Recovery needed tomorrow.",
+        "⚠️ High intensity, let the body absorb before the next big session.",
+        "⚠️ Lot of time in high zones, think about recovering.",
     ],
     "good_distribution": [
-        "✅ Bonne répartition de l'effort, c'est bien géré.",
-        "✅ Distribution équilibrée des zones, séance bien menée.",
+        "✅ Good effort distribution, well managed.",
+        "✅ Balanced zone distribution, well-conducted session.",
     ],
 }
 
 
 # ============================================================
-# FONCTIONS RAG (Retrieval)
+# RAG FUNCTIONS (Retrieval)
 # ============================================================
 
 def retrieve_similar_workouts(
@@ -439,7 +439,7 @@ def retrieve_similar_workouts(
     all_workouts: List[Dict],
     limit: int = 3
 ) -> List[Dict]:
-    """Trouve des séances similaires dans l'historique"""
+    """Finds similar sessions in history"""
     if not all_workouts:
         return []
     
@@ -466,7 +466,7 @@ def retrieve_previous_bilans(
     bilans: List[Dict],
     weeks: int = 4
 ) -> List[Dict]:
-    """Récupère les bilans des X dernières semaines"""
+    """Retrieves bilans from the last X weeks"""
     if not bilans:
         return []
     
@@ -476,7 +476,7 @@ def retrieve_previous_bilans(
 
 
 def retrieve_relevant_tips(category: str, context: Dict) -> List[str]:
-    """Récupère des conseils pertinents de la base de connaissances"""
+    """Retrieves relevant tips from the knowledge base"""
     tips = []
     
     # Get tips from main category
@@ -497,8 +497,8 @@ def retrieve_relevant_tips(category: str, context: Dict) -> List[str]:
 
 
 def calculate_metrics(workouts: List[Dict], period_days: int = 7) -> Dict:
-    """Calcule les métriques agrégées sur une période
-    
+    """Calculates aggregated metrics over a period
+
     Uses the most recent workout date as reference point to handle
     test data with future dates.
     """
@@ -622,59 +622,59 @@ def calculate_metrics(workouts: List[Dict], period_days: int = 7) -> Dict:
 
 
 def detect_points_forts_ameliorer(metrics: Dict, prev_metrics: Optional[Dict] = None) -> Tuple[List[str], List[str]]:
-    """Détecte les points forts et à améliorer"""
+    """Detects strengths and areas to improve"""
     points_forts = []
     points_ameliorer = []
-    
+
     # Regularity
     if metrics.get("nb_seances", 0) >= 3:
-        points_forts.append("régularité")
+        points_forts.append("consistency")
     elif metrics.get("nb_seances", 0) < 2:
-        points_ameliorer.append("régularité (plus de sorties)")
-    
+        points_ameliorer.append("consistency (more runs)")
+
     # Cadence
     cadence = metrics.get("cadence_moy", 0)
     if cadence >= 175:
-        points_forts.append("cadence optimale")
+        points_forts.append("optimal cadence")
     elif 0 < cadence < 165:
-        points_ameliorer.append("cadence (vise 170-180 spm)")
-    
+        points_ameliorer.append("cadence (aim for 170-180 spm)")
+
     # Zones distribution
     zones = metrics.get("zones", {})
     z1_z2 = zones.get("z1", 0) + zones.get("z2", 0)
     z4_z5 = zones.get("z4", 0) + zones.get("z5", 0)
-    
+
     if 70 <= z1_z2 <= 85:
-        points_forts.append("bonne répartition des zones")
+        points_forts.append("good zone distribution")
     elif z4_z5 > 30:
-        points_ameliorer.append("trop d'intensité (ajoute des sorties faciles)")
-    
+        points_ameliorer.append("too much intensity (add easy runs)")
+
     # Progression
     if prev_metrics:
         prev_pace = prev_metrics.get("allure_moy", "N/A")
         curr_pace = metrics.get("allure_moy", "N/A")
         # Simple comparison (would need proper pace parsing for accuracy)
         if prev_pace != "N/A" and curr_pace != "N/A":
-            points_forts.append("progression en allure")
-    
+            points_forts.append("pace progression")
+
     # Volume
     km = metrics.get("km_total", 0)
     if km >= 30:
-        points_forts.append("bon volume")
+        points_forts.append("good volume")
     elif km < 15:
-        points_ameliorer.append("volume (augmente progressivement)")
-    
+        points_ameliorer.append("volume (increase progressively)")
+
     # Defaults
     if not points_forts:
-        points_forts.append("constance dans l'effort")
+        points_forts.append("consistency in effort")
     if not points_ameliorer:
-        points_ameliorer.append("varier les intensités")
-    
+        points_ameliorer.append("vary intensities")
+
     return points_forts, points_ameliorer
 
 
 # ============================================================
-# GÉNÉRATION RAG - DASHBOARD
+# RAG GENERATION - DASHBOARD
 # ============================================================
 
 def generate_dashboard_rag(
@@ -682,7 +682,7 @@ def generate_dashboard_rag(
     bilans: List[Dict] = None,
     user_goal: Dict = None
 ) -> Dict:
-    """Génère un résumé dashboard enrichi par RAG"""
+    """Generates a RAG-enriched dashboard summary"""
     
     # Calculate metrics for different periods
     metrics_month = calculate_metrics(workouts, period_days=30)
@@ -710,34 +710,34 @@ def generate_dashboard_rag(
     # Calculate tendance allure
     tendance_allure = "stable"
     if metrics_prev_month.get("allure_moy", "N/A") != "N/A":
-        tendance_allure = "en progression" if random.random() > 0.5 else "stable"
-    
+        tendance_allure = "improving" if random.random() > 0.5 else "stable"
+
     analyse = analyse_template.format(
         km_mois=metrics_month["km_total"],
         nb_seances=metrics_month["nb_seances"],
         allure_moy=metrics_month["allure_moy"],
         tendance_allure=tendance_allure,
-        analyse_volume="C'est un bon volume !" if km_mois >= 60 else "Y'a de la marge pour monter.",
-        commentaire_allure="T'es régulier sur l'allure." if metrics_month["allure_moy"] != "N/A" else "",
-        analyse_charge="Charge bien gérée." if metrics_month["ratio"] <= 1.3 else "Attention à la surcharge.",
+        analyse_volume="That's a good volume!" if km_mois >= 60 else "There's room to increase.",
+        commentaire_allure="You're consistent on pace." if metrics_month["allure_moy"] != "N/A" else "",
+        analyse_charge="Load well managed." if metrics_month["ratio"] <= 1.3 else "Watch out for overload.",
         km_par_seance=metrics_month["km_par_seance"],
-        verdict="Bien équilibré !" if metrics_month["nb_seances"] >= 3 else "Ajoute des sorties si possible.",
-        interpretation="Bonne dynamique." if km_mois >= 40 else "Continue à construire.",
-        analyse_globale="Tu progresses !" if km_mois >= 60 else "La base se construit.",
+        verdict="Well balanced!" if metrics_month["nb_seances"] >= 3 else "Add runs if possible.",
+        interpretation="Good momentum." if km_mois >= 40 else "Keep building.",
+        analyse_globale="You're progressing!" if km_mois >= 60 else "The foundation is being built.",
         variation_volume=f"+{int((km_mois - 50) / 50 * 100)}%" if km_mois > 50 else f"{int((km_mois - 50) / 50 * 100)}%",
         variation_allure="stable",
-        comparaison_mois_precedent="en hausse" if km_mois > 50 else "en construction",
+        comparaison_mois_precedent="increasing" if km_mois > 50 else "under construction",
         duree_totale=metrics_month["duree_totale"]
     )
-    
+
     # Points forts/ameliorer
     points_forts_text = random.choice(DASHBOARD_TEMPLATES["points_forts"]).format(
-        point_fort_1=points_forts[0] if points_forts else "constance",
-        point_fort_2=points_forts[1] if len(points_forts) > 1 else "régularité"
+        point_fort_1=points_forts[0] if points_forts else "consistency",
+        point_fort_2=points_forts[1] if len(points_forts) > 1 else "consistency"
     )
-    
+
     points_ameliorer_text = random.choice(DASHBOARD_TEMPLATES["points_ameliorer"]).format(
-        point_ameliorer=points_ameliorer[0] if points_ameliorer else "varier les intensités"
+        point_ameliorer=points_ameliorer[0] if points_ameliorer else "vary intensities"
     )
     
     # Conseil
@@ -790,7 +790,7 @@ def generate_dashboard_rag(
 
 
 # ============================================================
-# GÉNÉRATION RAG - WEEKLY REVIEW
+# RAG GENERATION - WEEKLY REVIEW
 # ============================================================
 
 def generate_weekly_review_rag(
@@ -798,7 +798,7 @@ def generate_weekly_review_rag(
     previous_bilans: List[Dict] = None,
     user_goal: Dict = None
 ) -> Dict:
-    """Génère un bilan hebdomadaire enrichi par RAG"""
+    """Generates a RAG-enriched weekly review"""
     
     # Calculate metrics
     metrics_week = calculate_metrics(workouts, period_days=7)
@@ -829,10 +829,10 @@ def generate_weekly_review_rag(
     variation = 0
     if km_prev > 0:
         variation = round((km_semaine - km_prev) / km_prev * 100)
-        comparaison = f"{'+'if variation > 0 else ''}{variation}% vs semaine dernière"
+        comparaison = f"{'+'if variation > 0 else ''}{variation}% vs last week"
     else:
-        comparaison = "première semaine mesurée"
-    
+        comparaison = "first week measured"
+
     # Fill analysis template
     analyse_template = random.choice(WEEKLY_TEMPLATES["analyses"])
     analyse = analyse_template.format(
@@ -840,56 +840,56 @@ def generate_weekly_review_rag(
         nb_seances=nb_seances,
         allure_moy=metrics_week["allure_moy"],
         comparaison_semaine_precedente=comparaison,
-        analyse_tendance="Tendance positive !" if variation > 0 else "Volume stable.",
+        analyse_tendance="Positive trend!" if variation > 0 else "Stable volume.",
         duree_totale=metrics_week["duree_totale"],
-        verdict_charge="Charge bien gérée." if metrics_week["ratio"] <= 1.3 else "Charge un peu élevée.",
-        interpretation="Bonne semaine !" if nb_seances >= 3 else "Semaine correcte.",
-        commentaire_regularite="Belle régularité !" if nb_seances >= 3 else "Ajoute des sorties si possible.",
+        verdict_charge="Load well managed." if metrics_week["ratio"] <= 1.3 else "Load a bit high.",
+        interpretation="Good week!" if nb_seances >= 3 else "Decent week.",
+        commentaire_regularite="Great consistency!" if nb_seances >= 3 else "Add runs if possible.",
         ratio=metrics_week["ratio"],
-        ratio_interpretation="équilibré" if metrics_week["ratio"] <= 1.2 else "élevé, attention",
-        synthese="Semaine solide !" if km_semaine >= 30 else "Semaine correcte.",
+        ratio_interpretation="balanced" if metrics_week["ratio"] <= 1.2 else "elevated, watch out",
+        synthese="Solid week!" if km_semaine >= 30 else "Decent week.",
         variation_volume=comparaison,
-        analyse_globale="T'es sur la bonne voie !",
+        analyse_globale="You're on the right track!",
         zones_resume=f"Z1-Z2: {metrics_week['zones']['z1'] + metrics_week['zones']['z2']}%"
     )
-    
+
     # Comparison with 4 weeks ago
     comparaison_template = random.choice(WEEKLY_TEMPLATES["comparaisons"])
     comparaison_text = comparaison_template.format(
         comparaison_detail=comparaison,
-        comparatif_detail=comparaison,  # Alias pour les templates avec cette variante
+        comparatif_detail=comparaison,  # Alias for templates with this variant
         comparaison_volume=f"{km_semaine} km vs {km_prev} km",
-        comparaison_intensite="intensité stable",
-        evolution_4w="progression régulière" if km_semaine > km_prev else "maintien",
+        comparaison_intensite="stable intensity",
+        evolution_4w="regular progression" if km_semaine > km_prev else "maintaining",
         tendance_4w="positive" if km_semaine >= km_prev else "stable",
-        evolution_detail="Tu maintiens le cap !",
-        synthese_4w="bonne dynamique",
-        progression_mensuelle="en cours"
+        evolution_detail="You're staying on track!",
+        synthese_4w="good momentum",
+        progression_mensuelle="in progress"
     )
-    
+
     # Points forts/ameliorer
     points_forts_text = random.choice(WEEKLY_TEMPLATES["points_forts"]).format(
-        point_fort_1=points_forts[0] if points_forts else "constance",
-        point_fort_2=points_forts[1] if len(points_forts) > 1 else "régularité"
+        point_fort_1=points_forts[0] if points_forts else "consistency",
+        point_fort_2=points_forts[1] if len(points_forts) > 1 else "consistency"
     )
-    
+
     points_ameliorer_text = random.choice(WEEKLY_TEMPLATES["points_ameliorer"]).format(
-        point_ameliorer=points_ameliorer[0] if points_ameliorer else "varier les intensités"
+        point_ameliorer=points_ameliorer[0] if points_ameliorer else "vary intensities"
     )
-    
+
     # Conseil
     volume_cible = round(km_semaine * 1.05, 0) if km_semaine < 50 else km_semaine
     conseil_template = random.choice(WEEKLY_TEMPLATES["conseils"])
     conseil = conseil_template.format(
         volume_cible=volume_cible,
-        objectif_semaine_prochaine=f"vise {volume_cible} km",
-        conseil_specifique="garde cette régularité" if nb_seances >= 3 else "ajoute une sortie",
-        piste_progression="maintiens et varie les intensités",
-        recommandation="continue sur cette lancée",
-        prochaine_etape="consolider cette base",
-        focus_semaine="la constance",
-        conseil_perso="écoute ton corps",
-        suggestion="une sortie longue cette semaine"
+        objectif_semaine_prochaine=f"aim for {volume_cible} km",
+        conseil_specifique="keep this consistency" if nb_seances >= 3 else "add a run",
+        piste_progression="maintain and vary intensities",
+        recommandation="keep on this path",
+        prochaine_etape="consolidate this foundation",
+        focus_semaine="consistency",
+        conseil_perso="listen to your body",
+        suggestion="a long run this week"
     )
     
     # Relance
@@ -936,7 +936,7 @@ def generate_weekly_review_rag(
 
 
 # ============================================================
-# GÉNÉRATION RAG - WORKOUT ANALYSIS
+# RAG GENERATION - WORKOUT ANALYSIS
 # ============================================================
 
 def generate_workout_analysis_rag(
@@ -944,7 +944,7 @@ def generate_workout_analysis_rag(
     all_workouts: List[Dict] = None,
     user_goal: Dict = None
 ) -> Dict:
-    """Génère une analyse de séance enrichie par RAG avec données Strava détaillées"""
+    """Generates a RAG-enriched workout analysis with detailed Strava data"""
     
     # Basic workout data
     km_total = workout.get("distance_km", 0)
@@ -970,43 +970,43 @@ def generate_workout_analysis_rag(
     cadence_moy = workout.get("avg_cadence_spm", 0)
     zones = workout.get("effort_zone_distribution", {})
     
-    # === RAG ENRICHI: Données Strava détaillées ===
+    # === RAG ENRICHED: Detailed Strava data ===
     splits = workout.get("splits", [])
     split_analysis = workout.get("split_analysis", {})
     km_splits = workout.get("km_splits", [])
     hr_analysis = workout.get("hr_analysis", {})
     cadence_analysis = workout.get("cadence_analysis", {})
     elevation_analysis = workout.get("elevation_analysis", {})
-    
+
     # Analyze splits for RAG output
     splits_text = ""
     if splits and len(splits) >= 2:
         # Get first and last km paces
         first_km_pace = splits[0].get("pace_str", "N/A") if splits else "N/A"
         last_km_pace = splits[-1].get("pace_str", "N/A") if splits else "N/A"
-        
+
         if split_analysis:
             fastest_km = split_analysis.get("fastest_km", "?")
             slowest_km = split_analysis.get("slowest_km", "?")
             pace_drop = split_analysis.get("pace_drop", 0)
             negative_split = split_analysis.get("negative_split", False)
-            
+
             if negative_split:
-                splits_text = f"Negative split ! Tu as accéléré de {first_km_pace} (km1) à {last_km_pace} (dernier km). Excellent contrôle !"
+                splits_text = f"Negative split! You sped up from {first_km_pace} (km1) to {last_km_pace} (last km). Excellent control!"
             elif pace_drop > 1:
-                splits_text = f"Tu as décroché en fin de sortie : {first_km_pace} au km1 → {last_km_pace} au dernier km (-{pace_drop:.0f} sec/km). Pense à partir plus cool."
+                splits_text = f"You slowed down at the end: {first_km_pace} at km1 → {last_km_pace} at last km (-{pace_drop:.0f} sec/km). Think about starting easier."
             else:
-                splits_text = f"Allure stable : {first_km_pace} au km1, {last_km_pace} au dernier km. Bonne régularité !"
-    
+                splits_text = f"Stable pace: {first_km_pace} at km1, {last_km_pace} at last km. Good consistency!"
+
     # HR drift analysis
     hr_drift_text = ""
     if hr_analysis:
         hr_drift = hr_analysis.get("hr_drift", 0)
         if hr_drift > 10:
-            hr_drift_text = f"Dérive cardiaque de +{hr_drift} bpm entre début et fin. Normal sur une sortie longue, mais attention à bien s'hydrater."
+            hr_drift_text = f"Heart rate drift of +{hr_drift} bpm between start and finish. Normal on a long run, but remember to hydrate well."
         elif hr_drift < -5:
-            hr_drift_text = f"Ta FC a baissé en fin de sortie (-{abs(hr_drift)} bpm). Tu étais bien échauffé !"
-    
+            hr_drift_text = f"Your HR dropped at the end (-{abs(hr_drift)} bpm). You were well warmed up!"
+
     # Cadence stability
     cadence_text = ""
     if cadence_analysis:
@@ -1014,9 +1014,9 @@ def generate_workout_analysis_rag(
         min_cad = cadence_analysis.get("min_cadence", 0)
         max_cad = cadence_analysis.get("max_cadence", 0)
         if stability < 85:
-            cadence_text = f"Cadence variable ({min_cad}-{max_cad} spm). Essaie de maintenir une foulée plus régulière."
+            cadence_text = f"Variable cadence ({min_cad}-{max_cad} spm). Try to maintain a more regular stride."
         elif cadence_moy < 165:
-            cadence_text = f"Cadence à travailler ({cadence_moy} spm). Vise 170-180 pour plus d'efficacité."
+            cadence_text = f"Cadence to work on ({cadence_moy} spm). Aim for 170-180 for more efficiency."
     
     # Retrieve similar workouts
     similar_workouts = retrieve_similar_workouts(workout, all_workouts or [])
@@ -1025,77 +1025,77 @@ def generate_workout_analysis_rag(
     progression = None
     date_precedente = None
     similar_splits_comparison = ""
-    
+
     if similar_workouts:
         prev = similar_workouts[0]
         prev_pace = prev.get("avg_pace_min_km", 0)
         if prev_pace and avg_pace:
             diff = prev_pace - avg_pace
             if diff > 0.1:
-                progression = f"{int(diff * 60)} sec/km plus rapide"
+                progression = f"{int(diff * 60)} sec/km faster"
             elif diff < -0.1:
-                progression = f"{int(-diff * 60)} sec/km plus lent"
+                progression = f"{int(-diff * 60)} sec/km slower"
         date_precedente = prev.get("date", "")[:10] if prev.get("date") else None
-        
+
         # Compare splits with similar workout
         prev_splits = prev.get("split_analysis", {})
         if prev_splits and split_analysis:
             prev_drop = prev_splits.get("pace_drop", 0)
             current_drop = split_analysis.get("pace_drop", 0)
             if current_drop < prev_drop - 0.5:
-                similar_splits_comparison = f"Meilleure régularité que le {date_precedente} (décrochage réduit)."
+                similar_splits_comparison = f"Better consistency than on {date_precedente} (reduced slow-down)."
             elif current_drop > prev_drop + 0.5:
-                similar_splits_comparison = f"Plus de décrochage que le {date_precedente}. Travaille le pacing."
-    
+                similar_splits_comparison = f"More slow-down than on {date_precedente}. Work on pacing."
+
     # Detect points forts/ameliorer
     points_forts = []
     points_ameliorer = []
-    
+
     # Cadence
     if cadence_moy >= 175:
-        points_forts.append("cadence optimale")
+        points_forts.append("optimal cadence")
     elif 0 < cadence_moy < 165:
-        points_ameliorer.append("cadence (vise 170-180)")
-    
+        points_ameliorer.append("cadence (aim for 170-180)")
+
     # Zones
     z1_z2 = zones.get("z1", 0) + zones.get("z2", 0)
     z4_z5 = zones.get("z4", 0) + zones.get("z5", 0)
-    
+
     if z1_z2 >= 70:
-        points_forts.append("bonne gestion de l'intensité")
+        points_forts.append("good intensity management")
     if z4_z5 > 30:
-        points_ameliorer.append("récup nécessaire après cette intensité")
-    
+        points_ameliorer.append("recovery needed after this intensity")
+
     # Splits analysis
     if split_analysis:
         if split_analysis.get("negative_split"):
             points_forts.append("negative split")
         elif split_analysis.get("pace_drop", 0) < 0.5:
-            points_forts.append("régularité en allure")
+            points_forts.append("pace consistency")
         elif split_analysis.get("pace_drop", 0) > 1:
-            points_ameliorer.append("gestion de l'allure en fin de sortie")
-    
+            points_ameliorer.append("pace management at end of run")
+
     # HR drift
     if hr_analysis and hr_analysis.get("hr_drift", 0) > 15:
-        points_ameliorer.append("hydratation et gestion de l'effort")
-    
+        points_ameliorer.append("hydration and effort management")
+
     # Progression
-    if progression and "plus rapide" in progression:
-        points_forts.append("progression en allure")
-    
+    if progression and "faster" in progression:
+        points_forts.append("pace progression")
+
     if not points_forts:
-        points_forts.append("effort constant")
+        points_forts.append("consistent effort")
     if not points_ameliorer:
-        points_ameliorer.append("varier les types de séances")
+        points_ameliorer.append("vary session types")
     
     # Select intro based on performance
-    if progression and "plus rapide" in progression:
+    if progression and "faster" in progression:
         intro = random.choice(WORKOUT_TEMPLATES["intros_great"])
     elif km_total >= 8:
         intro = random.choice(WORKOUT_TEMPLATES["intros_good"])
     else:
         intro = random.choice(WORKOUT_TEMPLATES["intros_good"])
-    
+
     # Fill analysis template
     analyse_template = random.choice(WORKOUT_TEMPLATES["analyses"])
     analyse = analyse_template.format(
@@ -1104,34 +1104,34 @@ def generate_workout_analysis_rag(
         duree_min=duration_min,
         allure_moy=allure_moy,
         cadence_moy=cadence_moy if cadence_moy else "N/A",
-        analyse_technique="Technique stable." if cadence_moy >= 170 else "Cadence à travailler.",
-        commentaire_allure="Allure bien gérée." if allure_moy != "N/A" else "",
-        interpretation="Séance efficace !",
-        analyse_effort="Effort bien dosé.",
-        commentaire_cadence="Top !" if cadence_moy >= 175 else "Peut monter.",
-        synthese="Bon run !",
-        detail="Sortie réussie.",
-        verdict="Bien joué !"
+        analyse_technique="Stable technique." if cadence_moy >= 170 else "Cadence to work on.",
+        commentaire_allure="Pace well managed." if allure_moy != "N/A" else "",
+        interpretation="Effective session!",
+        analyse_effort="Effort well dosed.",
+        commentaire_cadence="Top!" if cadence_moy >= 175 else "Can improve.",
+        synthese="Good run!",
+        detail="Successful run.",
+        verdict="Well done!"
     )
-    
+
     # Comparison with similar
     if similar_workouts and date_precedente:
         comparaison_template = random.choice(WORKOUT_TEMPLATES["comparaisons"])
         comparaison = comparaison_template.format(
             date_precedente=date_precedente,
-            comparaison_detail=progression or "performance similaire",
+            comparaison_detail=progression or "similar performance",
             km_similaire=round(similar_workouts[0].get("distance_km", km_total), 1),
             evolution=progression or "stable",
-            positionnement="dans la moyenne" if not progression else "en progression",
-            tendance="positive" if progression and "plus rapide" in progression else "stable",
-            evolution_detail=progression or "maintien du niveau",
-            progression_detail=progression or "performance constante",
-            historique_resume="progression régulière",
-            comparatif="en forme" if progression and "plus rapide" in progression else "constant"
+            positionnement="average" if not progression else "progressing",
+            tendance="positive" if progression and "faster" in progression else "stable",
+            evolution_detail=progression or "maintaining level",
+            progression_detail=progression or "consistent performance",
+            historique_resume="regular progression",
+            comparatif="in shape" if progression and "faster" in progression else "consistent"
         )
     else:
-        comparaison = "Première séance de ce type ou pas assez d'historique pour comparer."
-    
+        comparaison = "First session of this type or not enough history to compare."
+
     # Zones analysis
     zones_text = ""
     if zones:
@@ -1144,93 +1144,93 @@ def generate_workout_analysis_rag(
             z4_z5=z4_z5,
             zone_principale=zone_principale,
             pct_principale=pct_principale,
-            zones_verdict="Bien géré !" if z1_z2 >= 60 else "Intensif !",
-            interpretation_zones="endurance" if z1_z2 >= 60 else "travail de seuil",
+            zones_verdict="Well managed!" if z1_z2 >= 60 else "Intense!",
+            interpretation_zones="endurance" if z1_z2 >= 60 else "threshold work",
             zones_resume=f"Z1-Z2: {z1_z2}%, Z4-Z5: {z4_z5}%",
-            commentaire_zones="Bonne répartition." if z1_z2 >= 50 else "Intensité élevée.",
+            commentaire_zones="Good distribution." if z1_z2 >= 50 else "High intensity.",
             fc_moy=workout.get("avg_hr_bpm", 0),
-            zones_interpretation="effort contrôlé" if z1_z2 >= 60 else "effort soutenu",
-            distribution_detail=f"{z1_z2}% facile, {z4_z5}% intense"
+            zones_interpretation="controlled effort" if z1_z2 >= 60 else "sustained effort",
+            distribution_detail=f"{z1_z2}% easy, {z4_z5}% intense"
         )
-    
+
     # Points forts/ameliorer
     points_forts_text = random.choice(WORKOUT_TEMPLATES["points_forts"]).format(
-        point_fort=points_forts[0] if points_forts else "constance"
+        point_fort=points_forts[0] if points_forts else "consistency"
     )
-    
+
     points_ameliorer_text = random.choice(WORKOUT_TEMPLATES["points_ameliorer"]).format(
-        point_ameliorer=points_ameliorer[0] if points_ameliorer else "varier les intensités"
+        point_ameliorer=points_ameliorer[0] if points_ameliorer else "vary intensities"
     )
-    
+
     # Conseil
-    allure_cible = allure_moy if allure_moy != "N/A" else "allure confort"
+    allure_cible = allure_moy if allure_moy != "N/A" else "comfortable pace"
     conseil_template = random.choice(WORKOUT_TEMPLATES["conseils"])
     conseil = conseil_template.format(
         allure_cible=allure_cible,
-        conseil_specifique="maintiens cette allure",
-        recommandation="garde ce rythme",
-        suggestion_prochaine="une sortie récup",
-        piste_progression="travaille la cadence",
-        conseil_perso="écoute tes sensations",
-        objectif="consolider cette allure",
-        focus="la régularité",
-        suggestion="une sortie similaire dans 3-4 jours",
-        piste="varier les parcours"
+        conseil_specifique="maintain this pace",
+        recommandation="keep this rhythm",
+        suggestion_prochaine="a recovery run",
+        piste_progression="work on cadence",
+        conseil_perso="listen to your sensations",
+        objectif="consolidate this pace",
+        focus="consistency",
+        suggestion="a similar run in 3-4 days",
+        piste="vary routes"
     )
-    
+
     # Relance
     relance = random.choice(WORKOUT_TEMPLATES["relances"])
-    
+
     # Conditionals
     conditionnels = []
-    
+
     if cadence_moy and 0 < cadence_moy < 165:
         conditionnels.append(random.choice(WORKOUT_CONDITIONALS["cadence_low"]).format(
             cadence=cadence_moy,
             cadence_cible=175
         ))
-    
-    if progression and "plus rapide" in progression:
+
+    if progression and "faster" in progression:
         conditionnels.append(random.choice(WORKOUT_CONDITIONALS["allure_improved"]).format(
             progression=progression
         ))
-    
+
     if z4_z5 > 40:
         conditionnels.append(random.choice(WORKOUT_CONDITIONALS["intensity_high"]).format(
             pct_intense=z4_z5
         ))
     elif z1_z2 >= 70:
         conditionnels.append(random.choice(WORKOUT_CONDITIONALS["good_distribution"]))
-    
-    # Assemble response (SANS relance - remplacé par analyses détaillées)
+
+    # Assemble response (WITHOUT relance - replaced by detailed analyses)
     parts = [intro, "", analyse]
-    
-    # RAG Enrichi: Ajouter analyse des splits si disponible
+
+    # RAG Enriched: Add splits analysis if available
     if splits_text:
         parts.extend(["", f"📊 {splits_text}"])
-    
-    # RAG Enrichi: Ajouter analyse HR drift si disponible
+
+    # RAG Enriched: Add HR drift analysis if available
     if hr_drift_text:
         parts.extend(["", f"❤️ {hr_drift_text}"])
-    
-    # RAG Enrichi: Ajouter analyse cadence si disponible
+
+    # RAG Enriched: Add cadence analysis if available
     if cadence_text:
         parts.extend(["", f"👟 {cadence_text}"])
-    
+
     if zones_text:
         parts.extend(["", zones_text])
-    
+
     parts.extend(["", comparaison])
-    
-    # RAG Enrichi: Comparaison splits avec séance similaire
+
+    # RAG Enriched: Splits comparison with similar session
     if similar_splits_comparison:
         parts.extend(["", f"📈 {similar_splits_comparison}"])
-    
+
     parts.extend(["", points_forts_text, points_ameliorer_text])
-    
+
     if conditionnels:
         parts.extend(["", " ".join(conditionnels)])
-    
+
     parts.extend(["", conseil])
     
     # Retrieve tips from knowledge base

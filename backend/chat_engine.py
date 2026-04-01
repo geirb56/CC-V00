@@ -1,7 +1,7 @@
 """
-CardioCoach - Moteur de Chat 100% Python + RAG
-Sans aucun LLM (ni local, ni cloud, ni WebLLM)
-Déterministe, rapide (<1s), offline, naturel, ultra-humain
+CardioCoach - Chat Engine 100% Python + RAG
+Without any LLM (neither local, nor cloud, nor WebLLM)
+Deterministic, fast (<1s), offline, natural, ultra-human
 """
 
 import random
@@ -10,1317 +10,1317 @@ import os
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Tuple
 
-# Charger la base de connaissances
+# Load the knowledge base
 KNOWLEDGE_BASE_PATH = os.path.join(os.path.dirname(__file__), "knowledge_base.json")
 
 def load_knowledge_base() -> Dict:
-    """Charge la base de connaissances statique"""
+    """Load the static knowledge base"""
     try:
         with open(KNOWLEDGE_BASE_PATH, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
-        print(f"Erreur chargement knowledge_base: {e}")
+        print(f"Error loading knowledge_base: {e}")
         return {}
 
 KNOWLEDGE_BASE = load_knowledge_base()
 
 # ============================================================
-# TEMPLATES PAR CATÉGORIE (10-15 variantes par bloc)
+# TEMPLATES BY CATEGORY (10-15 variants per block)
 # ============================================================
 
 TEMPLATES = {
-    # ==================== CATÉGORIE 1: FATIGUE ====================
+    # ==================== CATEGORY 1: FATIGUE ====================
     "fatigue": {
         "keywords": ["fatigue", "fatigué", "épuisé", "crevé", "lourd", "lourdeur", "épuisement", "vidé", "mort", "claqué", "cramé", "hs", "naze", "lessivé", "ko"],
         "intros": [
-            "T'as vraiment tout donné, respect ! 💪",
-            "Super mental pour finir malgré la lourdeur !",
-            "Bravo, t'as tenu jusqu'au bout 🔥",
-            "T'as poussé fort, chapeau !",
-            "Même fatigué t'as donné, c'est énorme !",
-            "T'as géré comme un chef malgré tout 😅",
-            "Respect pour l'effort malgré la lourdeur !",
-            "T'as du mental d'acier !",
-            "T'as assuré grave !",
-            "T'es un guerrier, même quand c'est dur !",
-            "Super combat, t'as pas lâché !",
-            "Chapeau bas, t'as fini malgré tout !",
-            "La fatigue t'a pas eu, bien joué !",
-            "T'as montré du caractère aujourd'hui !",
-            "Fier de toi pour avoir tenu !"
+            "You really gave it all, respect! 💪",
+            "Great mental strength to finish despite the heaviness!",
+            "Bravo, you held on until the end 🔥",
+            "You pushed hard, hats off!",
+            "Even tired you gave it your all, that's huge!",
+            "You managed like a boss despite everything 😅",
+            "Respect for the effort despite the heaviness!",
+            "You have a mental of steel!",
+            "You nailed it big time!",
+            "You're a warrior, even when it's tough!",
+            "Great fight, you didn't give up!",
+            "Hats off, you finished despite everything!",
+            "Fatigue didn't get you, well done!",
+            "You showed character today!",
+            "Proud of you for holding on!"
         ],
         "analyses": [
-            "Ton allure a décroché de {decrochage}% sur la fin avec une FC qui monte → t'es clairement en fatigue accumulée. Ton ratio est à {ratio}, ça veut dire que tu as beaucoup chargé sans assez récupérer.",
-            "Lourdeur en fin de séance → ta charge récente est haute ({charge}), ton corps te dit de ralentir un peu. C'est pas grave, c'est normal.",
-            "Ratio {ratio} élevé → surcharge légère, rien d'alarmant mais faut calmer le jeu quelques jours.",
-            "T'as une petite surcharge (ratio {ratio}) → c'est pas la fin du monde mais écoute ton corps.",
-            "Tes jambes ont lâché sur la fin, c'est le signe d'une fatigue qui s'accumule. Normal après {nb_seances} séances cette semaine !",
-            "La FC qui grimpe alors que l'allure baisse = signe classique de fatigue. Ton corps bosse dur pour compenser.",
-            "Avec {km_semaine} km cette semaine, c'est logique de sentir un peu de lourdeur. Ton corps absorbe la charge.",
-            "La fatigue que tu ressens c'est ton corps qui s'adapte. C'est un bon signe si tu récupères bien après !",
-            "Ton décrochage d'allure sur la fin montre que t'as bien poussé. C'est positif, tu travailles tes limites.",
-            "Quand les jambes sont lourdes dès le début, c'est souvent un manque de récup ou d'hydratation."
+            "Your pace dropped by {decrochage}% at the end with HR going up → you're clearly in accumulated fatigue. Your ratio is at {ratio}, which means you've loaded a lot without recovering enough.",
+            "Heaviness at the end of the session → your recent load is high ({charge}), your body is telling you to slow down a bit. It's okay, it's normal.",
+            "Ratio {ratio} elevated → slight overload, nothing alarming but need to calm things down a few days.",
+            "You have a slight overload (ratio {ratio}) → it's not the end of the world but listen to your body.",
+            "Your legs gave out at the end, it's a sign of fatigue accumulating. Normal after {nb_seances} sessions this week!",
+            "HR climbing while pace drops = classic sign of fatigue. Your body is working hard to compensate.",
+            "With {km_semaine} km this week, it's logical to feel some heaviness. Your body is absorbing the load.",
+            "The fatigue you're feeling is your body adapting. It's a good sign if you recover well after!",
+            "Your pace drop at the end shows you pushed well. It's positive, you're working your limits.",
+            "When legs are heavy from the start, it's often a lack of recovery or hydration."
         ],
         "conseils": [
-            "Demain footing très facile 40 min Z2 max ou jour off complet, hydrate-toi bien et dors tôt !",
-            "Repose-toi, prends soin de tes jambes avec un peu d'étirements doux. Ça va recharger vite.",
-            "Baisse l'intensité pendant 2-3 jours, ton corps te remerciera et tu reviendras plus fort.",
-            "Priorise sommeil et récupération active cette semaine. C'est là que les vrais progrès se font !",
-            "Prends un jour off complet si t'en ressens le besoin. Mieux vaut un jour de repos qu'une blessure.",
-            "Hydrate-toi bien (2L minimum), mange des glucides et au lit tôt ce soir !",
-            "Un petit massage ou du foam roller sur les jambes peut vraiment aider à récupérer.",
-            "Si la fatigue persiste plus de 3 jours, prends une vraie semaine de décharge.",
-            "Là t'as besoin de récup active : marche, vélo tranquille, natation... mais pas de course intense.",
-            "Écoute ton corps : s'il dit stop, c'est qu'il a besoin de récupérer pour mieux repartir."
+            "Tomorrow very easy run 40 min Z2 max or full day off, hydrate well and sleep early!",
+            "Rest, take care of your legs with some gentle stretching. It'll recharge quickly.",
+            "Lower the intensity for 2-3 days, your body will thank you and you'll come back stronger.",
+            "Prioritize sleep and active recovery this week. That's where real progress happens!",
+            "Take a full day off if you feel the need. Better one day of rest than an injury.",
+            "Hydrate well (2L minimum), eat carbs and early to bed tonight!",
+            "A little massage or foam roller on the legs can really help recovery.",
+            "If fatigue persists more than 3 days, take a real deload week.",
+            "Right now you need active recovery: walking, easy cycling, swimming... but no intense running.",
+            "Listen to your body: if it says stop, it needs to recover to restart better."
         ],
         "relances": [
-            "C'était lourd dès le km 3 ou seulement sur la fin ?",
-            "Tu as dormi combien d'heures ces derniers jours ?",
-            "Hydratation au top cette semaine ou t'as un peu zappé ?",
-            "Tu as senti tes jambes lourdes après combien de km ?",
-            "T'as eu des courbatures avant cette séance ?",
-            "C'est la première fois cette semaine que tu te sens comme ça ?",
-            "Tu manges assez de glucides en ce moment ?",
-            "T'as du stress au boulot ou perso qui pourrait jouer ?",
-            "Tu fais des étirements ou du foam roller après tes séances ?",
-            "T'as l'impression que c'est une fatigue musculaire ou plutôt générale ?",
-            "Tu sens une différence entre tes deux jambes ?",
-            "Ça fait combien de jours que tu t'entraînes sans break ?"
+            "Was it heavy from km 3 or only at the end?",
+            "How many hours have you slept these past few days?",
+            "Hydration on point this week or did you skip a bit?",
+            "Did you feel your legs heavy after how many km?",
+            "Did you have soreness before this session?",
+            "Is this the first time this week you feel like this?",
+            "Are you eating enough carbs right now?",
+            "Do you have work or personal stress that could be playing a role?",
+            "Do you do stretching or foam roller after your sessions?",
+            "Do you feel it's muscular fatigue or rather general?",
+            "Do you feel a difference between your two legs?",
+            "How many days have you been training without a break?"
         ]
     },
-    
-    # ==================== CATÉGORIE 2: ALLURE/CADENCE ====================
+
+    # ==================== CATEGORY 2: PACE/CADENCE ====================
     "allure_cadence": {
         "keywords": ["allure", "cadence", "pace", "vitesse", "rythme", "tempo", "foulée", "pas", "spm", "min/km", "lent", "rapide", "vite"],
         "intros": [
-            "Alors, parlons technique ! 🎯",
-            "Bonne question sur le rythme !",
-            "Ton allure, c'est un sujet important 👟",
-            "La cadence, c'est la clé d'une foulée efficace !",
-            "Ah l'allure, le nerf de la guerre !",
-            "Super question technique !",
-            "T'as raison de t'intéresser à ça !",
-            "La cadence, c'est souvent sous-estimé !",
-            "Ton rythme actuel, décortiquons ça !",
-            "Allure et cadence, les deux piliers de la perf !",
-            "Bonne réflexion sur ta foulée !",
-            "C'est malin de bosser là-dessus !"
+            "So, let's talk technique! 🎯",
+            "Good question about rhythm!",
+            "Your pace, that's an important topic 👟",
+            "Cadence is the key to an efficient stride!",
+            "Ah pace, the nerve of performance!",
+            "Great technical question!",
+            "You're right to be interested in this!",
+            "Cadence is often underestimated!",
+            "Your current rhythm, let's break it down!",
+            "Pace and cadence, the two pillars of performance!",
+            "Good thinking about your stride!",
+            "Smart to work on this!"
         ],
         "analyses": [
-            "Ta cadence moyenne est de {cadence} spm. {cadence_comment} L'idéal c'est entre 170 et 180, ça réduit l'impact sur les articulations.",
-            "Ton allure moyenne de {allure}/km est {allure_comment}. Par rapport à ta zone cible, t'es {zone_comment}.",
-            "Avec une cadence de {cadence}, {cadence_detail}. Une foulée plus rapide = moins de stress sur les genoux.",
-            "Ton pace de {allure}/km montre que {allure_analysis}. C'est cohérent avec ton niveau actuel.",
-            "La variabilité de ton allure est {variabilite}. {variabilite_comment}",
-            "En regardant tes dernières sorties, ta cadence varie entre {cadence_min} et {cadence_max}. {cadence_conseil}",
-            "Ton allure en endurance ({allure}) correspond bien à la zone {zone}. C'est {zone_feedback}.",
-            "Avec {km_semaine} km à {allure}/km de moyenne, tu travailles bien ton endurance de base.",
-            "Ta foulée actuelle ({cadence} spm) est {foulée_comment}. On peut optimiser ça !",
-            "L'écart entre ton allure facile et ton allure tempo est de {ecart}. C'est {ecart_comment}."
+            "Your average cadence is {cadence} spm. {cadence_comment} The ideal is between 170 and 180, it reduces impact on joints.",
+            "Your average pace of {allure}/km is {allure_comment}. Compared to your target zone, you're {zone_comment}.",
+            "With a cadence of {cadence}, {cadence_detail}. A faster stride = less stress on knees.",
+            "Your pace of {allure}/km shows that {allure_analysis}. It's consistent with your current level.",
+            "Your pace variability is {variabilite}. {variabilite_comment}",
+            "Looking at your recent runs, your cadence varies between {cadence_min} and {cadence_max}. {cadence_conseil}",
+            "Your endurance pace ({allure}) corresponds well to zone {zone}. It's {zone_feedback}.",
+            "With {km_semaine} km at {allure}/km average, you're working your base endurance well.",
+            "Your current stride ({cadence} spm) is {foulée_comment}. We can optimize this!",
+            "The gap between your easy pace and your tempo pace is {ecart}. That's {ecart_comment}."
         ],
         "conseils": [
-            "Pour augmenter ta cadence, fais des gammes : montées de genoux, talons-fesses, 2x par semaine pendant 10 min.",
-            "Essaie de courir au métronome à 175 bpm pendant quelques sorties, tu vas sentir la différence !",
-            "Pour le pace, travaille des séances de seuil : 3x10 min à allure semi-marathon avec 3 min récup.",
-            "Les côtes courtes (30-60 sec) sont géniales pour améliorer naturellement la cadence.",
-            "Pour une meilleure foulée : pense à lever les genoux et à atterrir sous ton centre de gravité.",
-            "Intègre des accélérations progressives (fartlek) dans tes sorties faciles pour varier les allures.",
-            "Le travail de cadence se fait mieux en légère descente au début, c'est plus naturel.",
-            "Pour l'allure spécifique, fais une séance par semaine de fractionné court (200-400m).",
-            "Pense à relâcher les épaules et les bras, ça aide à fluidifier la foulée.",
-            "Un bon exercice : 4x30 sec rapide / 30 sec lent pour travailler les changements d'allure."
+            "To increase your cadence, do drills: high knees, butt kicks, 2x per week for 10 min.",
+            "Try running to a metronome at 175 bpm for a few runs, you'll feel the difference!",
+            "For pace, work on threshold sessions: 3x10 min at half-marathon pace with 3 min recovery.",
+            "Short hills (30-60 sec) are great for naturally improving cadence.",
+            "For a better stride: think about lifting knees and landing under your center of gravity.",
+            "Integrate progressive accelerations (fartlek) into your easy runs to vary paces.",
+            "Cadence work is better done on slight downhill at first, it's more natural.",
+            "For specific pace, do one session per week of short intervals (200-400m).",
+            "Think about relaxing shoulders and arms, it helps fluidify the stride.",
+            "A good exercise: 4x30 sec fast / 30 sec slow to work on pace changes."
         ],
         "relances": [
-            "Tu fais déjà du travail de foulée ou des gammes ?",
-            "T'as une montre qui te donne la cadence en direct ?",
-            "Tu vises quoi comme allure sur ta prochaine course ?",
-            "T'as déjà essayé le métronome pour la cadence ?",
-            "Tu sens une différence de foulée en fin de séance ?",
-            "T'as l'impression d'avoir une foulée plutôt longue ou courte ?",
-            "Tu fais du fractionné régulièrement ?",
-            "T'as des douleurs qui pourraient être liées à ta foulée ?",
-            "Tu cours plutôt sur l'avant-pied, médio-pied ou talon ?",
-            "Tes chaussures sont adaptées à ta foulée ?"
+            "Do you already do stride work or drills?",
+            "Do you have a watch that gives you cadence in real-time?",
+            "What pace are you aiming for in your next race?",
+            "Have you tried the metronome for cadence?",
+            "Do you feel a stride difference at the end of sessions?",
+            "Do you feel you have a rather long or short stride?",
+            "Do you do intervals regularly?",
+            "Do you have pain that could be related to your stride?",
+            "Do you run on forefoot, midfoot or heel?",
+            "Are your shoes adapted to your stride?"
         ]
     },
-    
-    # ==================== CATÉGORIE 3: RÉCUPÉRATION ====================
+
+    # ==================== CATEGORY 3: RECOVERY ====================
     "recuperation": {
         "keywords": ["récup", "recuperation", "repos", "récupérer", "off", "pause", "break", "relâche", "décharge", "régénération"],
         "intros": [
-            "La récup, c'est là que la magie opère ! ✨",
-            "Ah la récupération, le secret des champions !",
-            "Bonne question, la récup c'est crucial !",
-            "T'as raison de penser récup !",
-            "Le repos, c'est aussi de l'entraînement !",
-            "Smart de s'intéresser à ça ! 🧠",
-            "La récup, c'est 50% de la progression !",
-            "Récupérer, c'est pas être fainéant, c'est être malin !",
-            "Bien vu, beaucoup négligent cet aspect !",
-            "La récup active, parlons-en !",
-            "T'inquiète, je vais t'aider là-dessus !",
-            "C'est THE sujet important !"
+            "Recovery, that's where magic happens! ✨",
+            "Ah recovery, the champions' secret!",
+            "Good question, recovery is crucial!",
+            "You're right to think recovery!",
+            "Rest is also training!",
+            "Smart to be interested in this! 🧠",
+            "Recovery is 50% of progress!",
+            "Recovering isn't being lazy, it's being smart!",
+            "Good catch, many neglect this aspect!",
+            "Active recovery, let's talk about it!",
+            "Don't worry, I'll help you with this!",
+            "This is THE important topic!"
         ],
         "analyses": [
-            "Avec {nb_seances} séances et {km_semaine} km cette semaine, ton corps a besoin de {recup_besoin}.",
-            "Ton ratio charge/récup est de {ratio}. {ratio_comment} La zone verte c'est entre 0.8 et 1.2.",
-            "Ta dernière semaine de décharge remonte à {derniere_decharge}. {decharge_comment}",
-            "En regardant ta charge des 4 dernières semaines, {charge_evolution}. {charge_conseil}",
-            "Tu as enchaîné {jours_consecutifs} jours sans repos. {consecutifs_comment}",
-            "Ton volume actuel ({km_semaine} km) par rapport à ta moyenne ({km_moyenne} km) est {volume_comment}.",
-            "La qualité de ta récup dépend de ton sommeil, ton hydratation et ton alimentation. {recup_analyse}",
-            "Après une séance intense comme celle-ci, compte 48-72h pour une récup complète des muscles.",
-            "Ton corps montre des signes de {signes_recup}. C'est {interpretation}.",
-            "La récup active (marche, vélo léger) est plus efficace que le repos total dans ton cas."
+            "With {nb_seances} sessions and {km_semaine} km this week, your body needs {recup_besoin}.",
+            "Your load/recovery ratio is {ratio}. {ratio_comment} The green zone is between 0.8 and 1.2.",
+            "Your last deload week was {derniere_decharge} ago. {decharge_comment}",
+            "Looking at your load over the last 4 weeks, {charge_evolution}. {charge_conseil}",
+            "You've chained {jours_consecutifs} days without rest. {consecutifs_comment}",
+            "Your current volume ({km_semaine} km) compared to your average ({km_moyenne} km) is {volume_comment}.",
+            "The quality of your recovery depends on your sleep, hydration and nutrition. {recup_analyse}",
+            "After an intense session like this, count 48-72h for complete muscle recovery.",
+            "Your body shows signs of {signes_recup}. It's {interpretation}.",
+            "Active recovery (walking, light cycling) is more effective than total rest in your case."
         ],
         "conseils": [
-            "Prévois au moins 1-2 jours de repos ou récup active par semaine, c'est non négociable.",
-            "Une semaine de décharge (volume -30-40%) toutes les 3-4 semaines, c'est la base.",
-            "Post-séance : étirements doux 10 min + 500ml d'eau + collation protéinée dans l'heure.",
-            "Le foam roller 10-15 min sur les jambes, ça fait des miracles pour la récup.",
-            "Dormir avant minuit = récup x2. Le sommeil avant minuit est plus réparateur.",
-            "En récup active, vise 60-65% de ta FC max, pas plus. C'est du vrai repos actif.",
-            "Les bains froids (10-15°C, 10-15 min) après une grosse séance réduisent l'inflammation.",
-            "Hydrate-toi tout au long de la journée, pas seulement pendant et après l'effort.",
-            "Les massages réguliers (1x/mois minimum) sont un investissement dans ta longévité.",
-            "Écoute les signaux : jambes lourdes 2+ jours = besoin de plus de récup."
+            "Plan at least 1-2 days of rest or active recovery per week, it's non-negotiable.",
+            "A deload week (volume -30-40%) every 3-4 weeks, that's the basis.",
+            "Post-session: gentle stretching 10 min + 500ml water + protein snack within the hour.",
+            "The foam roller 10-15 min on legs works miracles for recovery.",
+            "Sleep before midnight = recovery x2. Sleep before midnight is more restorative.",
+            "In active recovery, aim for 60-65% of your max HR, no more. That's real active rest.",
+            "Cold baths (10-15°C, 10-15 min) after a big session reduce inflammation.",
+            "Hydrate throughout the day, not just during and after effort.",
+            "Regular massages (1x/month minimum) are an investment in your longevity.",
+            "Listen to signals: heavy legs 2+ days = need more recovery."
         ],
         "relances": [
-            "Tu prends combien de jours off par semaine en général ?",
-            "T'as une routine de récup post-séance ?",
-            "Tu dors combien d'heures en moyenne ?",
-            "Tu fais du foam roller ou des massages ?",
-            "Tu t'hydrates bien tout au long de la journée ?",
-            "Ça fait combien de temps ta dernière semaine tranquille ?",
-            "Tu sens que t'as besoin de plus de repos en ce moment ?",
-            "T'as des courbatures qui persistent plus de 48h ?",
-            "Tu fais de la récup active genre vélo ou natation ?",
-            "T'as essayé les bains froids ou la douche froide ?"
+            "How many days off do you take per week usually?",
+            "Do you have a post-session recovery routine?",
+            "How many hours do you sleep on average?",
+            "Do you use foam roller or get massages?",
+            "Do you hydrate well throughout the day?",
+            "How long ago was your last easy week?",
+            "Do you feel you need more rest right now?",
+            "Do you have soreness that persists more than 48h?",
+            "Do you do active recovery like cycling or swimming?",
+            "Have you tried cold baths or cold showers?"
         ]
     },
-    
-    # ==================== CATÉGORIE 4: PLAN/PROCHAINE SORTIE ====================
+
+    # ==================== CATEGORY 4: PLAN/NEXT RUN ====================
     "plan": {
         "keywords": ["plan", "programme", "prochaine", "demain", "semaine", "planning", "organiser", "prévoir", "quoi faire", "entraînement"],
         "intros": [
-            "Planifions ta semaine ! 📅",
-            "Ok, voyons ce qu'on peut faire !",
-            "Bonne idée de planifier à l'avance !",
-            "Je te propose un plan adapté !",
-            "Allez, on organise tout ça !",
-            "C'est parti pour ta prochaine séance !",
-            "Je regarde tes données et je te dis ! 🔍",
-            "T'as bien fait de demander !",
-            "On va optimiser ta semaine !",
-            "Voilà ce que je te conseille !",
-            "Avec ce que t'as fait, voici la suite !",
-            "Je te fais un plan sur mesure !"
+            "Let's plan your week! 📅",
+            "Ok, let's see what we can do!",
+            "Good idea to plan ahead!",
+            "I'll suggest a tailored plan!",
+            "Let's go, let's organize all this!",
+            "Here we go for your next session!",
+            "I'm looking at your data and I'll tell you! 🔍",
+            "You did well to ask!",
+            "Let's optimize your week!",
+            "Here's what I recommend!",
+            "With what you've done, here's what's next!",
+            "I'll make you a custom plan!"
         ],
         "analyses": [
-            "Cette semaine t'as fait {km_semaine} km sur {nb_seances} séances. {analyse_semaine}",
-            "Ton ratio charge/récup est de {ratio}, donc {ratio_implication} pour la suite.",
-            "En regardant tes zones cette semaine : {zones_resume}. {zones_conseil}",
-            "Vu ta charge actuelle ({charge}), {charge_recommandation}.",
-            "Ton corps a bien absorbé {km_semaine} km, {adaptation_comment}.",
-            "La répartition intensité/endurance cette semaine est {repartition}. {repartition_comment}",
-            "Ta progression sur le dernier mois montre {progression}. On peut {progression_action}."
+            "This week you did {km_semaine} km over {nb_seances} sessions. {analyse_semaine}",
+            "Your load/recovery ratio is {ratio}, so {ratio_implication} for what's next.",
+            "Looking at your zones this week: {zones_resume}. {zones_conseil}",
+            "Given your current load ({charge}), {charge_recommandation}.",
+            "Your body has absorbed {km_semaine} km well, {adaptation_comment}.",
+            "The intensity/endurance distribution this week is {repartition}. {repartition_comment}",
+            "Your progress over the last month shows {progression}. We can {progression_action}."
         ],
         "conseils": [
-            "Demain je te conseille : footing 45-50 min en Z2, tranquille, pour bien récupérer.",
-            "Ta prochaine séance qualité : 6x1000m à allure 10km avec 2 min récup. Ça va te faire du bien !",
-            "Cette semaine, vise : 1 sortie longue (1h15-1h30), 1 séance tempo, 2 footings faciles.",
-            "Pour ta prochaine sortie : fartlek libre, 8-10 accélérations de 30 sec quand tu le sens.",
-            "Je te suggère un jour de repos complet demain, puis reprise douce mardi.",
-            "Prochaine séance idéale : côtes ! 8-10 répétitions de 45 sec, récup descente en trottinant.",
-            "Planning semaine : Lundi off, Mardi footing 40min, Mercredi fractionné, Jeudi off, Vendredi footing, Samedi sortie longue.",
-            "Pour varier : essaie une séance de fartlek nature, accélère quand t'as envie, récup quand tu veux.",
-            "Ta prochaine sortie longue : 1h20-1h30 à allure confort, sans regarder la montre, juste au feeling.",
-            "Je te propose du travail de seuil : 3x12 min à allure semi, 3 min récup entre chaque."
+            "Tomorrow I recommend: easy run 45-50 min in Z2, easy, to recover well.",
+            "Your next quality session: 6x1000m at 10k pace with 2 min recovery. That'll do you good!",
+            "This week, aim for: 1 long run (1h15-1h30), 1 tempo session, 2 easy runs.",
+            "For your next run: free fartlek, 8-10 accelerations of 30 sec when you feel like it.",
+            "I suggest a full rest day tomorrow, then easy restart on Tuesday.",
+            "Next ideal session: hills! 8-10 reps of 45 sec, recovery jog down.",
+            "Weekly plan: Monday off, Tuesday 40min run, Wednesday intervals, Thursday off, Friday run, Saturday long run.",
+            "For variety: try a nature fartlek session, accelerate when you want, recover when you want.",
+            "Your next long run: 1h20-1h30 at comfort pace, without looking at the watch, just by feeling.",
+            "I suggest threshold work: 3x12 min at half-marathon pace, 3 min recovery between each."
         ],
         "relances": [
-            "T'as des contraintes particulières cette semaine ?",
-            "Tu préfères courir le matin ou le soir ?",
-            "T'as un objectif de course en vue ?",
-            "Combien de séances tu peux caser cette semaine ?",
-            "Tu veux bosser quoi en priorité : endurance ou vitesse ?",
-            "T'as accès à une piste ou des côtes ?",
-            "Tu cours seul ou en groupe ?",
-            "T'as une durée max pour tes séances ?",
-            "Tu veux que je te fasse un plan pour la semaine complète ?",
-            "T'es plutôt du genre régulier ou ça dépend des semaines ?"
+            "Do you have any specific constraints this week?",
+            "Do you prefer running in the morning or evening?",
+            "Do you have a race goal coming up?",
+            "How many sessions can you fit in this week?",
+            "Do you want to work on what priority: endurance or speed?",
+            "Do you have access to a track or hills?",
+            "Do you run alone or in a group?",
+            "Do you have a max duration for your sessions?",
+            "Do you want me to make you a plan for the full week?",
+            "Are you more the regular type or does it depend on the weeks?"
         ]
     },
-    
-    # ==================== CATÉGORIE 5: ANALYSE SEMAINE ====================
+
+    # ==================== CATEGORY 5: WEEK ANALYSIS ====================
     "analyse_semaine": {
         "keywords": ["semaine", "bilan", "résumé", "analyse", "comment", "ça va", "forme", "état", "review", "point", "zones", "cardiaques", "cardiaque", "intensité", "endurance", "tempo"],
         "intros": [
-            "Faisons le point sur ta semaine ! 📊",
-            "Allez, je t'analyse tout ça !",
-            "Voyons ce que tu as fait !",
-            "Bilan de la semaine, c'est parti !",
-            "Je regarde tes stats !",
-            "Ok, décortiquons ta semaine !",
-            "Ton point hebdo, le voilà !",
-            "Analyse complète incoming !",
-            "Je te fais le topo !",
-            "Regardons ça ensemble !",
-            "Ta semaine en résumé !",
-            "C'est l'heure du bilan !"
+            "Let's review your week! 📊",
+            "Alright, I'll analyze all this!",
+            "Let's see what you did!",
+            "Week summary, here we go!",
+            "I'm looking at your stats!",
+            "Ok, let's dissect your week!",
+            "Your weekly review, here it is!",
+            "Complete analysis incoming!",
+            "I'll give you the rundown!",
+            "Let's look at this together!",
+            "Your week in summary!",
+            "It's review time!"
         ],
         "analyses": [
-            "Cette semaine : {km_semaine} km sur {nb_seances} séances, {duree_totale} de course. {appreciation}",
-            "Côté zones : {z1z2}% en endurance, {z3}% en tempo, {z4z5}% en intensif. {zones_verdict}",
-            "Ta charge est {charge_niveau} avec un ratio de {ratio}. {charge_interpretation}",
-            "Par rapport à la semaine dernière : {comparaison_km} sur le volume, {comparaison_intensite} sur l'intensité.",
-            "Ton allure moyenne ({allure}/km) est {allure_evolution} par rapport à d'habitude.",
-            "Tu as couru {nb_jours} jours sur 7. {regularite_comment}",
-            "La répartition de tes séances : {repartition_types}. {repartition_verdict}",
-            "Tes sensations cette semaine semblent {sensations}. {sensations_conseil}",
-            "Point fort : {point_fort}. Point à améliorer : {point_ameliorer}.",
-            "En résumé : {resume_global}. {conseil_global}"
+            "This week: {km_semaine} km over {nb_seances} sessions, {duree_totale} of running. {appreciation}",
+            "Zone-wise: {z1z2}% in endurance, {z3}% in tempo, {z4z5}% in intensive. {zones_verdict}",
+            "Your load is {charge_niveau} with a ratio of {ratio}. {charge_interpretation}",
+            "Compared to last week: {comparaison_km} in volume, {comparaison_intensite} in intensity.",
+            "Your average pace ({allure}/km) is {allure_evolution} compared to usual.",
+            "You ran {nb_jours} days out of 7. {regularite_comment}",
+            "Your session distribution: {repartition_types}. {repartition_verdict}",
+            "Your feelings this week seem {sensations}. {sensations_conseil}",
+            "Strong point: {point_fort}. Point to improve: {point_ameliorer}.",
+            "In summary: {resume_global}. {conseil_global}"
         ],
         "conseils": [
-            "Pour la semaine prochaine, je te conseille de {conseil_semaine_prochaine}.",
-            "Continue comme ça ! Maintiens ce volume et cette régularité.",
-            "Pense à ajouter une séance de récup active pour mieux absorber la charge.",
-            "La semaine prochaine, essaie d'ajouter un peu plus de travail en Z3-Z4.",
-            "Bien joué ! Pour progresser encore, varie un peu plus les types de séances.",
-            "Ta base d'endurance est solide. Tu peux commencer à ajouter du travail spécifique.",
-            "Attention à ne pas augmenter trop vite. La règle des 10% max par semaine !",
-            "Pour la suite, je te suggère une semaine de consolidation avant d'augmenter.",
-            "T'es sur la bonne voie ! Reste régulier et les progrès viendront.",
-            "Pense à intégrer une sortie longue par semaine si c'est pas déjà fait."
+            "For next week, I recommend you {conseil_semaine_prochaine}.",
+            "Keep it up! Maintain this volume and regularity.",
+            "Think about adding an active recovery session to better absorb the load.",
+            "Next week, try to add a bit more work in Z3-Z4.",
+            "Well done! To progress further, vary the session types a bit more.",
+            "Your endurance base is solid. You can start adding specific work.",
+            "Careful not to increase too fast. The rule is 10% max per week!",
+            "For what's next, I suggest a consolidation week before increasing.",
+            "You're on the right track! Stay regular and progress will come.",
+            "Think about integrating one long run per week if it's not already done."
         ],
         "relances": [
-            "Comment tu t'es senti globalement cette semaine ?",
-            "T'as des douleurs ou gênes à signaler ?",
-            "Le volume te semble gérable ou un peu trop ?",
-            "T'as pu respecter toutes les séances prévues ?",
-            "Tu veux qu'on ajuste le plan pour la semaine prochaine ?",
-            "T'es satisfait de ta semaine ?",
-            "Y a des séances que t'as trouvées trop dures ?",
-            "Tu veux qu'on parle d'un aspect en particulier ?",
-            "T'as bien récupéré entre les séances ?",
-            "Des objectifs spécifiques pour la semaine prochaine ?"
+            "How did you feel overall this week?",
+            "Do you have any pain or discomfort to report?",
+            "Does the volume seem manageable or a bit too much?",
+            "Were you able to complete all planned sessions?",
+            "Do you want us to adjust the plan for next week?",
+            "Are you satisfied with your week?",
+            "Were there sessions you found too hard?",
+            "Do you want to talk about a specific aspect?",
+            "Did you recover well between sessions?",
+            "Any specific goals for next week?"
         ]
     },
-    
-    # ==================== CATÉGORIE 6: MOTIVATION ====================
+
+    # ==================== CATEGORY 6: MOTIVATION ====================
     "motivation": {
         "keywords": ["motivation", "motivé", "démotivé", "envie", "flemme", "dur", "difficile", "lassé", "ennui", "routine", "marre", "abandonner", "moral"],
         "intros": [
-            "Hey, c'est normal d'avoir des coups de mou ! 💙",
-            "La motivation, ça va et ça vient, t'inquiète !",
-            "Je comprends, on passe tous par là !",
-            "C'est humain de se sentir comme ça !",
-            "Eh, même les pros ont des jours sans !",
-            "T'es pas seul, ça arrive à tout le monde !",
-            "La démotivation, c'est un signal, pas une faiblesse !",
-            "On va trouver une solution ensemble !",
-            "C'est ok de pas être à fond tout le temps !",
-            "La course c'est un marathon, pas un sprint... littéralement ! 😄",
-            "Ton honnêteté, c'est déjà un bon signe !",
-            "On va relancer la machine !"
+            "Hey, it's normal to have rough patches! 💙",
+            "Motivation comes and goes, don't worry!",
+            "I understand, we all go through this!",
+            "It's human to feel like this!",
+            "Hey, even the pros have off days!",
+            "You're not alone, it happens to everyone!",
+            "Lack of motivation is a signal, not a weakness!",
+            "We'll find a solution together!",
+            "It's ok not to be at 100% all the time!",
+            "Running is a marathon, not a sprint... literally! 😄",
+            "Your honesty is already a good sign!",
+            "We'll get the machine going again!"
         ],
         "analyses": [
-            "Quand la motivation baisse, c'est souvent signe de fatigue accumulée ou de routine trop monotone.",
-            "Vu ton historique, t'as fait {km_total} km ces dernières semaines. {charge_impact_motivation}",
-            "La lassitude peut venir d'objectifs trop lointains ou pas assez stimulants.",
-            "Parfois le corps dit stop avant la tête. La démotivation peut être un signal de récup nécessaire.",
-            "La routine tue la motivation. Si t'enchaînes les mêmes parcours, c'est normal de saturer.",
-            "Le surentraînement a la démotivation comme symptôme classique. {surentrainement_check}",
-            "Courir seul tout le temps peut peser sur le moral à la longue.",
-            "L'hiver, la météo et la luminosité impactent naturellement la motivation.",
-            "Si t'as pas d'objectif clair, c'est dur de rester motivé sur la durée.",
-            "La comparaison avec les autres sur les réseaux peut aussi démotiver. Focus sur TON parcours !"
+            "When motivation drops, it's often a sign of accumulated fatigue or too monotonous routine.",
+            "Given your history, you've done {km_total} km these past weeks. {charge_impact_motivation}",
+            "Weariness can come from goals that are too distant or not stimulating enough.",
+            "Sometimes the body says stop before the mind. Lack of motivation can be a signal that recovery is needed.",
+            "Routine kills motivation. If you keep doing the same routes, it's normal to get saturated.",
+            "Overtraining has lack of motivation as a classic symptom. {surentrainement_check}",
+            "Running alone all the time can weigh on morale in the long run.",
+            "In winter, weather and light naturally impact motivation.",
+            "If you don't have a clear goal, it's hard to stay motivated long-term.",
+            "Comparison with others on social media can also demotivate. Focus on YOUR journey!"
         ],
         "conseils": [
-            "Change de parcours ! Découvre un nouveau coin, ça relance souvent la motivation.",
-            "Fixe-toi un mini-objectif atteignable cette semaine : juste 3 sorties, peu importe la durée.",
-            "Essaie de courir avec quelqu'un, même une fois. Ça change tout !",
-            "Autorise-toi une vraie pause de 4-5 jours. Parfois c'est le meilleur remède.",
-            "Inscris-toi à une petite course fun, ça donne un objectif concret.",
-            "Écoute un nouveau podcast ou de la musique que t'adores pendant ta sortie.",
-            "Oublie la montre pendant une sortie. Cours au feeling, pour le plaisir.",
-            "Rappelle-toi pourquoi t'as commencé. C'était quoi ta motivation initiale ?",
-            "Varie les activités : vélo, natation, rando... Le cross-training peut relancer l'envie.",
-            "Récompense-toi après une bonne semaine. T'as le droit !"
+            "Change your route! Discover a new area, it often reboots motivation.",
+            "Set yourself a mini achievable goal this week: just 3 runs, no matter the duration.",
+            "Try running with someone, even once. It changes everything!",
+            "Allow yourself a real break of 4-5 days. Sometimes it's the best remedy.",
+            "Sign up for a small fun race, it gives a concrete goal.",
+            "Listen to a new podcast or music you love during your run.",
+            "Forget the watch for one run. Run by feeling, for pleasure.",
+            "Remember why you started. What was your initial motivation?",
+            "Vary activities: cycling, swimming, hiking... Cross-training can restart the desire.",
+            "Reward yourself after a good week. You deserve it!"
         ],
         "relances": [
-            "C'est depuis quand que tu te sens comme ça ?",
-            "T'as un objectif de course en ce moment ?",
-            "Tu cours toujours seul ou des fois en groupe ?",
-            "T'as des parcours variés ou c'est toujours le même ?",
-            "Y a un aspect de ta vie qui pourrait impacter ton moral ?",
-            "T'as essayé de courir sans montre récemment ?",
-            "C'est plus une flemme physique ou mentale ?",
-            "Tu dors bien en ce moment ?",
-            "T'as pris des vacances de course récemment ?",
-            "Qu'est-ce qui te motivait au début ?"
+            "Since when have you been feeling like this?",
+            "Do you have a race goal right now?",
+            "Do you always run alone or sometimes in a group?",
+            "Do you have varied routes or is it always the same?",
+            "Is there an aspect of your life that could impact your morale?",
+            "Have you tried running without a watch recently?",
+            "Is it more physical or mental laziness?",
+            "Are you sleeping well right now?",
+            "Have you taken a running break recently?",
+            "What motivated you at the beginning?"
         ]
     },
-    
-    # ==================== CATÉGORIE 7: MÉTÉO ====================
+
+    # ==================== CATEGORY 7: WEATHER ====================
     "meteo": {
         "keywords": ["météo", "temps", "pluie", "vent", "chaud", "froid", "chaleur", "canicule", "orage", "neige", "verglas", "humidité"],
         "intros": [
-            "Ah la météo, ça change tout ! 🌤️",
-            "Bien vu de penser aux conditions !",
-            "La météo, faut savoir s'adapter !",
-            "Courir par tous les temps, c'est un art !",
-            "Les conditions, c'est important à gérer !",
-            "Bonne question, ça impacte vraiment la perf !",
-            "S'adapter à la météo, c'est être un vrai coureur !",
-            "La météo, on peut pas la changer, mais on peut s'y préparer !",
-            "T'as raison de t'interroger là-dessus !",
-            "Les conditions extérieures, parlons-en !"
+            "Ah weather, it changes everything! 🌤️",
+            "Good catch thinking about conditions!",
+            "Weather, you have to know how to adapt!",
+            "Running in all weathers is an art!",
+            "Conditions are important to manage!",
+            "Good question, it really impacts performance!",
+            "Adapting to weather means being a real runner!",
+            "Weather, we can't change it, but we can prepare for it!",
+            "You're right to wonder about this!",
+            "External conditions, let's talk about them!"
         ],
         "analyses": [
-            "Par temps chaud (+25°C), le corps dépense plus d'énergie pour se refroidir. Résultat : même effort = allure plus lente.",
-            "Le vent de face peut te coûter 10-20 sec/km à effort équivalent. C'est pas toi qui es moins bon !",
-            "Par temps froid (<5°C), les muscles mettent plus de temps à chauffer. L'échauffement est crucial.",
-            "L'humidité élevée (>70%) rend l'évacuation de la chaleur plus difficile. Ton corps surchauffe plus vite.",
-            "La pluie légère n'impacte pas vraiment la perf si t'es bien équipé. C'est même rafraîchissant !",
-            "Par forte chaleur, ta FC sera naturellement plus haute pour la même allure. C'est physiologique.",
-            "Le froid sec est plus facile à gérer que le froid humide. L'humidité traverse les couches.",
-            "Les conditions difficiles renforcent le mental. C'est un investissement pour les courses !",
-            "Courir par mauvais temps te prépare à toutes les situations le jour J.",
-            "La météo impacte aussi ta récupération. Par forte chaleur, hydrate-toi encore plus après."
+            "In hot weather (+25°C), the body spends more energy cooling down. Result: same effort = slower pace.",
+            "Headwind can cost you 10-20 sec/km at equivalent effort. It's not you being worse!",
+            "In cold weather (<5°C), muscles take longer to warm up. Warm-up is crucial.",
+            "High humidity (>70%) makes heat evacuation more difficult. Your body overheats faster.",
+            "Light rain doesn't really impact performance if you're well equipped. It's even refreshing!",
+            "In strong heat, your HR will be naturally higher for the same pace. It's physiological.",
+            "Dry cold is easier to manage than humid cold. Humidity goes through layers.",
+            "Difficult conditions strengthen the mental. It's an investment for races!",
+            "Running in bad weather prepares you for all situations on race day.",
+            "Weather also impacts your recovery. In strong heat, hydrate even more after."
         ],
         "conseils": [
-            "Par chaleur : ralentis de 15-30 sec/km, hydrate-toi toutes les 15-20 min, mouille ta casquette.",
-            "Par temps froid : couche-toi bien (3 couches), protège tes extrémités, allonge l'échauffement à 15 min.",
-            "Par vent fort : pars face au vent et rentre vent dans le dos. T'auras plus d'énergie pour finir !",
-            "Sous la pluie : vêtements techniques qui sèchent vite, casquette, et prévois des chaussettes de rechange.",
-            "Par forte chaleur : cours tôt le matin ou tard le soir, évite 12h-16h à tout prix.",
-            "Par temps humide : choisis des vêtements respirants et évite le coton qui garde l'humidité.",
-            "En hiver : un tour de cou ou un buff protège bien les voies respiratoires du froid.",
-            "Par conditions difficiles : réduis tes objectifs de chrono et focus sur l'effort ressenti.",
-            "Pense à checker la météo avant de choisir ton parcours (ombre/soleil, abrité/exposé).",
-            "Adapte toujours ta tenue à la température ressentie, pas à la température affichée !"
+            "In heat: slow down by 15-30 sec/km, hydrate every 15-20 min, wet your cap.",
+            "In cold weather: layer up well (3 layers), protect your extremities, extend warm-up to 15 min.",
+            "In strong wind: start facing the wind and return with wind at your back. You'll have more energy to finish!",
+            "In rain: technical clothes that dry fast, cap, and plan spare socks.",
+            "In strong heat: run early morning or late evening, avoid 12pm-4pm at all costs.",
+            "In humid weather: choose breathable clothes and avoid cotton which retains moisture.",
+            "In winter: a neck warmer or buff protects airways from cold well.",
+            "In difficult conditions: reduce your time goals and focus on perceived effort.",
+            "Think about checking the weather before choosing your route (shade/sun, sheltered/exposed).",
+            "Always adapt your outfit to the felt temperature, not the displayed temperature!"
         ],
         "relances": [
-            "Tu cours plutôt matin ou soir en ce moment ?",
-            "T'as des parcours plus abrités pour les jours de vent ?",
-            "Tu t'hydrates suffisamment par temps chaud ?",
-            "T'as une tenue adaptée à toutes les conditions ?",
-            "Tu préfères reporter ou t'adapter aux conditions ?",
-            "T'as déjà couru sous la pluie battante ?",
-            "Le froid te gêne ou t'aimes bien ?",
-            "T'as une routine d'échauffement par temps froid ?",
-            "Tu cours avec une casquette par forte chaleur ?",
-            "La météo impacte beaucoup ta motivation ?"
+            "Do you run morning or evening right now?",
+            "Do you have more sheltered routes for windy days?",
+            "Do you hydrate enough in hot weather?",
+            "Do you have an outfit adapted to all conditions?",
+            "Do you prefer postponing or adapting to conditions?",
+            "Have you ever run in pouring rain?",
+            "Does cold bother you or do you like it?",
+            "Do you have a warm-up routine in cold weather?",
+            "Do you run with a cap in strong heat?",
+            "Does weather impact your motivation a lot?"
         ]
     },
-    
-    # ==================== CATÉGORIE 7b: ZONES CARDIAQUES ====================
+
+    # ==================== CATEGORY 7b: HEART RATE ZONES ====================
     "zones": {
-        "keywords": [],  # Détection via detect_intent
+        "keywords": [],  # Detection via detect_intent
         "intros": [
-            "Parlons de tes zones cardiaques ! 💓",
-            "Les zones, c'est la clé de l'entraînement !",
-            "L'équilibre des zones, super important !",
-            "Tes zones cardiaques, analysons ça !",
-            "La répartition des zones, j'adore ce sujet !"
+            "Let's talk about your heart rate zones! 💓",
+            "Zones are the key to training!",
+            "Zone balance, super important!",
+            "Your heart rate zones, let's analyze!",
+            "Zone distribution, I love this topic!"
         ],
         "analyses": [
-            "Ta répartition actuelle : Z1-Z2 (endurance) = {z1z2}%, Z3 (tempo) = {z3}%, Z4-Z5 (intensif) = {z4z5}%. {zones_verdict}",
-            "L'idéal pour progresser : 80% en Z1-Z2 (endurance), 15-20% en Z3-Z4. Toi t'es à {z1z2}% en endurance.",
-            "La zone 2 (endurance fondamentale) est LA zone où tu dois passer le plus de temps. Elle développe ta base aérobie.",
-            "Trop de Z3 (zone tempo) = risque de fatigue chronique sans vrais gains. Vise plutôt Z2 + Z4 avec moins de Z3.",
-            "Avec {z4z5}% en zones hautes (Z4-Z5), {zones_conseil}"
+            "Your current distribution: Z1-Z2 (endurance) = {z1z2}%, Z3 (tempo) = {z3}%, Z4-Z5 (intensive) = {z4z5}%. {zones_verdict}",
+            "The ideal to progress: 80% in Z1-Z2 (endurance), 15-20% in Z3-Z4. You're at {z1z2}% in endurance.",
+            "Zone 2 (base endurance) is THE zone where you should spend most time. It develops your aerobic base.",
+            "Too much Z3 (tempo zone) = risk of chronic fatigue without real gains. Aim for Z2 + Z4 with less Z3.",
+            "With {z4z5}% in high zones (Z4-Z5), {zones_conseil}"
         ],
         "conseils": [
-            "Pour équilibrer : ajoute 1-2 sorties en Z2 pure (conversation possible) par semaine. C'est contre-intuitif mais ça marche !",
-            "La règle 80/20 : 80% du temps en endurance facile, 20% en intensité. Simple mais efficace.",
-            "Pour savoir si t'es en Z2 : tu dois pouvoir parler facilement. Si tu souffles, t'es trop haut.",
-            "Une sortie en Z3 permanente = la 'zone grise'. Ni assez facile pour récupérer, ni assez dur pour progresser. À éviter !",
-            "Mon conseil : fais tes sorties faciles VRAIMENT faciles, et tes séances dures VRAIMENT dures. Pas de juste milieu mou.",
-            "Pour augmenter ta Z2 : cours avec un cardio et reste sous 75% de ta FC max. C'est frustrant au début mais payant !"
+            "To balance: add 1-2 pure Z2 runs (conversation possible) per week. Counter-intuitive but it works!",
+            "The 80/20 rule: 80% of time in easy endurance, 20% in intensity. Simple but effective.",
+            "To know if you're in Z2: you should be able to talk easily. If you're breathing hard, you're too high.",
+            "A permanent Z3 run = the 'gray zone'. Not easy enough to recover, not hard enough to progress. Avoid!",
+            "My advice: make your easy runs REALLY easy, and your hard sessions REALLY hard. No soft middle ground.",
+            "To increase your Z2: run with a heart rate monitor and stay under 75% of your max HR. Frustrating at first but pays off!"
         ],
         "relances": []
     },
-    
-    # ==================== CATÉGORIE 7c: SENSATIONS ====================
+
+    # ==================== CATEGORY 7c: FEELINGS ====================
     "sensations": {
-        "keywords": [],  # Détection via detect_intent
+        "keywords": [],  # Detection via detect_intent
         "intros": [
-            "Comment tu te sens, c'est important ! 😊",
-            "Les sensations, le meilleur indicateur !",
-            "Écouter son corps, c'est la base !",
-            "Tes sensations comptent énormément !",
-            "Le ressenti, souvent plus fiable que les chiffres !"
+            "How you feel is important! 😊",
+            "Feelings, the best indicator!",
+            "Listening to your body is the basis!",
+            "Your feelings matter enormously!",
+            "How you feel, often more reliable than numbers!"
         ],
         "analyses": [
-            "Se sentir bien, c'est le signe que ton corps absorbe bien la charge. Ton ratio de {ratio} confirme que t'es dans le bon équilibre.",
-            "Les bonnes sensations = bonne adaptation à l'entraînement. Continue comme ça !",
-            "Ton corps te parle : si tu te sens bien, c'est que ton plan fonctionne. {km_semaine} km cette semaine, c'est {volume_comment}.",
-            "La forme du jour varie, c'est normal ! L'important c'est la tendance sur plusieurs semaines.",
-            "Tes sensations aujourd'hui reflètent souvent ce que tu as fait il y a 2-3 jours. La fatigue est décalée."
+            "Feeling good is a sign your body is absorbing the load well. Your ratio of {ratio} confirms you're in good balance.",
+            "Good feelings = good adaptation to training. Keep it up!",
+            "Your body is talking to you: if you feel good, it's that your plan is working. {km_semaine} km this week is {volume_comment}.",
+            "Daily form varies, it's normal! What matters is the trend over several weeks.",
+            "Your feelings today often reflect what you did 2-3 days ago. Fatigue is delayed."
         ],
         "conseils": [
-            "Profite de cette bonne forme pour une séance qualité si t'en as pas fait récemment !",
-            "Quand tu te sens bien, c'est le moment idéal pour une sortie longue ou une séance de seuil.",
-            "Note tes sensations après chaque sortie (1-10). Ça aide à détecter les tendances sur le long terme.",
-            "Si tu te sens bien plusieurs jours d'affilée, tu peux légèrement augmenter l'intensité ou le volume.",
-            "Les sensations comptent plus que les chiffres. Si tu te sens fatigué malgré de bonnes stats, écoute ton corps !",
-            "Profite de ce bon feeling ! C'est le signe que ton entraînement est bien dosé. 💪"
+            "Take advantage of this good form for a quality session if you haven't done one recently!",
+            "When you feel good, it's the ideal time for a long run or threshold session.",
+            "Note your feelings after each run (1-10). It helps detect trends long-term.",
+            "If you feel good several days in a row, you can slightly increase intensity or volume.",
+            "Feelings matter more than numbers. If you feel tired despite good stats, listen to your body!",
+            "Enjoy this good feeling! It's a sign your training is well dosed. 💪"
         ],
         "relances": []
     },
-    
-    # ==================== CATÉGORIE 8: NUTRITION ====================
+
+    # ==================== CATEGORY 8: NUTRITION ====================
     "nutrition": {
         "keywords": ["nutrition", "manger", "alimentation", "glucides", "protéines", "hydratation", "boire", "eau", "gel", "boisson", "repas", "petit-déjeuner", "récup", "crampe"],
         "intros": [
-            "La nutrition, c'est le carburant ! ⛽",
-            "Bien manger = bien courir !",
-            "L'alimentation, sujet crucial !",
-            "Ton corps a besoin du bon fuel !",
-            "La nutrition, souvent négligée mais essentielle !",
-            "Ce que tu manges impacte direct ta perf !",
-            "Bonne question, parlons bouffe ! 🍝",
-            "L'hydratation et la nutrition, les bases !",
-            "T'as raison de t'y intéresser !",
-            "La diététique du coureur, c'est important !"
+            "Nutrition is the fuel! ⛽",
+            "Eating well = running well!",
+            "Nutrition, crucial topic!",
+            "Your body needs the right fuel!",
+            "Nutrition, often neglected but essential!",
+            "What you eat directly impacts your performance!",
+            "Good question, let's talk food! 🍝",
+            "Hydration and nutrition, the basics!",
+            "You're right to be interested!",
+            "Runner's diet is important!"
         ],
         "analyses": [
-            "Le running consomme environ 1 kcal/kg/km. Sur {km_semaine} km, t'as besoin de compenser !",
-            "Les glucides sont le carburant principal du coureur. Ils doivent représenter 50-60% de ton alimentation.",
-            "L'hydratation impacte direct la performance. 2% de déshydratation = -10% de perf.",
-            "Les protéines (1.2-1.6g/kg/jour) sont essentielles pour la récupération musculaire.",
-            "Le timing est important : manger 2-3h avant l'effort, recharger dans les 30min après.",
-            "Les crampes sont souvent liées à un manque de sodium ou de magnésium.",
-            "Une alimentation variée couvre généralement tous les besoins sans compléments.",
-            "Le café (caféine) peut améliorer la performance de 2-3% si pris 1-2h avant.",
-            "L'alcool la veille impacte la qualité du sommeil et donc la récupération.",
-            "Les fibres sont importantes mais à éviter juste avant une séance (inconfort digestif)."
+            "Running consumes about 1 kcal/kg/km. Over {km_semaine} km, you need to compensate!",
+            "Carbs are the runner's main fuel. They should represent 50-60% of your diet.",
+            "Hydration directly impacts performance. 2% dehydration = -10% performance.",
+            "Proteins (1.2-1.6g/kg/day) are essential for muscle recovery.",
+            "Timing is important: eat 2-3h before effort, refuel within 30min after.",
+            "Cramps are often linked to lack of sodium or magnesium.",
+            "A varied diet generally covers all needs without supplements.",
+            "Coffee (caffeine) can improve performance by 2-3% if taken 1-2h before.",
+            "Alcohol the night before impacts sleep quality and thus recovery.",
+            "Fiber is important but avoid just before a session (digestive discomfort)."
         ],
         "conseils": [
-            "Avant une sortie longue : repas riche en glucides 2-3h avant (pâtes, riz, pain).",
-            "Pendant l'effort (+1h30) : 30-60g de glucides/heure (gels, boisson énergétique, fruits secs).",
-            "Après l'effort : dans les 30 min, collation glucides + protéines (banane + yaourt, lait chocolaté).",
-            "Hydrate-toi tout au long de la journée, pas seulement pendant et après l'effort.",
-            "Par temps chaud, ajoute du sel dans ta boisson ou mange des aliments salés.",
-            "Évite les aliments gras et les fibres dans les 3h précédant une séance intense.",
-            "Le petit-déjeuner pré-course : pain, confiture, banane, café. Testé et approuvé !",
-            "Les fruits secs (abricots, dattes) sont parfaits pendant les sorties longues.",
-            "Ne teste jamais un nouvel aliment ou gel le jour d'une course. Toujours à l'entraînement !",
-            "En récup, les protéines végétales (légumineuses) sont aussi efficaces que les animales."
+            "Before a long run: carb-rich meal 2-3h before (pasta, rice, bread).",
+            "During effort (+1h30): 30-60g carbs/hour (gels, energy drink, dried fruits).",
+            "After effort: within 30 min, carbs + protein snack (banana + yogurt, chocolate milk).",
+            "Hydrate throughout the day, not just during and after effort.",
+            "In hot weather, add salt to your drink or eat salty foods.",
+            "Avoid fatty foods and fiber in the 3h before an intense session.",
+            "Pre-race breakfast: bread, jam, banana, coffee. Tested and approved!",
+            "Dried fruits (apricots, dates) are perfect during long runs.",
+            "Never test new food or gel on race day. Always in training!",
+            "For recovery, plant proteins (legumes) are as effective as animal ones."
         ],
         "relances": [
-            "Tu manges quoi avant tes sorties en général ?",
-            "Tu t'hydrates pendant tes séances ?",
-            "T'as déjà eu des problèmes digestifs en courant ?",
-            "Tu prends des gels ou barres sur les longues sorties ?",
-            "Tu manges dans les 30 min après ta séance ?",
-            "Tu as des crampes régulièrement ?",
-            "Tu bois combien de litres par jour environ ?",
-            "T'as un petit-déjeuner type avant une course ?",
-            "Tu évites certains aliments avant de courir ?",
-            "Tu prends des compléments alimentaires ?"
+            "What do you usually eat before your runs?",
+            "Do you hydrate during your sessions?",
+            "Have you had digestive problems while running?",
+            "Do you take gels or bars on long runs?",
+            "Do you eat within 30 min after your session?",
+            "Do you get cramps regularly?",
+            "How many liters do you drink per day approximately?",
+            "Do you have a typical breakfast before a race?",
+            "Do you avoid certain foods before running?",
+            "Do you take dietary supplements?"
         ]
     },
-    
-    # ==================== CATÉGORIE 9: BLESSURES ====================
+
+    # ==================== CATEGORY 9: INJURIES ====================
     "blessures": {
         "keywords": ["blessure", "douleur", "mal", "genou", "cheville", "tibia", "tendon", "hanche", "mollet", "pied", "dos", "périostite", "bandelette", "aponévrose", "contracture"],
         "intros": [
-            "Aïe, parlons de cette douleur 🩹",
-            "La douleur, faut pas la négliger !",
-            "Ok, voyons ce qui se passe !",
-            "Ton corps t'envoie un signal, écoutons-le !",
-            "Les blessures, c'est sérieux, on va en parler !",
-            "Attention à cette gêne !",
-            "Je t'aide à y voir plus clair !",
-            "La prévention, c'est la clé !",
-            "Ton corps te parle, on l'écoute !",
-            "Une douleur = un message, décodons-le !"
+            "Ouch, let's talk about this pain 🩹",
+            "Pain shouldn't be neglected!",
+            "Ok, let's see what's happening!",
+            "Your body is sending you a signal, let's listen!",
+            "Injuries are serious, let's talk about it!",
+            "Careful with this discomfort!",
+            "I'll help you see more clearly!",
+            "Prevention is the key!",
+            "Your body is talking, let's listen!",
+            "A pain = a message, let's decode it!"
         ],
         "analyses": [
-            "Une douleur qui persiste plus de 3 jours mérite un avis médical ou kiné.",
-            "Les douleurs au genou viennent souvent d'un déséquilibre hanches/fessiers ou d'une foulée inadaptée.",
-            "Les périostites tibiales sont souvent causées par une augmentation trop rapide du volume.",
-            "La bandelette ilio-tibiale se manifeste par une douleur externe du genou, souvent en descente.",
-            "Les tendinites d'Achille nécessitent du repos et des exercices excentriques.",
-            "Les douleurs plantaires (aponévrose) sont fréquentes chez les coureurs à forte charge.",
-            "Une douleur musculaire (courbature) ≠ une douleur articulaire ou tendineuse.",
-            "L'augmentation du volume de plus de 10%/semaine est la cause #1 des blessures.",
-            "Le manque de renforcement musculaire prédispose aux blessures.",
-            "Des chaussures usées (>800km) augmentent significativement le risque de blessure."
+            "A pain that persists more than 3 days deserves medical or physio advice.",
+            "Knee pain often comes from hip/glute imbalance or unsuitable stride.",
+            "Shin splints are often caused by too rapid volume increase.",
+            "IT band manifests as external knee pain, often downhill.",
+            "Achilles tendonitis requires rest and eccentric exercises.",
+            "Plantar pain (fasciitis) is common in runners with high load.",
+            "Muscle pain (soreness) ≠ joint or tendon pain.",
+            "Volume increase of more than 10%/week is cause #1 of injuries.",
+            "Lack of strength training predisposes to injuries.",
+            "Worn shoes (>800km) significantly increase injury risk."
         ],
         "conseils": [
-            "Règle d'or : si ça fait mal en courant et que ça empire, ARRÊTE. Le repos vaut mieux qu'une blessure longue.",
-            "RICE dans les 48h : Repos, Ice (glace), Compression, Élévation.",
-            "Si douleur articulaire, consulte un kiné spécialisé running, pas juste ton médecin généraliste.",
-            "Le renforcement des hanches et fessiers prévient 80% des blessures du coureur.",
-            "Genou : travaille les squats, fentes, et pont fessier. Ça stabilise toute la chaîne.",
-            "Périostite : repos 1-2 semaines, puis reprise très progressive. Pas de raccourci possible.",
-            "Tendon d'Achille : exercices excentriques (descendre sur la pointe, lentement). 3x15/jour.",
-            "Bandelette : foam roller sur l'extérieur de la cuisse + étirements IT band.",
-            "Mollet : check tes chaussures, souvent lié à un drop trop bas ou une transition trop rapide.",
-            "Prévention : 15 min de renfo 3x/semaine suffit à réduire drastiquement le risque."
+            "Golden rule: if it hurts while running and gets worse, STOP. Rest is better than a long injury.",
+            "RICE in 48h: Rest, Ice, Compression, Elevation.",
+            "If joint pain, consult a physio specialized in running, not just your GP.",
+            "Hip and glute strengthening prevents 80% of runner injuries.",
+            "Knee: work squats, lunges, and glute bridge. It stabilizes the whole chain.",
+            "Shin splints: rest 1-2 weeks, then very progressive restart. No possible shortcut.",
+            "Achilles tendon: eccentric exercises (lower on tiptoe, slowly). 3x15/day.",
+            "IT band: foam roller on outside of thigh + IT band stretches.",
+            "Calf: check your shoes, often linked to too low drop or too fast transition.",
+            "Prevention: 15 min of strength 3x/week is enough to drastically reduce risk."
         ],
         "relances": [
-            "Ça fait combien de temps que tu as cette douleur ?",
-            "C'est plutôt en courant, après, ou tout le temps ?",
-            "T'as changé quelque chose récemment (chaussures, volume, terrain) ?",
-            "La douleur est localisée précisément ou diffuse ?",
-            "Ça s'améliore avec l'échauffement ou ça empire ?",
-            "T'as déjà eu cette douleur avant ?",
-            "T'as vu un kiné ou médecin du sport ?",
-            "Tu fais du renforcement musculaire régulièrement ?",
-            "Tes chaussures ont combien de km ?",
-            "La douleur te réveille la nuit ?"
+            "How long have you had this pain?",
+            "Is it while running, after, or all the time?",
+            "Have you changed something recently (shoes, volume, terrain)?",
+            "Is the pain precisely localized or diffuse?",
+            "Does it improve with warm-up or get worse?",
+            "Have you had this pain before?",
+            "Have you seen a physio or sports doctor?",
+            "Do you do strength training regularly?",
+            "How many km do your shoes have?",
+            "Does the pain wake you at night?"
         ]
     },
-    
-    # ==================== CATÉGORIE 10: PROGRESSION / STAGNATION ====================
+
+    # ==================== CATEGORY 10: PROGRESSION / STAGNATION ====================
     "progression": {
         "keywords": ["progresser", "progressé", "stagne", "stagnation", "plateau", "bloqué", "évoluer", "avancer", "améliorer", "mieux", "indicateur", "surveiller"],
         "intros": [
-            "Bonne question sur la progression ! 📈",
-            "Surveiller ta progression, c'est la clé !",
-            "Voyons les indicateurs importants !",
-            "T'as raison de vouloir mesurer ta progression !",
-            "Pour progresser, il faut d'abord savoir où on en est !",
-            "Les bons indicateurs, ça change tout !"
+            "Good question about progression! 📈",
+            "Monitoring your progression is key!",
+            "Let's look at the important indicators!",
+            "You're right to want to measure your progress!",
+            "To progress, you first need to know where you are!",
+            "The right indicators change everything!"
         ],
         "analyses": [
-            "Les indicateurs clés à surveiller :\n• **Allure moyenne** (ton {allure}/km actuel)\n• **FC de repos** (si elle baisse = progression)\n• **Cadence** ({cadence} spm actuellement)\n• **Sensations** à l'effort\n• **Temps de récup** après les séances",
-            "Pour mesurer ta progression, compare sur 4-8 semaines :\n1. Ton allure au km sur les sorties faciles\n2. Ta FC moyenne à même allure\n3. Tes temps sur des parcours références",
-            "Avec ton volume de {km_semaine} km/sem et une allure de {allure}/km, les indicateurs à surveiller sont : allure, cadence, et surtout les sensations à même effort.",
-            "La FC est un super indicateur : si tu cours à {allure}/km avec une FC plus basse qu'avant, tu progresses ! Même si l'allure n'a pas changé.",
-            "Pour suivre ta progression :\n• **Court terme** : sensations, récupération\n• **Moyen terme** (4 sem) : allure, FC à effort égal\n• **Long terme** (3+ mois) : temps sur 5/10km, VMA",
+            "Key indicators to monitor:\n• **Average pace** (your current {allure}/km)\n• **Resting HR** (if it drops = progress)\n• **Cadence** (currently {cadence} spm)\n• **Feelings** during effort\n• **Recovery time** after sessions",
+            "To measure your progress, compare over 4-8 weeks:\n1. Your pace per km on easy runs\n2. Your average HR at same pace\n3. Your times on reference routes",
+            "With your volume of {km_semaine} km/week and pace of {allure}/km, the indicators to monitor are: pace, cadence, and especially feelings at same effort.",
+            "HR is a great indicator: if you run at {allure}/km with lower HR than before, you're progressing! Even if pace hasn't changed.",
+            "To track your progress:\n• **Short term**: feelings, recovery\n• **Medium term** (4 weeks): pace, HR at equal effort\n• **Long term** (3+ months): 5/10km times, VO2max",
         ],
         "conseils": [
-            "Les 5 indicateurs essentiels :\n1️⃣ Allure au km (sur parcours plat)\n2️⃣ FC de repos au réveil\n3️⃣ FC à allure donnée\n4️⃣ Cadence (spm)\n5️⃣ Sensations subjectives (1-10)",
-            "Crée-toi un parcours de référence (3-5km plat) que tu fais une fois par mois à fond. Compare les temps !",
-            "Note tes sensations après chaque sortie (1-10). Si tu cours plus vite avec les mêmes sensations = progression !",
-            "La FC de repos est un indicateur sous-estimé. Mesure-la chaque matin au réveil. Si elle baisse sur plusieurs semaines, tu t'améliores.",
-            "Compare tes allures en Z2 (endurance) : si tu cours plus vite à même FC, tu progresses en économie de course.",
-            "L'indicateur #1 pour moi : est-ce que tu arrives à tenir ton allure plus longtemps qu'avant ? Si oui, tu progresses !"
+            "The 5 essential indicators:\n1️⃣ Pace per km (on flat route)\n2️⃣ Resting HR upon waking\n3️⃣ HR at given pace\n4️⃣ Cadence (spm)\n5️⃣ Subjective feelings (1-10)",
+            "Create a reference route (3-5km flat) that you do once a month at full effort. Compare times!",
+            "Note your feelings after each run (1-10). If you run faster with same feelings = progress!",
+            "Resting HR is an underestimated indicator. Measure it every morning on waking. If it drops over several weeks, you're improving.",
+            "Compare your Z2 (endurance) paces: if you run faster at same HR, you're progressing in running economy.",
+            "The #1 indicator for me: can you hold your pace longer than before? If yes, you're progressing!"
         ],
         "relances": []
     },
-    
-    # ==================== CATÉGORIE 11: PRÉPA COURSE ====================
+
+    # ==================== CATEGORY 11: RACE PREP ====================
     "prepa_course": {
         "keywords": ["course", "compétition", "10km", "semi", "marathon", "trail", "prépa", "objectif", "dossard", "inscription", "jour j"],
         "intros": [
-            "Une course en vue, génial ! 🏃‍♂️",
-            "La prépa course, c'est excitant !",
-            "Ton objectif approche !",
-            "On va te préparer au top !",
-            "C'est parti pour la prépa !",
-            "Ton dossard t'attend !",
-            "La course, c'est LA motivation !",
-            "On va tout planifier !",
-            "Allez, objectif en ligne de mire !",
-            "Ta course mérite une vraie prépa !"
+            "A race coming up, great! 🏃‍♂️",
+            "Race prep is exciting!",
+            "Your goal is approaching!",
+            "We'll prepare you to the top!",
+            "Let's go for the prep!",
+            "Your bib is waiting!",
+            "Racing is THE motivation!",
+            "We'll plan everything!",
+            "Alright, goal in sight!",
+            "Your race deserves a real prep!"
         ],
         "analyses": [
-            "Pour un 10km, compte 8-10 semaines de prépa. Pour un semi, 10-12. Pour un marathon, 12-16.",
-            "À {jours_course} jours de ta course, tu es dans la phase {phase_prepa}. {phase_conseil}",
-            "Vu ton allure actuelle ({allure}/km), ton potentiel sur {distance} est autour de {temps_estime}.",
-            "Ta charge actuelle ({km_semaine} km/sem) est {charge_comment} pour préparer un {distance}.",
-            "La dernière sortie longue doit avoir lieu 2-3 semaines avant la course, pas moins.",
-            "La semaine avant la course : -50% de volume, maintien d'une petite intensité.",
-            "Ton travail spécifique à l'allure cible doit représenter 10-15% du volume total.",
-            "Tes zones cardiaques montrent {zones_analyse}. {zones_recommandation}",
-            "Le jour J, pars sur une allure 5-10 sec plus lente que ton objectif les 5 premiers km.",
-            "La gestion de course (pacing) est aussi importante que la forme physique."
+            "For a 10km, count 8-10 weeks of prep. For a half-marathon, 10-12. For a marathon, 12-16.",
+            "At {jours_course} days from your race, you're in the {phase_prepa} phase. {phase_conseil}",
+            "Given your current pace ({allure}/km), your potential on {distance} is around {temps_estime}.",
+            "Your current load ({km_semaine} km/week) is {charge_comment} to prepare a {distance}.",
+            "The last long run should be 2-3 weeks before the race, not less.",
+            "The week before the race: -50% volume, maintain some light intensity.",
+            "Your specific work at target pace should represent 10-15% of total volume.",
+            "Your heart rate zones show {zones_analyse}. {zones_recommandation}",
+            "On race day, start at a pace 5-10 sec slower than your goal for the first 5km.",
+            "Race management (pacing) is as important as physical form."
         ],
         "conseils": [
-            "Dernière semaine : réduis le volume de 50%, garde 2-3 courtes accélérations pour rester vif.",
-            "Teste TOUT à l'entraînement : chaussures, tenue, nutrition, gel. Rien de nouveau le jour J !",
-            "Repère le parcours si possible, ou étudie-le sur Google Maps. Savoir où sont les côtes aide.",
-            "Prépare tes affaires la veille, avec une checklist. Moins de stress le jour J.",
-            "Dors bien 2 nuits avant (la veille, le stress peut gêner le sommeil, c'est normal).",
-            "Arrive tôt le jour J : parking, retrait dossard, échauffement, WC... ça prend du temps.",
-            "Échauffement pré-course : 10-15 min de trot + quelques accélérations progressives.",
-            "Stratégie de course : pars prudemment, accélère progressivement, finis fort si possible.",
-            "Visualise ta course la veille : le départ, le parcours, tes sensations, l'arrivée.",
-            "Post-course : marche, étire-toi, mange et bois dans l'heure. La récup commence tout de suite !"
+            "Last week: reduce volume by 50%, keep 2-3 short accelerations to stay sharp.",
+            "Test EVERYTHING in training: shoes, outfit, nutrition, gel. Nothing new on race day!",
+            "Scout the course if possible, or study it on Google Maps. Knowing where hills are helps.",
+            "Prepare your stuff the night before, with a checklist. Less stress on race day.",
+            "Sleep well 2 nights before (the night before, stress can disrupt sleep, it's normal).",
+            "Arrive early on race day: parking, bib pickup, warm-up, bathroom... it takes time.",
+            "Pre-race warm-up: 10-15 min of jogging + a few progressive accelerations.",
+            "Race strategy: start cautiously, accelerate progressively, finish strong if possible.",
+            "Visualize your race the night before: the start, the course, your sensations, the finish.",
+            "Post-race: walk, stretch, eat and drink within the hour. Recovery starts right away!"
         ],
         "relances": [
-            "C'est quoi ta prochaine course ?",
-            "Elle est dans combien de temps ?",
-            "T'as un objectif de temps ?",
-            "C'est ta première course sur cette distance ?",
-            "T'as déjà fait un plan de prépa ?",
-            "Tu connais le parcours ?",
-            "T'as prévu ta stratégie de nutrition pendant la course ?",
-            "T'as une tenue prévue ?",
-            "Tu cours seul ou avec un groupe/pacer ?",
-            "T'es plutôt stressé ou serein avant les courses ?"
+            "What's your next race?",
+            "How far away is it?",
+            "Do you have a time goal?",
+            "Is this your first race at this distance?",
+            "Have you already made a prep plan?",
+            "Do you know the course?",
+            "Have you planned your nutrition strategy during the race?",
+            "Do you have an outfit planned?",
+            "Are you running alone or with a group/pacer?",
+            "Are you more stressed or calm before races?"
         ]
     },
-    
-    # ==================== CATÉGORIE 12: MENTAL/STRESS ====================
+
+    # ==================== CATEGORY 12: MENTAL/STRESS ====================
     "mental": {
         "keywords": ["mental", "stress", "anxiété", "pression", "peur", "confiance", "doute", "nerveux", "angoisse", "trac"],
         "intros": [
-            "Le mental, c'est 50% de la course ! 🧠",
-            "Le stress, ça se gère !",
-            "T'es pas seul à ressentir ça !",
-            "Le mental se travaille comme le physique !",
-            "Normal d'avoir le trac !",
-            "La pression, on va l'apprivoiser !",
-            "Ton mental est ta force cachée !",
-            "Le doute, ça arrive à tout le monde !",
-            "On va bosser cet aspect ensemble !",
-            "La confiance, ça se construit !"
+            "Mental is 50% of running! 🧠",
+            "Stress can be managed!",
+            "You're not alone feeling this!",
+            "Mental is trained like physical!",
+            "Normal to have nerves!",
+            "Pressure, we'll tame it!",
+            "Your mental is your hidden strength!",
+            "Doubt happens to everyone!",
+            "We'll work on this aspect together!",
+            "Confidence is built!"
         ],
         "analyses": [
-            "Le stress pré-course est normal et même utile : il prépare ton corps à la performance.",
-            "Le doute est normal, même les champions en ont. La différence : ils courent quand même.",
-            "Un stress chronique impacte la récupération et la progression. Il faut le prendre en compte.",
-            "La visualisation positive active les mêmes zones cérébrales que l'action réelle. C'est puissant !",
-            "Le 'mur' en course est souvent plus mental que physique. Ton corps peut bien plus que tu crois.",
-            "Les pensées négatives arrivent, c'est normal. L'important c'est de ne pas les nourrir.",
-            "La confiance vient de la préparation. Si t'es bien préparé, tu peux avoir confiance.",
-            "Le stress de performance peut améliorer tes résultats (bon stress) ou les plomber (mauvais stress).",
-            "Les routines pré-course réduisent l'anxiété : toujours le même échauffement, la même tenue...",
-            "Le sommeil perturbé avant une course est très courant. C'est la nuit d'avant-avant qui compte."
+            "Pre-race stress is normal and even useful: it prepares your body for performance.",
+            "Doubt is normal, even champions have it. The difference: they run anyway.",
+            "Chronic stress impacts recovery and progress. It must be taken into account.",
+            "Positive visualization activates the same brain areas as real action. It's powerful!",
+            "The 'wall' in racing is often more mental than physical. Your body can do much more than you think.",
+            "Negative thoughts come, it's normal. What matters is not feeding them.",
+            "Confidence comes from preparation. If you're well prepared, you can be confident.",
+            "Performance stress can improve your results (good stress) or tank them (bad stress).",
+            "Pre-race routines reduce anxiety: always the same warm-up, the same outfit...",
+            "Disturbed sleep before a race is very common. It's the night before-before that counts."
         ],
         "conseils": [
-            "Respiration carrée avant le départ : inspire 4s, bloque 4s, expire 4s, bloque 4s. Répète 5x.",
-            "Visualise ta course en détail la veille : départ, parcours, sensations, arrivée triomphante.",
-            "Découpe la course en segments : 'juste jusqu'au prochain ravito', 'juste 2 km de plus'...",
-            "Prépare 2-3 mantras personnels pour les moments durs : 'Je suis fort', 'Un pas après l'autre'...",
-            "Focus sur ce que tu contrôles (ta prépa, ta course) pas sur ce que tu ne contrôles pas (les autres, la météo).",
-            "Si le doute arrive, rappelle-toi tes entraînements. Tu as fait le boulot.",
-            "Le jour J, évite les gens négatifs ou stressés. Entoure-toi de bonnes ondes.",
-            "Accepte que la course ne sera peut-être pas parfaite. Aucune course ne l'est.",
-            "Célèbre le fait d'être à la ligne de départ. Beaucoup de gens n'osent même pas s'inscrire.",
-            "Si tu paniques, reviens à ta respiration. C'est la base du contrôle mental."
+            "Box breathing before start: inhale 4s, hold 4s, exhale 4s, hold 4s. Repeat 5x.",
+            "Visualize your race in detail the night before: start, course, sensations, triumphant finish.",
+            "Break the race into segments: 'just to the next aid station', 'just 2 more km'...",
+            "Prepare 2-3 personal mantras for tough moments: 'I'm strong', 'One step at a time'...",
+            "Focus on what you control (your prep, your race) not what you don't control (others, weather).",
+            "If doubt comes, remember your training. You did the work.",
+            "On race day, avoid negative or stressed people. Surround yourself with good vibes.",
+            "Accept that the race may not be perfect. No race ever is.",
+            "Celebrate being at the starting line. Many people don't even dare sign up.",
+            "If you panic, return to your breathing. It's the basis of mental control."
         ],
         "relances": [
-            "C'est quoi qui te stresse le plus ?",
-            "T'as déjà essayé la visualisation ?",
-            "Tu dors bien avant les courses ?",
-            "T'as des mantras ou phrases qui t'aident ?",
-            "Le stress c'est plutôt avant ou pendant la course ?",
-            "T'as des routines pré-course ?",
-            "C'est le chrono qui te met la pression ou autre chose ?",
-            "T'as déjà eu un 'mur' mental en course ?",
-            "Tu médites ou fais de la relaxation ?",
-            "T'arrives à relativiser ou c'est difficile ?"
+            "What stresses you most?",
+            "Have you tried visualization?",
+            "Do you sleep well before races?",
+            "Do you have mantras or phrases that help you?",
+            "Is stress more before or during the race?",
+            "Do you have pre-race routines?",
+            "Is it the time that puts pressure on you or something else?",
+            "Have you had a mental 'wall' in a race?",
+            "Do you meditate or do relaxation?",
+            "Can you put things in perspective or is it difficult?"
         ]
     },
-    
-    # ==================== CATÉGORIE 13: SOMMEIL ====================
+
+    # ==================== CATEGORY 13: SLEEP ====================
     "sommeil": {
         "keywords": ["sommeil", "dormir", "dodo", "nuit", "insomnie", "fatigue", "sieste", "repos", "réveil", "coucher"],
         "intros": [
-            "Le sommeil, c'est le meilleur dopant légal ! 😴",
-            "Bien dormir = bien courir !",
-            "La récup nocturne, sujet crucial !",
-            "Le sommeil, souvent négligé mais essentiel !",
-            "T'as raison de t'y intéresser !",
-            "Le repos, c'est aussi de l'entraînement !",
-            "Ton sommeil impacte direct ta perf !",
-            "La nuit, c'est là que ton corps se répare !",
-            "Parlons dodo !",
-            "Le sommeil, l'arme secrète des champions !"
+            "Sleep is the best legal doping! 😴",
+            "Sleeping well = running well!",
+            "Night recovery, crucial topic!",
+            "Sleep, often neglected but essential!",
+            "You're right to be interested!",
+            "Rest is also training!",
+            "Your sleep directly impacts your performance!",
+            "At night is when your body repairs!",
+            "Let's talk sleep!",
+            "Sleep, the champions' secret weapon!"
         ],
         "analyses": [
-            "Le sommeil profond est la phase où tes muscles se réparent et où l'hormone de croissance est sécrétée.",
-            "Un manque de sommeil chronique augmente le risque de blessure de 60%.",
-            "7-9h de sommeil sont recommandées pour un coureur régulier. En période de charge : plutôt 8-9h.",
-            "Le sommeil avant minuit est plus réparateur : les premiers cycles sont plus profonds.",
-            "La qualité compte autant que la quantité. 7h de bon sommeil > 9h de sommeil haché.",
-            "Le stress et les écrans bleus perturbent la production de mélatonine (hormone du sommeil).",
-            "Après une séance intense, le corps a besoin de plus de sommeil pour récupérer.",
-            "Le café après 14h peut impacter ton sommeil même si tu ne le ressens pas.",
-            "La température idéale de la chambre pour dormir : 18-19°C.",
-            "Une dette de sommeil se cumule et impacte la performance sur plusieurs jours."
+            "Deep sleep is the phase where your muscles repair and growth hormone is secreted.",
+            "Chronic sleep deprivation increases injury risk by 60%.",
+            "7-9h of sleep are recommended for a regular runner. During high load periods: rather 8-9h.",
+            "Sleep before midnight is more restorative: first cycles are deeper.",
+            "Quality matters as much as quantity. 7h of good sleep > 9h of interrupted sleep.",
+            "Stress and blue screens disrupt melatonin production (sleep hormone).",
+            "After an intense session, the body needs more sleep to recover.",
+            "Coffee after 2pm can impact your sleep even if you don't feel it.",
+            "Ideal bedroom temperature for sleep: 18-19°C.",
+            "Sleep debt accumulates and impacts performance over several days."
         ],
         "conseils": [
-            "Routine du soir : écrans off 1h avant, douche tiède, lecture, coucher à heure fixe.",
-            "Si tu dors mal, une sieste de 20 min (pas plus) peut compenser sans perturber la nuit.",
-            "Évite les repas trop copieux le soir, la digestion perturbe le sommeil.",
-            "Le magnésium peut aider si tu as du mal à t'endormir ou des crampes nocturnes.",
-            "Chambre fraîche, obscure et silencieuse = conditions optimales.",
-            "Si le stress empêche de dormir : journal de gratitude ou liste de tâches pour 'vider' la tête.",
-            "La veille de course, c'est la nuit d'avant-avant qui compte. Ne stresse pas si tu dors mal J-1.",
-            "Un réveil à heure fixe (même le week-end) régule mieux le sommeil qu'une heure de coucher fixe.",
-            "Évite l'alcool le soir : il endort mais perturbe la qualité du sommeil profond.",
-            "En période de grosse charge, priorise le sommeil sur tout le reste. C'est là que tu progresses."
+            "Evening routine: screens off 1h before, lukewarm shower, reading, bed at fixed time.",
+            "If you sleep poorly, a 20 min nap (no more) can compensate without disrupting the night.",
+            "Avoid heavy meals in the evening, digestion disturbs sleep.",
+            "Magnesium can help if you have trouble falling asleep or nighttime cramps.",
+            "Cool, dark and quiet room = optimal conditions.",
+            "If stress prevents sleep: gratitude journal or to-do list to 'empty' the mind.",
+            "Before a race, it's the night before-before that counts. Don't stress if you sleep poorly D-1.",
+            "Waking at fixed time (even weekends) regulates sleep better than fixed bedtime.",
+            "Avoid alcohol in the evening: it makes you sleepy but disturbs deep sleep quality.",
+            "During high load periods, prioritize sleep over everything else. That's where you progress."
         ],
         "relances": [
-            "Tu dors combien d'heures en moyenne ?",
-            "Tu t'endors facilement ou ça prend du temps ?",
-            "Tu te réveilles frais ou fatigué ?",
-            "T'as une routine avant de dormir ?",
-            "Tu regardes les écrans tard le soir ?",
-            "Tu te réveilles souvent la nuit ?",
-            "Tu fais des siestes ?",
-            "Tu dors mieux ou moins bien après les grosses séances ?",
-            "Le stress impacte ton sommeil ?",
-            "T'as essayé des techniques de relaxation ?"
+            "How many hours do you sleep on average?",
+            "Do you fall asleep easily or does it take time?",
+            "Do you wake up fresh or tired?",
+            "Do you have a routine before sleeping?",
+            "Do you look at screens late in the evening?",
+            "Do you wake up often at night?",
+            "Do you take naps?",
+            "Do you sleep better or worse after big sessions?",
+            "Does stress impact your sleep?",
+            "Have you tried relaxation techniques?"
         ]
     },
-    
-    # ==================== CATÉGORIE 14: RENFORCEMENT ====================
+
+    # ==================== CATEGORY 14: STRENGTH TRAINING ====================
     "renforcement": {
         "keywords": ["renfo", "renforcement", "musculation", "muscle", "gainage", "squat", "pompe", "abdos", "fessiers", "force", "gym"],
         "intros": [
-            "Le renfo, l'arme anti-blessure ! 💪",
-            "La musculation du coureur, sujet important !",
-            "Bien vu de penser au renforcement !",
-            "Le renfo, c'est pas que pour les bodybuilders !",
-            "La force au service de la course !",
-            "Le gainage, la base de tout !",
-            "T'as raison, le renfo c'est crucial !",
-            "Un coureur solide est un coureur efficace !",
-            "Le renforcement, parlons-en !",
-            "La prévention par le renfo !"
+            "Strength training, the anti-injury weapon! 💪",
+            "Runner's strength training, important topic!",
+            "Good catch thinking about strengthening!",
+            "Strength training isn't just for bodybuilders!",
+            "Strength in service of running!",
+            "Core work, the foundation of everything!",
+            "You're right, strength training is crucial!",
+            "A strong runner is an efficient runner!",
+            "Strengthening, let's talk about it!",
+            "Prevention through strength training!"
         ],
         "analyses": [
-            "Le gainage renforce ton tronc et stabilise ta foulée. Moins d'énergie perdue = plus d'efficacité.",
-            "Les fessiers sont les muscles les plus puissants de la foulée. Les négliger = blessures garanties.",
-            "80% des blessures du coureur pourraient être évitées par un renfo régulier.",
-            "Pas besoin de salle : les exercices au poids du corps suffisent largement.",
-            "Le renfo améliore l'économie de course : tu dépenses moins d'énergie pour la même vitesse.",
-            "2-3 séances de 15-20 min par semaine suffisent pour voir des résultats.",
-            "Les squats et fentes travaillent toute la chaîne de propulsion : quads, fessiers, mollets.",
-            "Le pont fessier isole bien les fessiers sans stresser les genoux.",
-            "Les mollets sont souvent négligés mais essentiels pour l'amorti et la propulsion.",
-            "Le renfo ne te fera pas prendre de masse si tu restes dans les hautes répétitions."
+            "Core work strengthens your trunk and stabilizes your stride. Less wasted energy = more efficiency.",
+            "Glutes are the most powerful muscles in stride. Neglecting them = guaranteed injuries.",
+            "80% of runner injuries could be avoided by regular strength training.",
+            "No gym needed: bodyweight exercises are largely sufficient.",
+            "Strength training improves running economy: you spend less energy for same speed.",
+            "2-3 sessions of 15-20 min per week are enough to see results.",
+            "Squats and lunges work the entire propulsion chain: quads, glutes, calves.",
+            "Glute bridge isolates glutes well without stressing knees.",
+            "Calves are often neglected but essential for cushioning and propulsion.",
+            "Strength training won't bulk you up if you stay in high repetitions."
         ],
         "conseils": [
-            "Routine de base : 3x30s de gainage (planche face + côtés), 3x12 squats, 3x10 fentes chaque jambe.",
-            "Le pont fessier : allongé sur le dos, pieds au sol, monte le bassin. 3x15 reps.",
-            "Pour les mollets : montées sur pointes (bilatéral puis unilatéral). 3x15 reps.",
-            "Le Superman renforce le bas du dos : allongé à plat ventre, lève bras et jambes. 3x10.",
-            "Fais ton renfo après une séance facile, pas avant une séance intense.",
-            "La corde à sauter est top pour les mollets et la proprioception. 3x1 min.",
-            "Le step-up sur marche travaille l'équilibre et la force unilaterale. 3x10 chaque jambe.",
-            "Le clam shell (coquillage) renforce les abducteurs de hanche. 3x15 chaque côté.",
-            "Pas motivé pour le renfo ? Fais-le devant une série Netflix, ça passe mieux !",
-            "Intègre du renfo à ta routine : même 10 min 3x par semaine font la différence."
+            "Basic routine: 3x30s core (front plank + sides), 3x12 squats, 3x10 lunges each leg.",
+            "Glute bridge: lying on back, feet on ground, raise pelvis. 3x15 reps.",
+            "For calves: calf raises (bilateral then unilateral). 3x15 reps.",
+            "Superman strengthens lower back: lying face down, raise arms and legs. 3x10.",
+            "Do strength training after an easy session, not before an intense one.",
+            "Jump rope is great for calves and proprioception. 3x1 min.",
+            "Step-up on step works balance and unilateral strength. 3x10 each leg.",
+            "Clam shell strengthens hip abductors. 3x15 each side.",
+            "Not motivated for strength training? Do it in front of a Netflix show, it goes better!",
+            "Integrate strength into your routine: even 10 min 3x per week makes a difference."
         ],
         "relances": [
-            "Tu fais du renfo actuellement ?",
-            "T'as du matériel ou tu bosses au poids du corps ?",
-            "Tu préfères les exercices debout ou au sol ?",
-            "T'as des zones à renforcer en priorité ?",
-            "Tu fais du renfo avant ou après tes sorties ?",
-            "T'as des douleurs qui pourraient être liées à un manque de renfo ?",
-            "Tu connais les exercices de base pour coureurs ?",
-            "Tu arrives à être régulier sur le renfo ?",
-            "T'as déjà suivi un programme de renfo spécifique ?",
-            "Le gainage, t'en fais ?"
+            "Do you currently do strength training?",
+            "Do you have equipment or work with bodyweight?",
+            "Do you prefer standing or floor exercises?",
+            "Do you have areas to strengthen as priority?",
+            "Do you do strength before or after your runs?",
+            "Do you have pain that could be related to lack of strength?",
+            "Do you know the basic exercises for runners?",
+            "Can you be regular with strength training?",
+            "Have you followed a specific strength program?",
+            "Core work, do you do it?"
         ]
     },
-    
-    # ==================== CATÉGORIE 15: ÉQUIPEMENT ====================
+
+    # ==================== CATEGORY 15: EQUIPMENT ====================
     "equipement": {
         "keywords": ["équipement", "chaussure", "basket", "montre", "gps", "tenue", "vêtement", "chaussette", "sac", "ceinture", "lampe", "frontale"],
         "intros": [
-            "L'équipement, c'est important ! 👟",
-            "Parlons matos !",
-            "Bien équipé = bien préparé !",
-            "Les chaussures, sujet crucial !",
-            "Le bon équipement fait la différence !",
-            "T'as raison de t'y intéresser !",
-            "L'équipement, un investissement malin !",
-            "Ton matos, parlons-en !",
-            "Bien s'équiper, c'est la base !",
-            "Les bons outils pour bien courir !"
+            "Equipment is important! 👟",
+            "Let's talk gear!",
+            "Well equipped = well prepared!",
+            "Shoes, crucial topic!",
+            "The right equipment makes the difference!",
+            "You're right to be interested!",
+            "Equipment, a smart investment!",
+            "Your gear, let's talk about it!",
+            "Getting well equipped is the basis!",
+            "The right tools to run well!"
         ],
         "analyses": [
-            "Des chaussures usées (>600-800 km) perdent leur amorti et augmentent le risque de blessure.",
-            "Le type de chaussure doit correspondre à ta foulée (pronatrice, neutre, supinatrice) et ton terrain.",
-            "Une montre GPS n'est pas indispensable mais aide énormément à suivre sa progression.",
-            "Les vêtements techniques évacuent la transpiration, contrairement au coton qui la retient.",
-            "Le drop (différence talon/avant-pied) impacte la foulée. Une transition trop rapide vers low-drop = blessure.",
-            "Les chaussettes de running réduisent les frottements et les ampoules.",
-            "Une ceinture porte-bidon est utile pour les sorties de plus d'1h, surtout par temps chaud.",
-            "La lampe frontale est indispensable pour courir le matin tôt ou le soir en hiver.",
-            "Les lunettes de soleil réduisent la fatigue visuelle et protègent des UV.",
-            "Le test en magasin spécialisé est le meilleur moyen de trouver LA bonne chaussure."
+            "Worn shoes (>600-800 km) lose their cushioning and increase injury risk.",
+            "Shoe type must match your stride (pronator, neutral, supinator) and your terrain.",
+            "A GPS watch isn't essential but helps enormously to track progress.",
+            "Technical clothes evacuate sweat, unlike cotton which retains it.",
+            "The drop (heel/forefoot difference) impacts stride. Too rapid transition to low-drop = injury.",
+            "Running socks reduce friction and blisters.",
+            "A hydration belt is useful for runs over 1h, especially in hot weather.",
+            "Headlamp is essential for running early morning or evening in winter.",
+            "Sunglasses reduce visual fatigue and protect from UV.",
+            "Testing in specialized store is the best way to find THE right shoe."
         ],
         "conseils": [
-            "Change tes chaussures tous les 600-800 km, ou dès que tu sens moins d'amorti.",
-            "Va dans un magasin spécialisé running pour un test de foulée et des conseils personnalisés.",
-            "Aie 2 paires de chaussures en rotation : ça prolonge leur durée de vie et varie les stimuli.",
-            "Teste tes chaussures de course à l'entraînement, jamais le jour J !",
-            "Pour le trail, choisis des chaussures avec du grip et de la protection.",
-            "Les vêtements sans coutures réduisent les frottements sur les longues distances.",
-            "Une montre basique avec GPS suffit amplement pour débuter. Pas besoin du dernier modèle.",
-            "Investis dans de bonnes chaussettes : c'est souvent négligé mais ça change tout.",
-            "Par temps froid, privilégie les couches fines superposables plutôt qu'une grosse doudoune.",
-            "Le sac d'hydratation type gilet est plus confortable que la ceinture pour le trail."
+            "Change your shoes every 600-800 km, or as soon as you feel less cushioning.",
+            "Go to a specialized running store for stride test and personalized advice.",
+            "Have 2 pairs of shoes in rotation: it prolongs their lifespan and varies stimuli.",
+            "Test your race shoes in training, never on race day!",
+            "For trail, choose shoes with grip and protection.",
+            "Seamless clothes reduce friction on long distances.",
+            "A basic watch with GPS is more than enough to start. No need for the latest model.",
+            "Invest in good socks: often neglected but it changes everything.",
+            "In cold weather, favor thin layers you can stack rather than a big puffer.",
+            "Hydration pack type vest is more comfortable than belt for trail."
         ],
         "relances": [
-            "Tes chaussures ont combien de km ?",
-            "Tu connais ton type de foulée ?",
-            "T'as été conseillé en magasin spécialisé ?",
-            "Tu cours sur quel terrain principalement ?",
-            "T'as une montre GPS ?",
-            "Tu as des problèmes d'ampoules ?",
-            "Tes chaussures sont confortables dès le début ou ça frotte ?",
-            "Tu alternes plusieurs paires ?",
-            "T'as le bon équipement pour toutes les conditions météo ?",
-            "Tu portes des vêtements techniques ou du coton ?"
+            "How many km do your shoes have?",
+            "Do you know your stride type?",
+            "Were you advised in specialized store?",
+            "What terrain do you mainly run on?",
+            "Do you have a GPS watch?",
+            "Do you have blister problems?",
+            "Are your shoes comfortable from the start or does it rub?",
+            "Do you alternate several pairs?",
+            "Do you have the right equipment for all weather conditions?",
+            "Do you wear technical clothes or cotton?"
         ]
     },
-    
-    # ==================== CATÉGORIE 16: CHALEUR ====================
+
+    # ==================== CATEGORY 16: HEAT ====================
     "chaleur": {
         "keywords": ["chaleur", "chaud", "canicule", "été", "soleil", "surchauffe", "coup de chaud", "déshydratation", "transpiration"],
         "intros": [
-            "Courir par chaleur, ça se gère ! ☀️",
-            "La chaleur, faut s'adapter !",
-            "Bonne question sur la gestion de la chaleur !",
-            "L'été, c'est un défi pour les coureurs !",
-            "La chaleur demande des ajustements !",
-            "T'as raison, c'est un sujet important !",
-            "Courir au frais, c'est mieux mais pas toujours possible !",
-            "La chaleur, on peut l'apprivoiser !",
-            "Gérer la chaleur, c'est essentiel !",
-            "L'acclimatation à la chaleur, parlons-en !"
+            "Running in heat can be managed! ☀️",
+            "Heat, you have to adapt!",
+            "Good question about heat management!",
+            "Summer is a challenge for runners!",
+            "Heat requires adjustments!",
+            "You're right, it's an important topic!",
+            "Running in cool is better but not always possible!",
+            "Heat, we can tame it!",
+            "Managing heat is essential!",
+            "Heat acclimatization, let's talk!"
         ],
         "analyses": [
-            "Par forte chaleur (+30°C), ton corps dépense beaucoup d'énergie pour se refroidir. Résultat : -15 à 30 sec/km à effort équivalent.",
-            "L'humidité aggrave l'effet de la chaleur : la sueur ne s'évapore plus, le corps surchauffe.",
-            "Les signes d'alerte coup de chaud : nausée, vertiges, confusion, arrêt de transpiration. STOP immédiat !",
-            "L'acclimatation à la chaleur prend 10-14 jours. Après, le corps s'adapte mieux.",
-            "La déshydratation de 2% réduit la performance de 10-20%. Et tu perds 1-2L/h par forte chaleur.",
-            "Ta FC sera naturellement 10-15 bpm plus haute par temps chaud pour la même allure.",
-            "Le corps ne peut pas se refroidir efficacement au-delà de 35°C avec forte humidité.",
-            "Courir à la chaleur est un stress supplémentaire. Ta charge perçue est plus haute.",
-            "L'hydratation doit commencer AVANT l'effort, pas pendant. Arrive déjà bien hydraté.",
-            "Les vêtements clairs réfléchissent la chaleur, les sombres l'absorbent."
+            "In strong heat (+30°C), your body spends a lot of energy to cool down. Result: -15 to 30 sec/km at equivalent effort.",
+            "Humidity worsens heat effect: sweat no longer evaporates, body overheats.",
+            "Heat stroke warning signs: nausea, dizziness, confusion, sweating stops. Immediate STOP!",
+            "Heat acclimatization takes 10-14 days. After, the body adapts better.",
+            "2% dehydration reduces performance by 10-20%. And you lose 1-2L/h in strong heat.",
+            "Your HR will be naturally 10-15 bpm higher in hot weather for same pace.",
+            "The body can't cool effectively beyond 35°C with high humidity.",
+            "Running in heat is additional stress. Your perceived load is higher.",
+            "Hydration must start BEFORE effort, not during. Arrive already well hydrated.",
+            "Light clothes reflect heat, dark ones absorb it."
         ],
         "conseils": [
-            "Par forte chaleur, ralentis de 15-30 sec/km et oublie le chrono. L'effort compte, pas l'allure.",
-            "Cours tôt le matin (6h-8h) ou tard le soir (après 20h). Évite 12h-16h à tout prix.",
-            "Hydrate-toi AVANT : 500ml dans les 2h précédant l'effort.",
-            "Pendant l'effort : 150-250ml toutes les 15-20 min, avec des sels si +1h.",
-            "Mouille ta casquette, ta nuque, tes avant-bras aux points d'eau. Le refroidissement externe aide.",
-            "Choisis des parcours ombragés et proches de fontaines ou points d'eau.",
-            "Vêtements clairs, légers, respirants, amples. Pas de coton !",
-            "Si tu te sens mal (nausée, vertiges) : ARRÊTE, mets-toi à l'ombre, bois, et appelle à l'aide si besoin.",
-            "Après la sortie : continue à boire, mange des aliments riches en eau (pastèque, concombre...).",
-            "Pour t'acclimater : 10-14 jours de sorties modérées à la chaleur, en augmentant progressivement."
+            "In strong heat, slow down by 15-30 sec/km and forget the time. Effort counts, not pace.",
+            "Run early morning (6am-8am) or late evening (after 8pm). Avoid 12pm-4pm at all costs.",
+            "Hydrate BEFORE: 500ml in the 2h before effort.",
+            "During effort: 150-250ml every 15-20 min, with salts if +1h.",
+            "Wet your cap, neck, forearms at water points. External cooling helps.",
+            "Choose shaded routes close to fountains or water points.",
+            "Light, breathable, loose clothes. No cotton!",
+            "If you feel bad (nausea, dizziness): STOP, get in shade, drink, and call for help if needed.",
+            "After the run: keep drinking, eat water-rich foods (watermelon, cucumber...).",
+            "To acclimatize: 10-14 days of moderate runs in heat, increasing progressively."
         ],
         "relances": [
-            "Tu cours plutôt matin ou soir en été ?",
-            "T'as des parcours ombragés ?",
-            "Tu bois assez avant de partir ?",
-            "T'emportes de l'eau avec toi ?",
-            "T'as déjà eu des coups de chaud ?",
-            "Tu mets une casquette ?",
-            "Tes vêtements sont adaptés à la chaleur ?",
-            "Tu sais reconnaître les signes de surchauffe ?",
-            "Tu adaptes ton allure quand il fait chaud ?",
-            "Tu arrives à courir régulièrement en été ?"
+            "Do you run morning or evening in summer?",
+            "Do you have shaded routes?",
+            "Do you drink enough before leaving?",
+            "Do you carry water with you?",
+            "Have you had heat strokes?",
+            "Do you wear a cap?",
+            "Are your clothes adapted to heat?",
+            "Do you know how to recognize overheating signs?",
+            "Do you adapt your pace when it's hot?",
+            "Can you run regularly in summer?"
         ]
     },
-    
-    # ==================== CATÉGORIE 17: POST-COURSE ====================
+
+    # ==================== CATEGORY 17: POST-RACE ====================
     "post_course": {
         "keywords": ["après", "post", "marathon", "récup", "courbature", "récupération", "course terminée", "finisher"],
         "intros": [
-            "Bravo pour ta course, finisher ! 🏅",
-            "La récup post-course, c'est crucial !",
-            "Bien joué d'avoir terminé !",
-            "Après l'effort, le réconfort... et la récup !",
-            "Ta course est faite, maintenant récupère !",
-            "Félicitations, parlons récupération !",
-            "Post-course, c'est le moment de prendre soin de toi !",
-            "Ton corps a besoin de récupérer maintenant !",
-            "La récup fait partie de la perf !",
-            "Bien récupérer = mieux repartir !"
+            "Congrats on your race, finisher! 🏅",
+            "Post-race recovery is crucial!",
+            "Well done finishing!",
+            "After effort, comfort... and recovery!",
+            "Your race is done, now recover!",
+            "Congratulations, let's talk recovery!",
+            "Post-race, time to take care of yourself!",
+            "Your body needs to recover now!",
+            "Recovery is part of performance!",
+            "Recover well = restart better!"
         ],
         "analyses": [
-            "Après un marathon, compte 2-3 semaines de récup complète. Ton corps a subi un stress énorme.",
-            "Les courbatures post-course (DOMS) sont normales et peuvent durer 3-5 jours.",
-            "La fatigue post-course est multifactorielle : musculaire, tendineuse, immunitaire, mentale.",
-            "Le glycogène musculaire met 24-48h à se reconstituer complètement. Mange des glucides !",
-            "L'inflammation post-effort est normale et fait partie du processus de récupération.",
-            "Le risque de blessure est élevé dans les 2 semaines post-course si tu reprends trop vite.",
-            "La récup active (marche, vélo très léger) est plus efficace que le repos total.",
-            "Ton système immunitaire est affaibli 24-72h après une course longue. Attention aux infections.",
-            "Les douleurs qui persistent plus de 7 jours méritent un avis médical.",
-            "La récup mentale compte aussi : savoure ta performance, même si elle n'était pas parfaite."
+            "After a marathon, count 2-3 weeks of complete recovery. Your body underwent enormous stress.",
+            "Post-race soreness (DOMS) is normal and can last 3-5 days.",
+            "Post-race fatigue is multifactorial: muscular, tendon, immune, mental.",
+            "Muscle glycogen takes 24-48h to fully replenish. Eat carbs!",
+            "Post-effort inflammation is normal and part of recovery process.",
+            "Injury risk is high in the 2 weeks post-race if you restart too fast.",
+            "Active recovery (walking, very light cycling) is more effective than total rest.",
+            "Your immune system is weakened 24-72h after a long race. Watch for infections.",
+            "Pain persisting more than 7 days deserves medical advice.",
+            "Mental recovery matters too: savor your performance, even if it wasn't perfect."
         ],
         "conseils": [
-            "J+0 : Marche 10-15 min, étirements doux, mange et bois dans l'heure. Bain froid si possible.",
-            "J+1 à J+3 : Repos ou marche/vélo très léger. Pas de course. Continue à bien manger et dormir.",
-            "J+4 à J+7 : Footing très facile 20-30 min si les sensations sont bonnes. Sinon, encore repos.",
-            "J+7 à J+14 : Reprise progressive, footings courts, pas d'intensité. Écoute ton corps.",
-            "Après J+14 : Si tout va bien, tu peux reprendre un entraînement normal progressivement.",
-            "Bois beaucoup les jours suivants : l'hydratation aide à évacuer les déchets métaboliques.",
-            "Le foam roller ou massage aide à accélérer la récup musculaire.",
-            "Mange des protéines pour la reconstruction musculaire, des glucides pour l'énergie.",
-            "Dors plus que d'habitude : c'est pendant le sommeil que la récup se fait.",
-            "Savoure ta performance ! Prends le temps de célébrer avant de penser à la prochaine."
+            "D+0: Walk 10-15 min, gentle stretching, eat and drink within the hour. Cold bath if possible.",
+            "D+1 to D+3: Rest or very light walking/cycling. No running. Keep eating and sleeping well.",
+            "D+4 to D+7: Very easy jog 20-30 min if feelings are good. Otherwise, more rest.",
+            "D+7 to D+14: Progressive restart, short jogs, no intensity. Listen to your body.",
+            "After D+14: If all is well, you can resume normal training progressively.",
+            "Drink a lot in following days: hydration helps evacuate metabolic waste.",
+            "Foam roller or massage helps accelerate muscle recovery.",
+            "Eat proteins for muscle reconstruction, carbs for energy.",
+            "Sleep more than usual: that's when recovery happens.",
+            "Savor your performance! Take time to celebrate before thinking about the next one."
         ],
         "relances": [
-            "C'était quoi comme distance ta course ?",
-            "Comment tu te sens physiquement ?",
-            "T'as des courbatures où ?",
-            "Tu as bien mangé et bu après ?",
-            "C'est ta première course de cette distance ?",
-            "T'as prévu combien de temps de récup ?",
-            "Tu as des douleurs particulières ?",
-            "Comment était ta course ? Content du résultat ?",
-            "Tu as déjà un prochain objectif en tête ?",
-            "Tu arrives à te reposer ou t'as envie de recourir ?"
+            "What distance was your race?",
+            "How do you feel physically?",
+            "Where do you have soreness?",
+            "Did you eat and drink well after?",
+            "Is this your first race at this distance?",
+            "How much recovery time did you plan?",
+            "Do you have any specific pain?",
+            "How was your race? Happy with the result?",
+            "Do you already have a next goal in mind?",
+            "Can you rest or do you want to run again?"
         ]
     },
-    
-    # ==================== CATÉGORIE 18: QUESTIONS GÉNÉRALES ====================
+
+    # ==================== CATEGORY 18: GENERAL QUESTIONS ====================
     "general": {
         "keywords": ["conseil", "aide", "quoi", "comment", "pourquoi", "question", "avis", "pense", "sais pas"],
         "intros": [
-            "Je suis là pour t'aider ! 🙌",
-            "Bonne question !",
-            "Je t'explique !",
-            "Voyons ça ensemble !",
-            "C'est parti !",
-            "Je te dis ce que j'en pense !",
-            "Allez, on regarde ça !",
-            "Je suis ton coach, pose tes questions !",
-            "T'as bien fait de demander !",
-            "On va voir ça !"
+            "I'm here to help you! 🙌",
+            "Good question!",
+            "I'll explain!",
+            "Let's look at this together!",
+            "Here we go!",
+            "I'll tell you what I think!",
+            "Alright, let's check this!",
+            "I'm your coach, ask your questions!",
+            "You did well to ask!",
+            "Let's see this!"
         ],
         "analyses": [
-            "En regardant tes données récentes, je vois que {observation_generale}.",
-            "Ta régularité ({nb_seances} séances/semaine) est {regularite_comment}.",
-            "Ton volume actuel ({km_semaine} km) est {volume_comment} pour ton niveau.",
-            "La répartition de tes zones montre {zones_comment}.",
-            "Ta progression ces dernières semaines est {progression_comment}.",
-            "Ton ratio charge/récup ({ratio}) indique {ratio_comment}.",
-            "Globalement, tu es sur une bonne dynamique. {dynamique_detail}",
-            "J'ai noté que {pattern_observe}. C'est {pattern_interpretation}.",
-            "En comparant avec tes objectifs, tu es {objectif_position}.",
-            "Ce que je retiens de ton historique : {resume_historique}."
+            "Looking at your recent data, I see that {observation_generale}.",
+            "Your regularity ({nb_seances} sessions/week) is {regularite_comment}.",
+            "Your current volume ({km_semaine} km) is {volume_comment} for your level.",
+            "Your zone distribution shows {zones_comment}.",
+            "Your progress these past weeks is {progression_comment}.",
+            "Your load/recovery ratio ({ratio}) indicates {ratio_comment}.",
+            "Overall, you're on good momentum. {dynamique_detail}",
+            "I noticed that {pattern_observe}. It's {pattern_interpretation}.",
+            "Compared to your goals, you're {objectif_position}.",
+            "What I take from your history: {resume_historique}."
         ],
         "conseils": [
-            "Mon conseil principal pour toi en ce moment : {conseil_principal}.",
-            "Continue comme ça, t'es sur la bonne voie !",
-            "Focus sur la régularité, c'est la clé de la progression.",
-            "N'hésite pas à me poser des questions plus précises si tu veux approfondir.",
-            "Je te conseille de {recommandation_specifique}.",
-            "Pour progresser, {piste_progression}.",
-            "Un point à améliorer : {point_amelioration}.",
-            "Ta priorité devrait être : {priorite}.",
-            "Si je devais te donner un seul conseil : {conseil_unique}.",
-            "Reste à l'écoute de ton corps, c'est ton meilleur coach !"
+            "My main advice for you right now: {conseil_principal}.",
+            "Keep it up, you're on the right track!",
+            "Focus on regularity, it's the key to progress.",
+            "Don't hesitate to ask more specific questions if you want to go deeper.",
+            "I advise you to {recommandation_specifique}.",
+            "To progress, {piste_progression}.",
+            "A point to improve: {point_amelioration}.",
+            "Your priority should be: {priorite}.",
+            "If I had to give you one advice: {conseil_unique}.",
+            "Stay in tune with your body, it's your best coach!"
         ],
         "relances": [
-            "Tu veux qu'on parle d'un sujet en particulier ?",
-            "T'as d'autres questions ?",
-            "Y a un aspect de ton entraînement que tu veux creuser ?",
-            "Comment je peux t'aider davantage ?",
-            "Tu veux qu'on regarde un point précis ?",
-            "T'as des objectifs spécifiques en ce moment ?",
-            "Y a quelque chose qui te tracasse ?",
-            "Tu veux un plan pour la semaine ?",
-            "Des douleurs ou gênes à signaler ?",
-            "Comment tu te sens globalement ?"
+            "Do you want to talk about a specific topic?",
+            "Do you have other questions?",
+            "Is there an aspect of your training you want to dig into?",
+            "How can I help you further?",
+            "Do you want to look at a specific point?",
+            "Do you have specific goals right now?",
+            "Is something bothering you?",
+            "Do you want a plan for the week?",
+            "Any pain or discomfort to report?",
+            "How do you feel overall?"
         ]
     },
-    
-    # ==================== CATÉGORIE 19: ROUTINE ====================
+
+    # ==================== CATEGORY 19: ROUTINE ====================
     "routine": {
         "keywords": ["routine", "habitude", "régularité", "discipline", "régulier", "tenir", "maintenir", "constance"],
         "intros": [
-            "La routine, c'est la clé ! 🔑",
-            "La régularité bat l'intensité !",
-            "Créer une habitude, sujet important !",
-            "La constance, c'est le secret !",
-            "Bien vu de penser à ça !",
-            "La routine, c'est ton meilleur allié !",
-            "Installer une habitude, parlons-en !",
-            "La discipline, ça se construit !",
-            "La régularité, c'est 80% du succès !",
-            "Les habitudes font les champions !"
+            "Routine is the key! 🔑",
+            "Regularity beats intensity!",
+            "Creating a habit, important topic!",
+            "Consistency is the secret!",
+            "Good catch thinking about this!",
+            "Routine is your best ally!",
+            "Installing a habit, let's talk!",
+            "Discipline is built!",
+            "Regularity is 80% of success!",
+            "Habits make champions!"
         ],
         "analyses": [
-            "Une habitude met environ 21-66 jours à s'installer. Patience !",
-            "Vu ton historique, tu cours en moyenne {frequence} fois par semaine. {frequence_comment}",
-            "La régularité est plus importante que l'intensité pour progresser sur le long terme.",
-            "Les coureurs les plus constants sont ceux qui progressent le plus, pas les plus intenses.",
-            "Courir le matin est souvent plus facile à tenir : moins d'imprévus, c'est fait !",
-            "La routine crée un automatisme. Après quelques semaines, tu n'auras plus à te forcer.",
-            "Les jours où t'as pas envie, une sortie courte vaut mieux que pas de sortie.",
-            "La motivation est fluctuante, la discipline est constante. Construis sur la discipline.",
-            "Ton cerveau résiste au changement les premières semaines. C'est normal, persévère !",
-            "Une routine flexible (3-4 créneaux possibles/semaine) est plus tenable qu'une rigide."
+            "A habit takes about 21-66 days to install. Patience!",
+            "Given your history, you run on average {frequence} times per week. {frequence_comment}",
+            "Regularity is more important than intensity to progress long-term.",
+            "The most consistent runners progress the most, not the most intense.",
+            "Morning running is often easier to maintain: fewer surprises, it's done!",
+            "Routine creates automatism. After a few weeks, you won't have to force yourself.",
+            "On days you don't feel like it, a short run is better than no run.",
+            "Motivation fluctuates, discipline is constant. Build on discipline.",
+            "Your brain resists change the first weeks. It's normal, persevere!",
+            "A flexible routine (3-4 possible slots/week) is more sustainable than a rigid one."
         ],
         "conseils": [
-            "Planifie tes séances comme des rendez-vous importants dans ton agenda.",
-            "Prépare tes affaires la veille. Moins d'obstacles = plus de chances d'y aller.",
-            "Trouve un partenaire d'entraînement, ça engage et motive.",
-            "Commence petit : 2-3 sorties par semaine, puis augmente progressivement.",
-            "Le matin, c'est souvent le meilleur créneau pour installer une routine.",
-            "Associe ta séance à un trigger : 'Je cours après le café' ou 'Je cours avant la douche'.",
-            "Autorise-toi à faire une sortie courte les jours difficiles. 15 min > 0 min.",
-            "Récompense-toi après une bonne semaine de régularité.",
-            "Ne cherche pas la motivation, cherche la discipline. La motivation suivra.",
-            "Si tu rates une séance, ne culpabilise pas. Reprends simplement au prochain créneau."
+            "Plan your sessions like important appointments in your calendar.",
+            "Prepare your stuff the night before. Fewer obstacles = more chances to go.",
+            "Find a training partner, it commits and motivates.",
+            "Start small: 2-3 runs per week, then increase progressively.",
+            "Morning is often the best slot to install a routine.",
+            "Associate your session with a trigger: 'I run after coffee' or 'I run before shower'.",
+            "Allow yourself a short run on difficult days. 15 min > 0 min.",
+            "Reward yourself after a good week of regularity.",
+            "Don't seek motivation, seek discipline. Motivation will follow.",
+            "If you miss a session, don't feel guilty. Just resume at next slot."
         ],
         "relances": [
-            "Tu cours plutôt à quel moment de la journée ?",
-            "T'arrives à tenir un rythme régulier ?",
-            "Qu'est-ce qui t'empêche parfois de sortir ?",
-            "Tu prépares tes affaires à l'avance ?",
-            "Tu cours seul ou avec quelqu'un ?",
-            "T'as essayé de courir le matin ?",
-            "Tu te fixes des rendez-vous running fixes ?",
-            "Combien de séances tu vises par semaine ?",
-            "T'as des astuces qui t'aident à rester régulier ?",
-            "La flemme, ça t'arrive souvent ?"
+            "Do you run at what time of day?",
+            "Can you maintain a regular rhythm?",
+            "What sometimes prevents you from running?",
+            "Do you prepare your stuff in advance?",
+            "Do you run alone or with someone?",
+            "Have you tried running in the morning?",
+            "Do you set fixed running appointments?",
+            "How many sessions do you aim for per week?",
+            "Do you have tricks that help you stay regular?",
+            "Laziness, does it happen often?"
         ]
     },
-    
-    # ==================== CATÉGORIE 19: AMÉLIORER L'ALLURE ====================
-    # Spécifique aux questions "Comment améliorer mon allure / pace"
+
+    # ==================== CATEGORY 19: IMPROVE PACE ====================
+    # Specific to questions "How to improve my pace"
     "ameliorer_allure": {
-        "keywords": [],  # Catégorie activée par detect_intent combiné
+        "keywords": [],  # Category activated by combined detect_intent
         "intros": [
-            "Améliorer ton allure de {allure}/km ? C'est un objectif top ! 🎯",
-            "Progresser depuis {allure}/km, c'est faisable avec la bonne méthode !",
-            "Bonne question ! Pour passer de {allure} à {allure_cible}/km, y'a plusieurs leviers.",
-            "Améliorer ton pace de {allure}/km, c'est THE objectif de beaucoup de coureurs !",
-            "Ok, on va bosser ta vitesse depuis {allure}/km ! 💪",
-            "Pour progresser depuis ton allure actuelle ({allure}/km), il faut être malin.",
-            "Le pace, ça se travaille ! Ton {allure}/km peut évoluer, voici comment.",
+            "Improve your pace from {allure}/km? That's a great goal! 🎯",
+            "Progress from {allure}/km is doable with the right method!",
+            "Good question! To go from {allure} to {allure_cible}/km, there are several levers.",
+            "Improve your pace from {allure}/km, that's THE goal of many runners!",
+            "Ok, let's work on your speed from {allure}/km! 💪",
+            "To progress from your current pace ({allure}/km), you need to be smart.",
+            "Pace can be worked on! Your {allure}/km can evolve, here's how.",
         ],
         "analyses": [
-            "Ton allure actuelle de {allure}/km est {allure_comment}. Pour progresser, il faut combiner endurance de base (80% du volume) et travail spécifique (20%).",
-            "Pour passer de {allure} à {allure_cible}/km (ton objectif réaliste), le secret c'est la régularité + la patience. Compte 2-3 mois de travail structuré.",
-            "L'amélioration de l'allure vient de : 1) Plus de volume en endurance facile, 2) Séances de seuil, 3) Fractionné court. Avec {km_semaine} km/sem, {volume_comment}.",
-            "Ta cadence de {cadence} spm joue aussi un rôle. Une foulée plus rapide (170-180 spm) = moins d'effort à même allure.",
-            "Pour gagner 30 sec/km (de {allure} à {allure_cible}), il faut environ 3-4 mois de travail structuré. C'est pas instantané mais c'est durable !",
-            "Ton volume actuel ({km_semaine} km/sem) est {volume_comment}. Plus de volume facile = meilleure économie de course = allure plus rapide.",
+            "Your current pace of {allure}/km is {allure_comment}. To progress, you need to combine base endurance (80% of volume) and specific work (20%).",
+            "To go from {allure} to {allure_cible}/km (your realistic goal), the secret is regularity + patience. Count 2-3 months of structured work.",
+            "Pace improvement comes from: 1) More volume in easy endurance, 2) Threshold sessions, 3) Short intervals. With {km_semaine} km/week, {volume_comment}.",
+            "Your cadence of {cadence} spm also plays a role. A faster stride (170-180 spm) = less effort at same pace.",
+            "To gain 30 sec/km (from {allure} to {allure_cible}), it takes about 3-4 months of structured work. It's not instant but it's lasting!",
+            "Your current volume ({km_semaine} km/week) is {volume_comment}. More easy volume = better running economy = faster pace.",
         ],
         "conseils": [
-            "Plan concret pour passer de {allure} à {allure_cible}/km :\n• 1 séance de seuil/sem (ex: 3x10min à allure semi)\n• 1 séance de fractionné court (ex: 8x400m)\n• Le reste en endurance facile (Z2)",
-            "Commence par ajouter du volume en endurance fondamentale. Paradoxalement, courir plus lentement sur les sorties faciles te rendra plus rapide sur les courses !",
-            "Le travail de seuil est LA clé pour ton allure. Fais 2x15min ou 3x10min à ton allure semi-marathon, 1x par semaine.",
-            "Pour {allure}/km → {allure_cible}/km : vise 10-12 semaines de travail avec 1 séance qualité + 2-3 sorties faciles par semaine.",
-            "Travaille ta VMA avec du fractionné court (200-400m). Ça améliore ton plafond de vitesse et donc toutes tes allures.",
-            "Les côtes sont géniales pour l'allure : 6-8 x 30sec en côte, récup descente. Ça booste la puissance sans traumatiser les jambes.",
+            "Concrete plan to go from {allure} to {allure_cible}/km:\n• 1 threshold session/week (ex: 3x10min at half-marathon pace)\n• 1 short interval session (ex: 8x400m)\n• The rest in easy endurance (Z2)",
+            "Start by adding volume in base endurance. Paradoxically, running slower on easy runs will make you faster in races!",
+            "Threshold work is THE key for your pace. Do 2x15min or 3x10min at your half-marathon pace, 1x per week.",
+            "For {allure}/km → {allure_cible}/km: aim for 10-12 weeks of work with 1 quality session + 2-3 easy runs per week.",
+            "Work your VO2max with short intervals (200-400m). It improves your speed ceiling and thus all your paces.",
+            "Hills are great for pace: 6-8 x 30sec uphill, recovery downhill. It boosts power without traumatizing legs.",
         ],
-        "relances": []  # Pas de relances, on utilise les suggestions
+        "relances": []  # No follow-ups, we use suggestions
     },
-    
-    # ==================== CATÉGORIE 19b: AMÉLIORER L'ENDURANCE ====================
+
+    # ==================== CATEGORY 19b: IMPROVE ENDURANCE ====================
     "ameliorer_endurance": {
         "keywords": [],
         "intros": [
-            "Améliorer ton endurance, excellent objectif ! 🏃",
-            "L'endurance, c'est la base de tout en course à pied !",
-            "Pour plus d'endurance, faut être patient mais ça paie !",
-            "Progresser en endurance, c'est le meilleur investissement !",
+            "Improve your endurance, excellent goal! 🏃",
+            "Endurance is the foundation of everything in running!",
+            "For more endurance, you need patience but it pays!",
+            "Progress in endurance is the best investment!",
         ],
         "analyses": [
-            "L'endurance se construit avec du volume. Ton volume actuel ({km_semaine} km/sem) est {volume_comment}. Augmente progressivement (+10% max par semaine).",
-            "Pour plus d'endurance, la clé c'est de courir LENTEMENT la plupart du temps. 80% de tes km doivent être en Z2 (conversation possible).",
-            "Ta base d'endurance se développe sur des semaines et des mois. Pas de raccourci, mais les gains sont durables !",
-            "Les sorties longues hebdomadaires (1h30-2h+) sont essentielles pour l'endurance. Tu en fais actuellement {nb_sorties_longues} par semaine.",
+            "Endurance is built with volume. Your current volume ({km_semaine} km/week) is {volume_comment}. Increase progressively (+10% max per week).",
+            "For more endurance, the key is to run SLOWLY most of the time. 80% of your km should be in Z2 (conversation possible).",
+            "Your endurance base develops over weeks and months. No shortcut, but gains are lasting!",
+            "Weekly long runs (1h30-2h+) are essential for endurance. You currently do {nb_sorties_longues} per week.",
         ],
         "conseils": [
-            "Plan pour améliorer l'endurance :\n• Augmente ton volume de 10% par semaine\n• Ajoute une sortie longue le weekend (1h30 min)\n• Reste en Z2 sur 80% des km",
-            "La sortie longue est TA séance clé pour l'endurance. Commence à 1h15, monte progressivement jusqu'à 2h sur 8-10 semaines.",
-            "Cours plus lentement ! Si tu peux pas tenir une conversation, c'est trop rapide pour l'endurance de base.",
-            "Ajoute 1 sortie par semaine (même 30-40min facile). Le volume total compte plus que l'intensité pour l'endurance.",
+            "Plan to improve endurance:\n• Increase your volume by 10% per week\n• Add a long run on weekend (1h30 min)\n• Stay in Z2 for 80% of km",
+            "The long run is YOUR key session for endurance. Start at 1h15, progressively go up to 2h over 8-10 weeks.",
+            "Run slower! If you can't hold a conversation, it's too fast for base endurance.",
+            "Add 1 run per week (even 30-40min easy). Total volume matters more than intensity for endurance.",
         ],
         "relances": []
     },
-    
-    # ==================== CATÉGORIE 19c: POINTS FORTS ====================
+
+    # ==================== CATEGORY 19c: STRENGTHS ====================
     "points_forts": {
         "keywords": [],
         "intros": [
-            "Tes points forts, voyons ça ! 💪",
-            "Ce sur quoi tu excelles, c'est important !",
-            "Analysons tes forces !",
-            "Tes atouts running, les voilà !",
+            "Your strengths, let's see! 💪",
+            "What you excel at is important!",
+            "Let's analyze your forces!",
+            "Your running assets, here they are!",
         ],
         "analyses": [
-            "Tes points forts actuels :\n• **Régularité** : {nb_seances} séances cette semaine, c'est {regularite_comment}\n• **Allure** : {allure}/km, {allure_comment}\n• **Cadence** : {cadence} spm, {cadence_comment}",
-            "En analysant tes données, tes forces sont :\n• Volume : {km_semaine} km/sem ({volume_comment})\n• Endurance : {z1z2}% en zones basses\n• Régularité : {nb_seances} séances/sem",
-            "Ce qui ressort de ton profil :\n• Tu cours régulièrement ({nb_seances} séances/sem) ✓\n• Ton allure ({allure}/km) est {allure_comment} ✓\n• Tu gères bien la charge (ratio {ratio}) ✓",
+            "Your current strengths:\n• **Regularity**: {nb_seances} sessions this week, that's {regularite_comment}\n• **Pace**: {allure}/km, {allure_comment}\n• **Cadence**: {cadence} spm, {cadence_comment}",
+            "Analyzing your data, your strengths are:\n• Volume: {km_semaine} km/week ({volume_comment})\n• Endurance: {z1z2}% in low zones\n• Regularity: {nb_seances} sessions/week",
+            "What stands out from your profile:\n• You run regularly ({nb_seances} sessions/week) ✓\n• Your pace ({allure}/km) is {allure_comment} ✓\n• You manage load well (ratio {ratio}) ✓",
         ],
         "conseils": [
-            "Capitalise sur ta régularité ! C'est LA base de la progression en course.",
-            "Ton point fort principal : ta constance. Continue à courir régulièrement, les gains viendront.",
-            "Ta force : tu cours ! Beaucoup abandonnent, toi tu persévères. C'est énorme.",
-            "Point fort à exploiter : ta base d'endurance. Tu peux commencer à ajouter du travail spécifique.",
+            "Capitalize on your regularity! That's THE foundation of progress in running.",
+            "Your main strength: your consistency. Keep running regularly, gains will come.",
+            "Your strength: you run! Many give up, you persevere. That's huge.",
+            "Strength to exploit: your endurance base. You can start adding specific work.",
         ],
         "relances": []
     },
-    
-    # ==================== CATÉGORIE 19d: POINTS FAIBLES ====================
+
+    # ==================== CATEGORY 19d: WEAKNESSES ====================
     "points_faibles": {
         "keywords": [],
         "intros": [
-            "Tes axes d'amélioration, regardons ça ! 🎯",
-            "Ce qu'on peut travailler ensemble !",
-            "Où tu peux progresser, voilà !",
-            "Les pistes d'amélioration !",
+            "Your areas for improvement, let's look! 🎯",
+            "What we can work on together!",
+            "Where you can progress, here!",
+            "Improvement tracks!",
         ],
         "analyses": [
-            "Tes axes d'amélioration :\n• **Zones** : {z1z2}% en endurance (idéal = 80%). {zones_conseil}\n• **Cadence** : {cadence} spm. {cadence_comment}\n• **Volume** : {km_semaine} km/sem, {volume_comment}",
-            "En analysant tes données, tu peux progresser sur :\n• L'équilibre des zones : trop de Z3 ({z3}%), pas assez de Z2\n• Le volume progressif : +10% max par semaine\n• La récupération : assure-toi de bien dormir",
-            "Points à travailler :\n• {point_ameliorer}\n• Plus de temps en endurance fondamentale (Z2)\n• Travail technique (cadence, foulée)",
+            "Your areas for improvement:\n• **Zones**: {z1z2}% in endurance (ideal = 80%). {zones_conseil}\n• **Cadence**: {cadence} spm. {cadence_comment}\n• **Volume**: {km_semaine} km/week, {volume_comment}",
+            "Analyzing your data, you can progress on:\n• Zone balance: too much Z3 ({z3}%), not enough Z2\n• Progressive volume: +10% max per week\n• Recovery: make sure to sleep well",
+            "Points to work on:\n• {point_ameliorer}\n• More time in base endurance (Z2)\n• Technical work (cadence, stride)",
         ],
         "conseils": [
-            "Pour améliorer tes points faibles, concentre-toi sur UN seul à la fois. Trop de changements = échec.",
-            "L'axe #1 à travailler : l'endurance fondamentale. Plus de Z2 = meilleure base = progression durable.",
-            "Ton point faible le plus simple à corriger : la répartition des zones. Cours plus lentement sur les sorties faciles !",
-            "Conseil : ne vois pas ça comme des faiblesses, mais comme des opportunités de progression ! 🚀",
+            "To improve your weaknesses, focus on ONE at a time. Too many changes = failure.",
+            "Axis #1 to work on: base endurance. More Z2 = better foundation = lasting progress.",
+            "Your easiest weakness to fix: zone distribution. Run slower on easy runs!",
+            "Advice: don't see these as weaknesses, but as progress opportunities! 🚀",
         ],
         "relances": []
     },
-    
-    # ==================== CATÉGORIE 19e: ENDURANCE FONDAMENTALE ====================
+
+    # ==================== CATEGORY 19e: BASE ENDURANCE ====================
     "endurance_fondamentale": {
         "keywords": [],
         "intros": [
-            "L'endurance fondamentale, LA base de tout ! 🏃",
-            "La Z2, parlons-en ! C'est crucial.",
-            "L'endurance de base, le secret des pros !",
-            "Le travail en zone 2, excellent sujet !",
+            "Base endurance, THE foundation of everything! 🏃",
+            "Z2, let's talk about it! It's crucial.",
+            "Base endurance, the pros' secret!",
+            "Zone 2 work, excellent topic!",
         ],
         "analyses": [
-            "L'endurance fondamentale (Z2), c'est courir à une allure où tu peux PARLER facilement. Ton corps utilise les graisses comme carburant et développe ta base aérobie.",
-            "Actuellement, tu passes {z1z2}% de ton temps en Z1-Z2. L'idéal pour progresser = 80% en endurance facile, 20% en intensité.",
-            "La Z2, c'est l'allure qui paraît 'trop facile'. Mais c'est là que se construisent tes adaptations profondes : capillaires, mitochondries, économie de course.",
-            "Ton allure Z2 devrait être environ {allure_z2}/km (30-60 sec plus lent que ton allure moyenne). Si tu souffles, c'est trop vite !",
+            "Base endurance (Z2) is running at a pace where you can TALK easily. Your body uses fat as fuel and develops your aerobic base.",
+            "Currently, you spend {z1z2}% of your time in Z1-Z2. The ideal to progress = 80% in easy endurance, 20% in intensity.",
+            "Z2 is the pace that feels 'too easy'. But that's where deep adaptations are built: capillaries, mitochondria, running economy.",
+            "Your Z2 pace should be around {allure_z2}/km (30-60 sec slower than your average pace). If you're breathing hard, it's too fast!",
         ],
         "conseils": [
-            "Pour travailler l'endurance fondamentale :\n• Cours à une allure où tu peux tenir une conversation\n• Vise 70-75% de ta FC max\n• Ne regarde pas l'allure, focus sur le ressenti\n• 1h minimum pour les effets optimaux",
-            "Astuce Z2 : cours avec quelqu'un et discute. Si tu peux pas parler = trop vite. C'est le test le plus simple !",
-            "Ajoute une sortie longue en Z2 le weekend (1h15-1h30). C'est LA séance clé pour développer ton endurance.",
-            "Le piège : courir trop vite en pensant être en Z2. Vérifie avec un cardio : reste sous 75% de ta FC max.",
-            "L'endurance fondamentale, c'est frustrant au début (impression de ne pas progresser). Mais après 2-3 mois, les gains sont énormes !",
+            "To work on base endurance:\n• Run at a pace where you can hold a conversation\n• Aim for 70-75% of your max HR\n• Don't look at pace, focus on feel\n• 1h minimum for optimal effects",
+            "Z2 trick: run with someone and chat. If you can't talk = too fast. It's the simplest test!",
+            "Add a long Z2 run on weekend (1h15-1h30). That's THE key session to develop your endurance.",
+            "The trap: running too fast thinking you're in Z2. Check with a heart rate monitor: stay under 75% of your max HR.",
+            "Base endurance is frustrating at first (feeling of not progressing). But after 2-3 months, the gains are enormous!",
         ],
         "relances": []
     },
-    
-    # ==================== CATÉGORIE 19f: AMÉLIORER GÉNÉRAL ====================
+
+    # ==================== CATEGORY 19f: GENERAL IMPROVEMENT ====================
     "ameliorer_general": {
         "keywords": [],
         "intros": [
-            "Tu veux progresser, c'est super ! 💪",
-            "Améliorer tes performances, on va voir ça ensemble !",
-            "La progression, c'est mon domaine ! Voyons ça.",
-            "Ok, on va t'aider à progresser ! 🎯",
+            "You want to progress, that's great! 💪",
+            "Improve your performance, let's see this together!",
+            "Progress is my domain! Let's look.",
+            "Ok, we'll help you progress! 🎯",
         ],
         "analyses": [
-            "Pour progresser en course, il faut du volume (endurance), de la qualité (fractionné/seuil) et de la récup (repos, sommeil).",
-            "Avec tes {nb_seances} séances et {km_semaine} km cette semaine, {analyse_progression}.",
-            "La progression vient de la régularité avant tout. Mieux vaut 3 séances/sem pendant 6 mois que 5 séances/sem pendant 1 mois.",
-            "Ton corps s'adapte à ce que tu lui demandes. Pour progresser, il faut varier les stimuli : endurance, tempo, VMA, côtes...",
+            "To progress in running, you need volume (endurance), quality (intervals/threshold) and recovery (rest, sleep).",
+            "With your {nb_seances} sessions and {km_semaine} km this week, {analyse_progression}.",
+            "Progress comes from regularity above all. Better 3 sessions/week for 6 months than 5 sessions/week for 1 month.",
+            "Your body adapts to what you ask of it. To progress, you must vary stimuli: endurance, tempo, VO2max, hills...",
         ],
         "conseils": [
-            "Les 3 piliers de la progression :\n• Volume : plus de km (progressivement)\n• Qualité : 1-2 séances spécifiques/sem\n• Récup : repos, sommeil, nutrition",
-            "Pour progresser, sois régulier ! 3 séances/sem pendant 3 mois battent 5 séances/sem pendant 1 mois.",
-            "Ajoute de la variété : si tu fais toujours les mêmes séances, ton corps s'adapte et stagne.",
-            "La patience est clé. Les vrais progrès prennent 3-6 mois de travail constant.",
+            "The 3 pillars of progress:\n• Volume: more km (progressively)\n• Quality: 1-2 specific sessions/week\n• Recovery: rest, sleep, nutrition",
+            "To progress, be regular! 3 sessions/week for 3 months beats 5 sessions/week for 1 month.",
+            "Add variety: if you always do the same sessions, your body adapts and stagnates.",
+            "Patience is key. Real progress takes 3-6 months of constant work.",
         ],
         "relances": []
     },
-    
-    # ==================== CATÉGORIE 19g: ÉQUILIBRE SÉANCES (80/20) ====================
+
+    # ==================== CATEGORY 19g: SESSION BALANCE (80/20) ====================
     "equilibre_seances": {
         "keywords": [],
         "intros": [
-            "L'équilibre entre fractionné et endurance, super question ! ⚖️",
-            "Le ratio 80/20, parlons-en !",
-            "Comment répartir tes séances, c'est LA question clé !",
-            "L'entraînement polarisé, excellent sujet !",
+            "The balance between intervals and endurance, great question! ⚖️",
+            "The 80/20 ratio, let's talk!",
+            "How to distribute your sessions, that's THE key question!",
+            "Polarized training, excellent topic!",
         ],
         "analyses": [
-            "La règle d'or = **80/20** :\n• 80% du volume en endurance facile (Z1-Z2)\n• 20% en intensité (fractionné, seuil, VMA)\n\nToi actuellement : {z1z2}% en endurance, {z4z5}% en intensité.",
-            "Avec {nb_seances} séances/sem, voici une répartition idéale :\n• 2-3 séances faciles (endurance)\n• 1-2 séances qualité (fractionné ou seuil)\n• 0-1 sortie longue",
-            "L'erreur classique : trop de séances en zone 3 (tempo). C'est la 'zone grise' - ni assez facile pour récupérer, ni assez dur pour progresser.",
-            "Le modèle polarisé (séances très faciles OU très dures, peu de juste milieu) est prouvé comme le plus efficace pour progresser.",
+            "The golden rule = **80/20**:\n• 80% of volume in easy endurance (Z1-Z2)\n• 20% in intensity (intervals, threshold, VO2max)\n\nYou currently: {z1z2}% in endurance, {z4z5}% in intensity.",
+            "With {nb_seances} sessions/week, here's an ideal distribution:\n• 2-3 easy sessions (endurance)\n• 1-2 quality sessions (intervals or threshold)\n• 0-1 long run",
+            "Classic mistake: too many sessions in zone 3 (tempo). It's the 'gray zone' - not easy enough to recover, not hard enough to progress.",
+            "The polarized model (very easy OR very hard sessions, little middle ground) is proven most effective to progress.",
         ],
         "conseils": [
-            "Répartition recommandée pour {nb_seances} séances/sem :\n• {nb_seances_faciles} séances en endurance facile (Z2)\n• {nb_seances_qualite} séance(s) de qualité (fractionné/seuil)\n• 1 sortie longue si possible",
-            "Exemple de semaine équilibrée :\n• Lundi : Repos\n• Mardi : Fractionné court (8x400m)\n• Mercredi : Footing facile 45min\n• Jeudi : Repos ou footing récup\n• Vendredi : Seuil (3x10min)\n• Samedi : Footing facile\n• Dimanche : Sortie longue 1h30",
-            "Le piège du 'no pain no gain' : courir dur à chaque sortie = fatigue chronique + stagnation. Les sorties faciles sont AUSSI importantes !",
-            "Pour respecter le 80/20 : utilise un cardio et force-toi à rester en Z2 sur les sorties faciles. C'est contre-intuitif mais ça marche !",
-            "Si tu fais 3 séances/sem : 2 faciles + 1 qualité. Si tu fais 5 séances/sem : 3-4 faciles + 1-2 qualité. Ne dépasse jamais 20% d'intensité !",
+            "Recommended distribution for {nb_seances} sessions/week:\n• {nb_seances_faciles} sessions in easy endurance (Z2)\n• {nb_seances_qualite} quality session(s) (intervals/threshold)\n• 1 long run if possible",
+            "Example balanced week:\n• Monday: Rest\n• Tuesday: Short intervals (8x400m)\n• Wednesday: Easy jog 45min\n• Thursday: Rest or recovery jog\n• Friday: Threshold (3x10min)\n• Saturday: Easy jog\n• Sunday: Long run 1h30",
+            "The 'no pain no gain' trap: running hard every time = chronic fatigue + stagnation. Easy runs are ALSO important!",
+            "To respect 80/20: use a heart rate monitor and force yourself to stay in Z2 on easy runs. It's counter-intuitive but it works!",
+            "If you do 3 sessions/week: 2 easy + 1 quality. If you do 5 sessions/week: 3-4 easy + 1-2 quality. Never exceed 20% intensity!",
         ],
         "relances": []
     },
-    
-    # ==================== CATÉGORIE 20: FALLBACK ====================
+
+    # ==================== CATEGORY 20: FALLBACK ====================
     "fallback": {
-        "keywords": [],  # Pas de keywords, c'est le fallback
+        "keywords": [],  # No keywords, it's the fallback
         "intros": [
-            "Hmm, je suis pas sûr de comprendre... 🤔",
-            "Je vois pas trop où tu veux en venir...",
-            "Je capte pas bien, désolé !",
-            "Pas sûr de suivre là...",
-            "J'ai du mal à comprendre ta question...",
-            "Oups, j'ai pas bien saisi...",
-            "Attends, c'est quoi ta question exacte ?",
-            "Je suis un peu perdu là...",
-            "Tu peux m'en dire plus ?",
-            "Je comprends pas bien ce que tu veux dire..."
+            "Hmm, I'm not sure I understand... 🤔",
+            "I don't quite see what you mean...",
+            "I'm not getting it, sorry!",
+            "Not sure I'm following...",
+            "I'm having trouble understanding your question...",
+            "Oops, I didn't quite catch that...",
+            "Wait, what's your exact question?",
+            "I'm a bit lost here...",
+            "Can you tell me more?",
+            "I don't really understand what you mean..."
         ],
         "analyses": [
-            "Je suis ton coach running, dis-moi ce qui te tracasse côté course !",
-            "Parle-moi de ton entraînement, je suis là pour ça !",
-            "Côté running, je peux t'aider sur plein de sujets.",
-            "Mon domaine c'est la course à pied, pose-moi tes questions là-dessus !",
-            "Je suis calé sur tout ce qui touche à l'endurance et à la course.",
-            "Pour le running, je suis ton gars ! Autre chose... moins.",
-            "Ma spécialité c'est t'aider à progresser en course.",
-            "J'ai pas compris mais dis-moi ce qui te préoccupe côté entraînement !",
-            "Parlons de ta course, c'est là que je peux vraiment t'aider !",
-            "Recentrons sur la course, c'est là que je peux vraiment t'aider !"
+            "I'm your running coach, tell me what's bothering you about running!",
+            "Talk to me about your training, that's what I'm here for!",
+            "On the running side, I can help you with lots of topics.",
+            "My domain is running, ask me your questions about that!",
+            "I'm knowledgeable about everything related to endurance and running.",
+            "For running, I'm your guy! Other things... less so.",
+            "My specialty is helping you progress in running.",
+            "I didn't understand but tell me what's concerning you training-wise!",
+            "Let's talk about your running, that's where I can really help!",
+            "Let's refocus on running, that's where I can really help!"
         ],
         "conseils": [
-            "Essaie de me poser une question sur ton entraînement, ta forme, ou tes objectifs !",
-            "Demande-moi un plan de semaine, je gère ça !",
-            "Parle-moi de tes sensations, je peux analyser !",
-            "Tu veux qu'on parle de ta dernière sortie ?",
-            "Pose-moi une question sur ta prochaine course !",
-            "On peut parler récup, nutrition, blessures... ce que tu veux !",
-            "Dis-moi comment tu te sens, je te conseille !",
-            "Tu veux un bilan de ta semaine ?",
-            "Parle-moi de tes objectifs, je t'aide à les atteindre !",
-            "Qu'est-ce qui te tracasse côté running ?"
+            "Try asking me a question about your training, your form, or your goals!",
+            "Ask me for a weekly plan, I handle that!",
+            "Talk to me about your feelings, I can analyze!",
+            "Want to talk about your last run?",
+            "Ask me a question about your next race!",
+            "We can talk recovery, nutrition, injuries... whatever you want!",
+            "Tell me how you feel, I'll advise you!",
+            "Want a summary of your week?",
+            "Talk to me about your goals, I'll help you reach them!",
+            "What's bothering you running-wise?"
         ],
         "relances": [
-            "Tu voulais me parler de quoi exactement ?",
-            "Tu peux préciser ta question ?",
-            "Tu peux reformuler ?",
-            "T'as une question sur ton entraînement ?",
-            "Comment je peux t'aider ?",
-            "Tu veux qu'on parle de ton entraînement ?",
-            "Y a un sujet running qui t'intéresse ?",
-            "Dis-moi ce qui te préoccupe !",
-            "T'as besoin d'un conseil sur quoi ?",
-            "Qu'est-ce qui t'amène aujourd'hui ?",
-            "Qu'est-ce que tu veux savoir ?",
-            "Je t'écoute, dis-moi tout !"
+            "What exactly did you want to talk about?",
+            "Can you clarify your question?",
+            "Can you rephrase?",
+            "Do you have a question about your training?",
+            "How can I help you?",
+            "Want to talk about your training?",
+            "Is there a running topic that interests you?",
+            "Tell me what's on your mind!",
+            "What do you need advice on?",
+            "What brings you here today?",
+            "What do you want to know?",
+            "I'm listening, tell me everything!"
         ]
     }
 }
 
 
 # ============================================================
-# FONCTIONS RAG (Retrieval)
+# RAG FUNCTIONS (Retrieval)
 # ============================================================
 
 def get_user_training_context(workouts: List[Dict], user_goal: Optional[Dict] = None) -> Dict:
-    """Extrait le contexte d'entraînement de l'utilisateur"""
+    """Extract the user's training context"""
     if not workouts:
         return {
             "km_semaine": 0,
@@ -1438,205 +1438,204 @@ def get_user_training_context(workouts: List[Dict], user_goal: Optional[Dict] = 
 
 
 def get_relevant_knowledge(category: str, context: Dict) -> List[str]:
-    """Récupère les conseils pertinents de la base de connaissances"""
+    """Retrieve relevant tips from the knowledge base"""
     tips = []
-    
-    # Catégorie principale
+
+    # Main category
     if category in KNOWLEDGE_BASE:
         tips.extend(random.sample(KNOWLEDGE_BASE[category]["tips"], min(3, len(KNOWLEDGE_BASE[category]["tips"]))))
-    
-    # Tips conditionnels basés sur le contexte
+
+    # Conditional tips based on context
     if context.get("ratio", 1.0) > 1.3:
         if "recuperation" in KNOWLEDGE_BASE:
             tips.append(random.choice(KNOWLEDGE_BASE["recuperation"]["tips"]))
-    
+
     if context.get("cadence", 180) < 165:
         if "allure_cadence" in KNOWLEDGE_BASE:
             tips.append(random.choice(KNOWLEDGE_BASE["allure_cadence"]["tips"]))
-    
+
     return tips[:5]  # Max 5 tips
 
 
 # ============================================================
-# DÉTECTION D'INTENTION
+# INTENT DETECTION
 # ============================================================
 
-# Réponses courtes qui indiquent une réponse à une question précédente
-# NOTE: Plus de "relance" - les suggestions intelligentes remplacent les relances
+# Short responses that indicate an answer to a previous question
+# NOTE: No more "relances" - smart suggestions replace follow-ups
 SHORT_RESPONSES = {
-    # SALUTATIONS
+    # GREETINGS
     "salut": {
-        "response": "Salut ! 👋 Content de te voir ! Je suis là pour t'aider sur ton entraînement, ta récup, tes objectifs...",
+        "response": "Hi! 👋 Good to see you! I'm here to help with your training, recovery, goals...",
     },
     "bonjour": {
-        "response": "Bonjour ! ☀️ Prêt à parler running ? Je peux t'aider sur ton plan, ta récup, tes zones...",
+        "response": "Good morning! ☀️ Ready to talk running? I can help with your plan, recovery, zones...",
     },
     "hello": {
-        "response": "Hello ! 👋 Je suis ton coach running. Dis-moi ce qui te préoccupe !",
+        "response": "Hello! 👋 I'm your running coach. Tell me what's on your mind!",
     },
     "hey": {
-        "response": "Hey ! 🙌 Quoi de neuf côté running ?",
+        "response": "Hey! 🙌 What's new running-wise?",
     },
     "coucou": {
-        "response": "Coucou ! 😊 Comment ça va ? Je suis là pour t'aider sur ton entraînement.",
+        "response": "Hi there! 😊 How's it going? I'm here to help with your training.",
     },
     "bonsoir": {
-        "response": "Bonsoir ! 🌙 Tu veux qu'on parle de ton entraînement ou de ta récup ?",
+        "response": "Good evening! 🌙 Want to talk about your training or recovery?",
     },
     "hi": {
-        "response": "Hi ! 👋 Je suis ton coach. Parle-moi de ton entraînement !",
+        "response": "Hi! 👋 I'm your coach. Talk to me about your training!",
     },
     "yo": {
-        "response": "Yo ! 🤙 Prêt à bosser ?",
+        "response": "Yo! 🤙 Ready to work?",
     },
-    # Réponses temporelles (matin/soir)
+    # Time-based responses (morning/evening)
     "matin": {
-        "response": "Le matin, c'est top pour l'énergie et la fraîcheur ! 🌅 Tu peux prévoir ton fractionné le matin quand t'es bien réveillé. Pour les sorties longues, ça laisse le reste de la journée libre !",
+        "response": "Morning is great for energy and freshness! 🌅 You can plan your intervals in the morning when you're wide awake. For long runs, it leaves the rest of the day free!",
     },
     "soir": {
-        "response": "Le soir, c'est parfait pour décompresser après la journée ! 🌆 Les muscles sont plus souples et la perf est souvent meilleure. Par contre, évite les séances trop intenses juste avant de dormir.",
+        "response": "Evening is perfect to decompress after the day! 🌆 Muscles are more flexible and performance is often better. However, avoid too intense sessions just before sleeping.",
     },
     "midi": {
-        "response": "Le midi, c'est bien si t'as une pause assez longue ! ☀️ Avantage : ça coupe la journée et te donne de l'énergie pour l'après-midi. Juste, mange léger avant.",
+        "response": "Midday is good if you have a long enough break! ☀️ Advantage: it breaks up the day and gives you energy for the afternoon. Just eat light before.",
     },
-    # Réponses oui/non (français ET anglais)
+    # Yes/no responses (French AND English)
     "oui": {
-        "response": "Super, on est partis ! 💪 Je suis là pour t'aider.",
+        "response": "Great, let's go! 💪 I'm here to help.",
     },
     "yes": {
-        "response": "Super, on est partis ! 💪 Je suis là pour t'aider.",
+        "response": "Great, let's go! 💪 I'm here to help.",
     },
     "ouais": {
-        "response": "Parfait ! 👊 On continue.",
+        "response": "Perfect! 👊 Let's continue.",
     },
     "yep": {
-        "response": "Top ! 👍 Je t'écoute.",
+        "response": "Great! 👍 I'm listening.",
     },
     "non": {
-        "response": "Pas de souci, on adapte ! 👍",
+        "response": "No worries, we'll adapt! 👍",
     },
     "no": {
-        "response": "Pas de souci, on adapte ! 👍",
+        "response": "No worries, we'll adapt! 👍",
     },
     "nope": {
-        "response": "Ok, pas de problème !",
+        "response": "Ok, no problem!",
     },
     "ok": {
-        "response": "Parfait ! ✅",
+        "response": "Perfect! ✅",
     },
     "okay": {
-        "response": "Parfait ! ✅",
+        "response": "Perfect! ✅",
     },
     "d'accord": {
-        "response": "Super ! 👌",
+        "response": "Super! 👌",
     },
     "merci": {
-        "response": "De rien, c'est le job ! 😊 Content de pouvoir t'aider.",
+        "response": "You're welcome, that's the job! 😊 Happy to help.",
     },
     "thanks": {
-        "response": "De rien ! 😊 Je suis là pour ça.",
+        "response": "You're welcome! 😊 That's what I'm here for.",
     },
     "cool": {
-        "response": "Content que ça te plaise ! 😎",
+        "response": "Glad you like it! 😎",
     },
     "parfait": {
-        "response": "Super ! On est sur la bonne voie. 🎯",
+        "response": "Great! We're on the right track. 🎯",
     },
     "perfect": {
-        "response": "Super ! 🎯",
+        "response": "Great! 🎯",
     },
     "génial": {
-        "response": "Content que ça te convienne ! 🙌",
+        "response": "Glad it suits you! 🙌",
     },
     "top": {
-        "response": "Au top ! 🔥",
+        "response": "Top! 🔥",
     },
     "nickel": {
-        "response": "Nickel ! 👌",
+        "response": "Perfect! 👌",
     },
-    # Jours de la semaine
-    "lundi": {"response": "Lundi, bonne idée pour bien démarrer la semaine ! 📅 C'est souvent un bon jour pour une séance de reprise."},
-    "mardi": {"response": "Mardi, c'est souvent un bon jour pour du fractionné ! 💨 Les jambes sont bien récupérées du week-end."},
-    "mercredi": {"response": "Mercredi, milieu de semaine, parfait pour une séance qualité ! 🎯"},
-    "jeudi": {"response": "Jeudi, jour idéal pour une séance technique ou un footing récup. 🤔"},
-    "vendredi": {"response": "Vendredi, on prépare le week-end ! 🏃 Séance légère pour être frais."},
-    "samedi": {"response": "Samedi, journée idéale pour la sortie longue ! ☀️ Profite du temps libre."},
-    "dimanche": {"response": "Dimanche, jour classique pour la sortie longue ou repos ! 🌳"},
+    # Days of the week
+    "lundi": {"response": "Monday, good idea to start the week! 📅 It's often a good day for a recovery session."},
+    "mardi": {"response": "Tuesday is often a good day for intervals! 💨 Legs are well recovered from the weekend."},
+    "mercredi": {"response": "Wednesday, mid-week, perfect for a quality session! 🎯"},
+    "jeudi": {"response": "Thursday, ideal day for a technical session or recovery jog. 🤔"},
+    "vendredi": {"response": "Friday, preparing for the weekend! 🏃 Light session to be fresh."},
+    "samedi": {"response": "Saturday, ideal day for the long run! ☀️ Take advantage of free time."},
+    "dimanche": {"response": "Sunday, classic day for long run or rest! 🌳"},
 }
 
 
 def detect_intent(message: str) -> Tuple[str, float]:
-    """Détecte l'intention/catégorie du message avec compréhension du type de question"""
+    """Detect the intent/category of the message with understanding of question type"""
     message_lower = message.lower()
-    
+
     # ============================================================
-    # ÉTAPE 0: Détections prioritaires AVANT tout
+    # STEP 0: Priority detections BEFORE everything
     # ============================================================
-    
-    # Points forts / Points faibles - questions d'analyse personnelle
+
+    # Strengths / Weaknesses - personal analysis questions
     if "point fort" in message_lower or "points forts" in message_lower:
         return "points_forts", 0.95
     if "point faible" in message_lower or "points faibles" in message_lower or "point à améliorer" in message_lower:
         return "points_faibles", 0.95
-    
-    # Endurance fondamentale / Zone 2 - question spécifique
+
+    # Base endurance / Zone 2 - specific question
     if "endurance fondamentale" in message_lower or "zone 2" in message_lower or "z2" in message_lower or "fond " in message_lower:
         return "endurance_fondamentale", 0.95
-    
-    # Équilibre fractionné/endurance - question sur le ratio 80/20
+
+    # Balance intervals/endurance - question about 80/20 ratio
     equilibre_keywords = ["équilibrer", "equilibrer", "ratio", "répartir", "repartir", "combien de fractionné", "combien de séances", "80/20", "polarisé"]
     types_seances = ["fractionné", "endurance", "séances", "intensité", "qualité", "facile"]
     if any(kw in message_lower for kw in equilibre_keywords) and any(ts in message_lower for ts in types_seances):
         return "equilibre_seances", 0.95
-    
+
     # ============================================================
-    # ÉTAPE 1: Détecter le TYPE de question (améliorer, analyser, etc.)
+    # STEP 1: Detect the TYPE of question (improve, analyze, etc.)
     # ============================================================
     question_type = "general"
-    
-    # Détection des questions "comment améliorer / progresser / travailler"
+
+    # Detection of "how to improve / progress / work on" questions
     ameliorer_keywords = ["améliorer", "ameliorer", "progresser", "augmenter", "booster", "optimiser", "gagner", "passer de", "passer à", "descendre sous", "baisser mon", "comment aller plus", "courir plus vite", "être plus rapide", "travailler", "développer", "renforcer mon", "augmenter mon"]
     if any(kw in message_lower for kw in ameliorer_keywords):
         question_type = "ameliorer"
-    
+
     # ============================================================
-    # ÉTAPE 2: Si c'est une question d'amélioration, détecter le SUJET spécifique
+    # STEP 2: If it's an improvement question, detect the specific SUBJECT
     # ============================================================
     if question_type == "ameliorer":
-        # Sujet: Allure / Vitesse / Pace
+        # Subject: Pace / Speed
         allure_keywords = ["allure", "pace", "vitesse", "vite", "rapide", "min/km", "km/h", "tempo", "rythme", "chrono"]
         if any(kw in message_lower for kw in allure_keywords):
             return "ameliorer_allure", 0.95
-        
-        # Sujet: Endurance / Distance
+
+        # Subject: Endurance / Distance
         endurance_keywords = ["endurance", "fond", "longue", "distance", "km", "volume", "tenir plus", "durer"]
         if any(kw in message_lower for kw in endurance_keywords):
             return "ameliorer_endurance", 0.95
-        
-        # Sujet: Cadence / Foulée
+
+        # Subject: Cadence / Stride
         cadence_keywords = ["cadence", "foulée", "spm", "pas"]
         if any(kw in message_lower for kw in cadence_keywords):
-            return "ameliorer_allure", 0.95  # Cadence va avec allure
-        
-        # Amélioration générale (pas de sujet spécifique détecté)
+            return "ameliorer_allure", 0.95  # Cadence goes with pace
+
+        # General improvement (no specific subject detected)
         return "ameliorer_general", 0.85
-    
+
     # ============================================================
-    # ÉTAPE 2b: Détecter les questions sur la PROGRESSION / INDICATEURS
+    # STEP 2b: Detect questions about PROGRESSION / INDICATORS
     # ============================================================
     progression_keywords = ["progress", "indicateur", "surveiller", "mesurer", "savoir si je", "comment voir", "évolue", "évolution", "stagne", "plateau"]
     if any(kw in message_lower for kw in progression_keywords):
         return "progression", 0.90
-    
+
     # ============================================================
-    # ÉTAPE 2c: Détections spécifiques prioritaires
+    # STEP 2c: Specific priority detections
     # ============================================================
-    
-    # Nutrition / Alimentation
+
+    # Nutrition / Diet
     nutrition_keywords = ["nutrition", "manger", "alimentation", "glucide", "protéine", "hydrat", "boire", "eau", "gel", "boisson", "repas", "petit-déjeuner", "crampe", "nourrir", "avant la course", "après la course"]
     if any(kw in message_lower for kw in nutrition_keywords):
         return "nutrition", 0.90
-    
     # Préparation course / Compétition
     prepa_keywords = ["course dans", "compétition", "10km", "semi", "marathon", "trail", "dossard", "jour j", "objectif chrono", "préparer une course", "préparer un", "avant ma course"]
     if any(kw in message_lower for kw in prepa_keywords):
@@ -1684,257 +1683,257 @@ def detect_intent(message: str) -> Tuple[str, float]:
 
 
 # ============================================================
-# GÉNÉRATION DE RÉPONSE (100% déterministe, templates + random)
+# RESPONSE GENERATION (100% deterministic, templates + random)
 # ============================================================
 
 def _get_zones_verdict(zones: Dict) -> str:
-    """Génère un verdict sur la répartition des zones"""
+    """Generate a verdict on zone distribution"""
     z1z2 = zones.get("z1", 0) + zones.get("z2", 0)
     z3 = zones.get("z3", 0)
     z4z5 = zones.get("z4", 0) + zones.get("z5", 0)
-    
+
     if z1z2 >= 60:
-        return "Très bonne base d'endurance, continue comme ça !"
+        return "Very good endurance base, keep it up!"
     elif z1z2 >= 40:
-        return "Bon équilibre entre endurance et intensité."
+        return "Good balance between endurance and intensity."
     elif z3 >= 50:
-        return "Beaucoup de tempo, pense à faire plus d'endurance fondamentale."
+        return "Lots of tempo, think about doing more base endurance."
     elif z4z5 >= 30:
-        return "Pas mal d'intensité ! Assure-toi de bien récupérer."
+        return "Quite a bit of intensity! Make sure to recover well."
     else:
-        return "Continue à varier tes séances !"
+        return "Keep varying your sessions!"
 
 
 def _get_sensations(context: Dict) -> str:
-    """Génère une description des sensations basée sur le contexte"""
+    """Generate a description of feelings based on context"""
     ratio = context.get("ratio", 1.0)
     nb_seances = context.get("nb_seances", 0)
     z4z5 = context.get("zones", {}).get("z4", 0) + context.get("zones", {}).get("z5", 0)
-    
+
     if ratio > 1.5:
-        return "peut-être un peu lourdes avec cette charge élevée"
+        return "perhaps a bit heavy with this high load"
     elif ratio > 1.2:
-        return "correctes mais surveillées vu la charge"
+        return "decent but monitored given the load"
     elif nb_seances >= 4:
-        return "bonnes grâce à ta régularité"
+        return "good thanks to your regularity"
     elif z4z5 > 25:
-        return "intenses avec ce travail de qualité"
+        return "intense with this quality work"
     else:
-        return "plutôt bonnes cette semaine"
+        return "rather good this week"
 
 
 def _get_sensations_conseil(context: Dict) -> str:
-    """Génère un conseil basé sur les sensations estimées"""
+    """Generate advice based on estimated feelings"""
     ratio = context.get("ratio", 1.0)
     z4z5 = context.get("zones", {}).get("z4", 0) + context.get("zones", {}).get("z5", 0)
-    
+
     if ratio > 1.5:
-        return "Prends une semaine plus cool pour récupérer."
+        return "Take a cooler week to recover."
     elif ratio > 1.2:
-        return "Écoute bien ton corps cette semaine."
+        return "Listen to your body well this week."
     elif z4z5 > 25:
-        return "Bien joué sur l'intensité, récupère bien entre les séances."
+        return "Well done on intensity, recover well between sessions."
     else:
-        return "Continue sur cette lancée !"
+        return "Keep up this momentum!"
 
 
 def _get_point_fort(context: Dict) -> str:
-    """Identifie le point fort de la semaine"""
+    """Identify the strong point of the week"""
     zones = context.get("zones", {})
     z1z2 = zones.get("z1", 0) + zones.get("z2", 0)
     nb_seances = context.get("nb_seances", 0)
     cadence = context.get("cadence", 0)
-    
+
     if nb_seances >= 4:
-        return "ta régularité"
+        return "your regularity"
     elif z1z2 >= 50:
-        return "ton travail en endurance"
+        return "your endurance work"
     elif cadence >= 170:
-        return "ta cadence de course"
+        return "your running cadence"
     elif context.get("km_semaine", 0) >= 30:
-        return "ton volume d'entraînement"
+        return "your training volume"
     else:
-        return "ta motivation à continuer"
+        return "your motivation to continue"
 
 
 def _get_point_ameliorer(context: Dict) -> str:
-    """Identifie le point à améliorer"""
+    """Identify the point to improve"""
     zones = context.get("zones", {})
     z1z2 = zones.get("z1", 0) + zones.get("z2", 0)
     z3 = zones.get("z3", 0)
     cadence = context.get("cadence", 0)
     nb_seances = context.get("nb_seances", 0)
-    
+
     if z1z2 < 30 and z3 > 50:
-        return "ajouter plus d'endurance fondamentale"
+        return "add more base endurance"
     elif 0 < cadence < 165:
-        return "travailler ta cadence"
+        return "work on your cadence"
     elif nb_seances < 3:
-        return "augmenter la fréquence des séances"
+        return "increase session frequency"
     else:
-        return "varier les types de séances"
+        return "vary session types"
 
 
 def _get_conseil_semaine_prochaine(context: Dict) -> str:
-    """Génère un conseil pour la semaine prochaine"""
+    """Generate advice for next week"""
     zones = context.get("zones", {})
     z1z2 = zones.get("z1", 0) + zones.get("z2", 0)
     z3 = zones.get("z3", 0)
     ratio = context.get("ratio", 1.0)
     nb_seances = context.get("nb_seances", 0)
     cadence = context.get("cadence", 0)
-    
+
     conseils = []
-    
+
     if ratio > 1.3:
-        conseils.append("réduire un peu le volume pour mieux récupérer")
+        conseils.append("reduce volume a bit to recover better")
     elif ratio < 0.8:
-        conseils.append("augmenter légèrement le volume")
-    
+        conseils.append("slightly increase volume")
+
     if z1z2 < 30 and z3 > 50:
-        conseils.append("ajouter une sortie longue en endurance fondamentale")
-    
+        conseils.append("add a long run in base endurance")
+
     if 0 < cadence < 165:
-        conseils.append("intégrer des gammes ou du travail technique")
-    
+        conseils.append("integrate drills or technical work")
+
     if nb_seances < 3:
-        conseils.append("ajouter une séance de plus si ton emploi du temps le permet")
-    
+        conseils.append("add one more session if your schedule allows")
+
     if not conseils:
         conseils = [
-            "maintenir ce bon équilibre",
-            "continuer sur cette lancée",
-            "garder cette régularité"
+            "maintain this good balance",
+            "continue on this momentum",
+            "keep this regularity"
         ]
-    
+
     return random.choice(conseils) if len(conseils) == 1 else conseils[0]
 
 
 def _get_resume_global(context: Dict) -> str:
-    """Génère un résumé global de la semaine"""
+    """Generate a global summary of the week"""
     km = context.get("km_semaine", 0)
     nb = context.get("nb_seances", 0)
     ratio = context.get("ratio", 1.0)
-    
+
     if nb >= 4 and km >= 30:
-        return "semaine très active"
+        return "very active week"
     elif nb >= 3:
-        return "bonne semaine"
+        return "good week"
     elif ratio > 1.3:
-        return "semaine chargée"
+        return "loaded week"
     elif nb == 0:
-        return "semaine de repos"
+        return "rest week"
     else:
-        return "semaine correcte"
+        return "decent week"
 
 
 def _get_conseil_global(context: Dict) -> str:
-    """Génère un conseil global"""
+    """Generate global advice"""
     zones = context.get("zones", {})
     z1z2 = zones.get("z1", 0) + zones.get("z2", 0)
     ratio = context.get("ratio", 1.0)
-    
+
     if ratio > 1.3:
-        return "Pense à bien récupérer."
+        return "Think about recovering well."
     elif z1z2 < 30:
-        return "Ajoute plus d'endurance fondamentale."
+        return "Add more base endurance."
     else:
-        return "Continue comme ça !"
+        return "Keep it up!"
 
 
 def _get_recup_besoin(context: Dict) -> str:
-    """Génère le besoin en récupération"""
+    """Generate recovery need"""
     ratio = context.get("ratio", 1.0)
     km = context.get("km_semaine", 0)
     nb = context.get("nb_seances", 0)
-    
+
     if ratio > 1.5:
-        return "plusieurs jours de repos ou récup très légère"
+        return "several days of rest or very light recovery"
     elif ratio > 1.2:
-        return "au moins 2 jours de récup active"
+        return "at least 2 days of active recovery"
     elif km >= 40:
-        return "1-2 jours de récup active entre les grosses séances"
+        return "1-2 days of active recovery between big sessions"
     elif nb >= 4:
-        return "bien alterner effort et récup"
+        return "alternate well between effort and recovery"
     else:
-        return "maintenir un bon équilibre effort/repos"
+        return "maintain a good effort/rest balance"
 
 
 def _get_recup_conseil(context: Dict) -> str:
-    """Génère un conseil de récupération"""
+    """Generate recovery advice"""
     ratio = context.get("ratio", 1.0)
-    
+
     conseils = [
-        "Hydrate-toi bien et dors suffisamment.",
-        "Le foam roller peut aider à détendre les muscles.",
-        "Une marche légère aide à récupérer activement.",
-        "Les étirements doux après chaque sortie aident.",
-        "Le sommeil est ton meilleur allié pour récupérer."
+        "Hydrate well and sleep enough.",
+        "Foam roller can help relax muscles.",
+        "A light walk helps active recovery.",
+        "Gentle stretching after each run helps.",
+        "Sleep is your best ally for recovery."
     ]
-    
+
     if ratio > 1.3:
-        conseils.insert(0, "Cette semaine, privilégie le repos.")
-    
+        conseils.insert(0, "This week, prioritize rest.")
+
     return random.choice(conseils)
 
 
 def _get_allure_comment(context: Dict) -> str:
-    """Génère un commentaire sur l'allure actuelle"""
+    """Generate a comment on current pace"""
     allure = context.get("allure", "N/A")
     if allure == "N/A":
-        return "pas de données d'allure disponibles"
-    
-    # Extraire les minutes et secondes
+        return "no pace data available"
+
+    # Extract minutes and seconds
     try:
         parts = allure.split(":")
         pace_min = float(parts[0]) + float(parts[1]) / 60
     except:
-        return "solide"
-    
+        return "solid"
+
     if pace_min < 4.5:
-        return "vraiment rapide, niveau compétiteur"
+        return "really fast, competitor level"
     elif pace_min < 5.0:
-        return "très solide, tu as un bon niveau"
+        return "very solid, you have a good level"
     elif pace_min < 5.5:
-        return "solide, tu cours bien"
+        return "solid, you run well"
     elif pace_min < 6.0:
-        return "correct, y'a de la marge pour progresser"
+        return "decent, there's room to improve"
     elif pace_min < 6.5:
-        return "dans la moyenne, c'est bien"
+        return "average, it's good"
     elif pace_min < 7.0:
-        return "correct pour un coureur régulier"
+        return "decent for a regular runner"
     else:
-        return "on peut améliorer ça progressivement"
+        return "we can improve this progressively"
 
 
 def _get_volume_comment(context: Dict) -> str:
-    """Génère un commentaire sur le volume d'entraînement"""
+    """Generate a comment on training volume"""
     km_semaine = context.get("km_semaine", 0)
-    
+
     if km_semaine >= 60:
-        return "très élevé, attention à la récupération"
+        return "very high, watch recovery"
     elif km_semaine >= 40:
-        return "solide pour une préparation sérieuse"
+        return "solid for serious preparation"
     elif km_semaine >= 30:
-        return "bon volume pour progresser"
+        return "good volume to progress"
     elif km_semaine >= 20:
-        return "correct, tu peux augmenter progressivement"
+        return "decent, you can increase progressively"
     elif km_semaine >= 10:
-        return "un bon début, y'a de la marge"
+        return "a good start, there's room"
     else:
-        return "léger, tu peux ajouter du volume si tu te sens bien"
+        return "light, you can add volume if you feel good"
 
 
 def _get_allure_cible(context: Dict) -> str:
-    """Génère une allure cible réaliste (30 sec/km plus rapide que l'actuelle)"""
+    """Generate a realistic target pace (30 sec/km faster than current)"""
     allure = context.get("allure", "N/A")
     if allure == "N/A":
         return "5:30"
-    
+
     try:
         parts = allure.split(":")
         pace_min = float(parts[0]) + float(parts[1]) / 60
-        # Cible = 30 sec/km plus rapide
+        # Target = 30 sec/km faster
         target_pace = pace_min - 0.5
         target_min = int(target_pace)
         target_sec = int((target_pace - target_min) * 60)
@@ -1944,66 +1943,66 @@ def _get_allure_cible(context: Dict) -> str:
 
 
 def _get_analyse_progression(context: Dict) -> str:
-    """Génère une analyse de progression basée sur les données"""
+    """Generate a progress analysis based on data"""
     km_semaine = context.get("km_semaine", 0)
     nb_seances = context.get("nb_seances", 0)
     zones = context.get("zones", {})
     z1z2 = zones.get("z1", 0) + zones.get("z2", 0)
-    
+
     if nb_seances >= 4 and z1z2 >= 50:
-        return "tu as une bonne base, tu peux viser plus de travail spécifique"
+        return "you have a good base, you can aim for more specific work"
     elif nb_seances >= 3:
-        return "tu as de la régularité, on peut monter en intensité"
+        return "you have regularity, we can increase intensity"
     elif km_semaine >= 20:
-        return "ton volume est correct, ajoute de la variété"
+        return "your volume is decent, add variety"
     else:
-        return "tu démarres bien, la priorité c'est la régularité"
+        return "you're starting well, priority is regularity"
 
 
 def _get_temps_estime(context: Dict) -> str:
-    """Estime un temps de course basé sur l'allure actuelle"""
+    """Estimate a race time based on current pace"""
     allure = context.get("allure", "N/A")
     if allure == "N/A":
-        return "à déterminer"
-    
+        return "to be determined"
+
     try:
         parts = allure.split(":")
         pace_min = float(parts[0]) + float(parts[1]) / 60
-        
-        # Estimation 10km (allure + 5% de marge)
+
+        # 10km estimation (pace + 5% margin)
         time_10k = pace_min * 10 * 1.05
         hours = int(time_10k // 60)
         minutes = int(time_10k % 60)
-        
+
         if hours > 0:
             return f"{hours}h{minutes:02d}"
         else:
             return f"{minutes} min"
     except:
-        return "à calculer"
+        return "to calculate"
 
 
 def _get_charge_comment(context: Dict) -> str:
-    """Génère un commentaire sur la charge d'entraînement"""
+    """Generate a comment on training load"""
     km_semaine = context.get("km_semaine", 0)
-    
+
     if km_semaine >= 50:
-        return "solide, attention à ne pas trop charger avant la course"
+        return "solid, be careful not to overload before the race"
     elif km_semaine >= 35:
-        return "bonne pour une prépa sérieuse"
+        return "good for serious prep"
     elif km_semaine >= 25:
-        return "correcte, tu peux encore augmenter si tu te sens bien"
+        return "decent, you can still increase if you feel good"
     elif km_semaine >= 15:
-        return "un bon début, continue de construire ta base"
+        return "a good start, keep building your base"
     else:
-        return "légère, augmente progressivement"
+        return "light, increase progressively"
 
 
 def _get_duree_totale(context: Dict) -> str:
-    """Calcule la durée totale de course de la semaine"""
+    """Calculate total running duration for the week"""
     workouts = context.get("recent_workouts", [])
     total_min = sum(w.get("duration_min", 0) for w in workouts)
-    
+
     if total_min >= 60:
         hours = total_min // 60
         mins = total_min % 60
@@ -2013,15 +2012,15 @@ def _get_duree_totale(context: Dict) -> str:
 
 
 def _get_allure_z2(context: Dict) -> str:
-    """Calcule l'allure Z2 (environ 45 sec plus lent que l'allure moyenne)"""
+    """Calculate Z2 pace (about 45 sec slower than average pace)"""
     allure = context.get("allure", "N/A")
     if allure == "N/A":
         return "7:00-7:30"
-    
+
     try:
         parts = allure.split(":")
         pace_min = float(parts[0]) + float(parts[1]) / 60
-        # Z2 = environ 45 sec/km plus lent
+        # Z2 = about 45 sec/km slower
         z2_pace = pace_min + 0.75
         z2_min = int(z2_pace)
         z2_sec = int((z2_pace - z2_min) * 60)
@@ -2031,7 +2030,7 @@ def _get_allure_z2(context: Dict) -> str:
 
 
 def fill_template(template: str, context: Dict) -> str:
-    """Remplit un template avec les données du contexte"""
+    """Fill a template with context data"""
     # Créer un dictionnaire de remplacement avec des valeurs par défaut
     replacements = {
         "km_semaine": str(context.get("km_semaine", 0)),

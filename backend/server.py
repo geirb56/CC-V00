@@ -35,7 +35,7 @@ from analysis_engine import (
 # Import LLM coach module (GPT-4o-mini)
 from llm_coach import LLM_MODEL, generate_cycle_week
 
-# Import coach service (stratégie cascade)
+# Import coach service (cascade strategy)
 from coach_service import (
     analyze_workout as coach_analyze_workout,
     weekly_review as coach_weekly_review,
@@ -108,25 +108,25 @@ STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', '')
 # Subscription tiers configuration
 SUBSCRIPTION_TIERS = {
     "free": {
-        "name": "Gratuit",
+        "name": "Free",
         "price_monthly": 0,
         "price_annual": 0,
         "messages_limit": 10,
-        "description": "Découverte"
+        "description": "Discovery"
     },
     "starter": {
         "name": "Starter",
         "price_monthly": 4.99,
         "price_annual": 49.99,
         "messages_limit": 25,
-        "description": "Pour débuter"
+        "description": "Getting started"
     },
     "confort": {
         "name": "Confort",
         "price_monthly": 5.99,
         "price_annual": 59.99,
         "messages_limit": 50,
-        "description": "Usage régulier"
+        "description": "Regular usage"
     },
     "pro": {
         "name": "Pro",
@@ -134,7 +134,7 @@ SUBSCRIPTION_TIERS = {
         "price_annual": 99.99,
         "messages_limit": 150,  # Soft limit (fair-use)
         "unlimited": True,
-        "description": "Illimité"
+        "description": "Unlimited"
     }
 }
 
@@ -265,41 +265,41 @@ async def auth_user(
     x_user_id: Optional[str] = Header(None, alias="X-User-Id")
 ) -> dict:
     """
-    Dépendance d'authentification flexible.
-    
-    Ordre de priorité:
-    1. Bearer token (JWT à implémenter)
+    Flexible authentication dependency.
+
+    Priority order:
+    1. Bearer token (JWT to be implemented)
     2. Header X-User-Id
     3. Query param user_id
     4. Fallback "default"
     """
     user_id = None
-    
-    # 1. Bearer token (placeholder pour JWT)
+
+    # 1. Bearer token (placeholder for JWT)
     if credentials and credentials.credentials:
         token = credentials.credentials
-        # TODO: Valider JWT et extraire user_id
-        # Pour l'instant, on utilise le token comme user_id si pas de JWT
+        # TODO: Validate JWT and extract user_id
+        # For now, use the token as user_id if not JWT
         if token.startswith("user_"):
             user_id = token
-    
+
     # 2. Header X-User-Id
     if not user_id and x_user_id:
         user_id = x_user_id
-    
+
     # 3. Query param
     if not user_id:
         user_id = request.query_params.get("user_id")
-    
+
     # 4. Fallback
     if not user_id:
         user_id = "default"
-    
+
     return {"id": user_id, "authenticated": bool(credentials)}
 
 
 async def auth_user_optional(request: Request) -> dict:
-    """Version optionnelle - ne lève jamais d'erreur"""
+    """Optional version - never throws an error"""
     user_id = request.query_params.get("user_id", "default")
     return {"id": user_id, "authenticated": False}
 
@@ -334,10 +334,10 @@ async def rate_limit_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def subscription_middleware(request: Request, call_next):
-    """Middleware de vérification d'abonnement.
-    
-    Bloque l'accès aux routes protégées pour les utilisateurs 'free'.
-    Les utilisateurs 'trial', 'early_adopter' et 'premium' ont accès complet.
+    """Subscription verification middleware.
+
+    Blocks access to protected routes for 'free' users.
+    Users with 'trial', 'early_adopter' and 'premium' have full access.
     """
     path = request.url.path
     
@@ -364,7 +364,7 @@ async def subscription_middleware(request: Request, call_next):
                 status_code=403,
                 content={
                     "error": "subscription_required",
-                    "message": "Abonnement requis pour accéder à cette fonctionnalité",
+                    "message": "Subscription required to access this feature",
                     "message_en": "Subscription required to access this feature",
                     "status": status,
                     "upgrade_url": "/subscription"
@@ -376,7 +376,7 @@ async def subscription_middleware(request: Request, call_next):
         
     except Exception as e:
         logger.error(f"[Subscription] Error checking subscription: {e}")
-        # En cas d'erreur, on laisse passer (fail open)
+        # In case of error, allow access (fail open)
     
     return await call_next(request)
 
@@ -1347,52 +1347,52 @@ If your response looks like a report or written analysis, it is WRONG and must b
 
 100% ENGLISH. No French words allowed."""
 
-CARDIOCOACH_SYSTEM_FR = """Tu es CardioCoach, un coach sportif personnel mobile-first.
-Tu reponds directement aux questions de l'utilisateur, comme un coach humain qui parle a son oreille.
+CARDIOCOACH_SYSTEM_FR = """You are CardioCoach, a mobile-first personal sports coach.
+You respond directly to user questions, like a human coach speaking in their ear.
 
-CECI N'EST PAS UN RAPPORT. C'EST UNE CONVERSATION.
+THIS IS NOT A REPORT. IT'S A CONVERSATION.
 
-FORMAT DE REPONSE (OBLIGATOIRE):
+RESPONSE FORMAT (REQUIRED):
 
-1) REPONSE DIRECTE (obligatoire)
-- 1 a 2 phrases maximum
-- Repond directement a la question
-- Langage simple
-Exemple: "Ta charge recente est globalement moderee, mais assez irreguliere."
+1) DIRECT RESPONSE (required)
+- 1 to 2 sentences maximum
+- Answer the question directly
+- Simple language
+Example: "Your recent training load is generally moderate, but quite irregular."
 
-2) CONTEXTE RAPIDE (optionnel)
-- 1 a 3 puces maximum
-- Chaque puce = une information cle
-- Pas de chiffres inutiles
-- Pas de sous-sections
-Exemple:
-- Tes trois dernieres sorties etaient toutes a intensite similaire
-- Le volume est legerement en hausse par rapport a la semaine derniere
+2) QUICK CONTEXT (optional)
+- 1 to 3 bullet points maximum
+- Each bullet = one key piece of information
+- No unnecessary numbers
+- No subsections
+Example:
+- Your last three runs were all at similar intensity
+- Volume is slightly up compared to last week
 
-3) CONSEIL COACH (obligatoire)
-- UNE seule recommandation
-- Claire, concrete, immediatement applicable
-Exemple: "Essaie de garder des seances vraiment faciles entre les sorties plus intenses."
+3) COACH ADVICE (required)
+- ONE recommendation only
+- Clear, concrete, immediately actionable
+Example: "Try to keep some runs really easy between the more intense sessions."
 
-REGLES DE STYLE STRICTES (INTERDITS):
-- AUCUNE etoile (*, **, ****)
-- AUCUN markdown
-- AUCUN titre
-- AUCUNE numerotation (1., 2., etc.)
-- AUCUNE section "physiologique", "tendance", "lecture"
-- AUCUN pave de texte
-- AUCUNE emphase artificielle
-- AUCUN ton academique ou medical
+STRICT STYLE RULES (FORBIDDEN):
+- NO stars (*, **, ****)
+- NO markdown
+- NO titles
+- NO numbering (1., 2., etc.)
+- NO "physiological", "trend", "reading" sections
+- NO text walls
+- NO artificial emphasis
+- NO academic or medical tone
 
-TON:
-- Calme
-- Confiant
-- Bienveillant
-- Precis mais simple
-- Comme un coach qui parle dans l'oreille de l'utilisateur
+TONE:
+- Calm
+- Confident
+- Caring
+- Precise but simple
+- Like a coach speaking in the user's ear
 
-REGLE D'OR:
-Si ta reponse ressemble a un rapport ou a une analyse ecrite, elle est FAUSSE et doit etre simplifiee.
+GOLDEN RULE:
+If your response looks like a report or written analysis, it is WRONG and must be simplified.
 """
 
 DEEP_ANALYSIS_PROMPT_EN = """Provide a deep technical analysis of this workout WITH CONTEXTUAL COMPARISON to the athlete's recent baseline.
@@ -1436,46 +1436,46 @@ Tone: Calm, precise, non-alarmist. Use phrases like:
 
 Never dramatize. Just observe and advise."""
 
-DEEP_ANALYSIS_PROMPT_FR = """Fournis une analyse technique approfondie de cette seance AVEC COMPARAISON CONTEXTUELLE a la baseline recente de l'athlete.
+DEEP_ANALYSIS_PROMPT_FR = """Provide a deep technical analysis of this workout WITH CONTEXTUAL COMPARISON to the athlete's recent baseline.
 
-Tu as acces a:
-- Les donnees de la seance actuelle
-- Les metriques de reference des 7-14 derniers jours (moyennes et tendances)
+You have access to:
+- Current workout data
+- Baseline metrics from the last 7-14 days (averages and trends)
 
-Structure ton analyse:
+Structure your analysis:
 
-1. EVALUATION DE L'EXECUTION
-- Comment cette seance a-t-elle ete executee?
-- Compare a la baseline recente: regularite allure/puissance, reponse cardiaque
-- Exprime en termes relatifs: "legerement au-dessus de ta moyenne aerobie recente", "en ligne avec la baseline", "notablement plus eleve que les seances recentes"
+1. EXECUTION ASSESSMENT
+- How well was this session executed?
+- Compare to recent baseline: pace/power consistency, heart rate response
+- Express in relative terms: "slightly above your recent aerobic average", "in line with baseline", "notably higher than recent sessions"
 
-2. DETECTION DE TENDANCE
-- En comparant cette seance a la baseline:
-  - PROGRESSION: metriques en amelioration (FC plus basse a meme allure, temps plus rapides, meilleure efficacite)
-  - MAINTIEN: performance stable, coherente avec la baseline
-  - RISQUE DE SURCHARGE: signes de fatigue accumulee (FC elevee, allure en baisse, mauvaise recuperation entre efforts)
-- Sois calme et precis. Pas alarmiste. Enonce les observations de maniere neutre.
+2. TREND DETECTION
+- Based on comparing this workout to baseline:
+  - IMPROVING: metrics trending positively (lower HR at same pace, faster times, better efficiency)
+  - MAINTAINING: stable performance, consistent with baseline
+  - OVERLOAD RISK: signs of accumulated fatigue (elevated HR, declining pace, poor recovery between efforts)
+- Be calm and precise. Not alarmist. State observations neutrally.
 
-3. CONTEXTE PHYSIOLOGIQUE
-- Distribution des zones vs patterns recents
-- Efficacite cardiaque relative a la baseline
-- Toute deviation des patterns de reponse normaux
+3. PHYSIOLOGICAL CONTEXT
+- Zone distribution vs recent patterns
+- Cardiac efficiency relative to baseline
+- Any deviation from normal response patterns
 
-4. RECOMMANDATION ACTIONNABLE
-- Une recommandation specifique basee sur la position de cette seance par rapport a la charge recente
-- Si charge elevee: suggere un focus recuperation
-- Si maintien: suggere une opportunite de progression
-- Si progression: reconnais et suggere le prochain defi
+4. ACTIONABLE INSIGHT
+- One specific recommendation based on where this workout sits relative to recent load
+- If load is high: suggest recovery focus
+- If maintaining: suggest progression opportunity
+- If improving: acknowledge and suggest next challenge
 
 {hidden_insight_instruction}
 
-Ton: Calme, precis, non-alarmiste. Utilise des phrases comme:
-- "legerement eleve par rapport a ta baseline recente"
-- "coherent avec ta moyenne sur 7 jours"
-- "cela represente une augmentation modeste de la charge"
-- "ton corps repond bien a l'entrainement recent"
+Tone: Calm, precise, non-alarmist. Use phrases like:
+- "slightly elevated compared to your recent baseline"
+- "consistent with your 7-day average"
+- "this represents a modest increase in training load"
+- "your body is responding well to recent training"
 
-Ne dramatise jamais. Observe et conseille simplement."""
+Never dramatize. Just observe and advise."""
 
 HIDDEN_INSIGHT_EN = """
 5. HIDDEN INSIGHT (include this section)
@@ -1499,25 +1499,25 @@ Rules:
 The goal is to sound like a thoughtful coach who notices things others don't."""
 
 HIDDEN_INSIGHT_FR = """
-5. OBSERVATION DISCRETE (inclure cette section)
-Ajoute une observation non-evidente a la fin. Quelque chose qu'un coach moins experimente pourrait manquer.
+5. HIDDEN INSIGHT (include this section)
+Add one non-obvious observation at the end. Something a less experienced coach might miss.
 
-Axes d'attention (choisis UN qui s'applique):
-- Anomalie de distribution d'effort: transitions de zones inhabituelles, patterns de splits
-- Stabilite d'allure: patterns de derive, tendances splits negatifs/positifs
-- Signaux d'efficacite: changements du ratio allure/FC, evolution de l'economie de puissance
-- Empreintes de fatigue: degradation en fin de seance, qualite des intervalles de recuperation
-- Signature aerobie: patterns de proximite au seuil, marqueurs d'effort soutenable
+Focus areas (pick ONE that applies):
+- Effort distribution anomaly: unusual zone transitions, split behavior patterns
+- Pacing stability: drift patterns, negative/positive split tendencies
+- Efficiency signals: pace-to-HR ratio changes, power economy shifts
+- Fatigue fingerprints: late-session degradation, recovery interval quality
+- Aerobic signature: threshold proximity patterns, sustainable effort markers
 
-Regles:
-- Longueur variable: parfois une seule phrase, parfois 2-3 phrases
-- Pas de motivation ("bravo", "continue comme ca")
-- Pas d'alarmes ("attention", "danger", "preoccupant")
-- Pas de termes medicaux
-- Enonce-le comme une observation tranquille, comme une reflexion a voix haute
-- Utilise des phrases comme: "A noter...", "Quelque chose de subtil ici...", "Un pattern interessant...", "Un detail ressort..."
+Rules:
+- Variable length: sometimes just one sentence, sometimes 2-3 sentences
+- No motivation ("great job", "keep it up")
+- No alarms ("warning", "danger", "concerning")
+- No medical terms
+- State it as a quiet observation, like thinking out loud
+- Use phrases like: "Worth noting...", "Something subtle here...", "An interesting pattern...", "One detail stands out..."
 
-L'objectif est de sonner comme un coach reflechi qui remarque des choses que d'autres ne voient pas."""
+The goal is to sound like a thoughtful coach who notices things others don't."""
 
 NO_HIDDEN_INSIGHT = ""
 
@@ -1568,50 +1568,50 @@ Rules:
 
 The goal is to help the athlete train better without cognitive overload."""
 
-ADAPTIVE_GUIDANCE_PROMPT_FR = """En fonction des donnees d'entrainement recentes de l'athlete, fournis des recommandations adaptatives.
+ADAPTIVE_GUIDANCE_PROMPT_FR = """Based on the athlete's recent training data, provide adaptive training guidance.
 
-Tu as acces a:
-- Les seances recentes (7-14 derniers jours)
-- Resume de la charge (volume, distribution d'intensite, types de seances)
+You have access to:
+- Recent workouts (last 7-14 days)
+- Training load summary (volume, intensity distribution, workout types)
 
-Genere des recommandations A COURT TERME (pas un plan rigide):
+Generate SHORT-TERM guidance (not a rigid plan):
 
-1. STATUT ACTUEL
-Evalue l'etat actuel de l'athlete avec UN de ces termes:
-- "MAINTENIR" - l'entrainement est equilibre, continuer l'approche actuelle
-- "AJUSTER" - petits ajustements necessaires selon les patterns recents
-- "CONSOLIDER" - consolider le travail recent avant d'en ajouter
+1. CURRENT STATUS
+Assess the athlete's current state in ONE of these terms:
+- "MAINTAIN" - training is balanced, continue current approach
+- "ADJUST" - minor tweaks needed based on recent patterns
+- "HOLD STEADY" - consolidate recent work before adding more
 
-Explique en 1-2 phrases pourquoi.
+Explain in 1-2 sentences why.
 
-2. SEANCES SUGGEREES (max 3)
-Propose jusqu'a 3 prochaines seances. Pour chacune:
-- Type: course/velo/recuperation
-- Focus: ce que cette seance cible (base aerobie, vitesse, recuperation, seuil, etc.)
-- Duree/Distance: approximative
-- Intensite: facile/moderee/difficile ou zones
-- Justification: UNE phrase expliquant "pourquoi maintenant" basee sur les donnees recentes
+2. SUGGESTED SESSIONS (max 3)
+Provide up to 3 suggested next sessions. For each:
+- Type: run/cycle/recovery
+- Focus: what this session targets (aerobic base, speed, recovery, threshold, etc.)
+- Duration/Distance: approximate
+- Intensity: easy/moderate/hard or zone guidance
+- Rationale: ONE sentence explaining "why this helps now" based on recent data
 
-Formate chaque suggestion ainsi:
-SEANCE 1: [Type] - [Focus]
-- Duree: [X min] ou Distance: [X km]
-- Intensite: [niveau]
-- Pourquoi maintenant: [breve justification liee a l'entrainement recent]
+Format each suggestion as:
+SESSION 1: [Type] - [Focus]
+- Duration: [X min] or Distance: [X km]
+- Intensity: [level]
+- Why now: [brief rationale tied to recent training]
 
-3. NOTE DE GUIDANCE (optionnel)
-Si pertinent, ajoute une breve observation sur l'allure, la recuperation ou la gestion de charge.
+3. GUIDANCE NOTE (optional)
+If relevant, add one brief observation about pacing, recovery, or load management.
 
-Regles:
-- Pas de plannings rigides ou plans hebdomadaires fixes
-- Les suggestions sont des recommandations, pas des obligations
-- Max 3 seances a venir
-- Ton calme et technique
-- Pas de motivation ("tu vas y arriver", "super travail")
-- Pas de langage medical
-- Pas d'alarmes ou avertissements
-- Chaque suggestion doit avoir une justification claire "pourquoi maintenant"
+Rules:
+- No rigid schedules or fixed weekly plans
+- Suggestions are guidance, not obligations
+- Max 3 sessions ahead
+- Calm, technical tone
+- No motivation ("you've got this", "great work")
+- No medical language
+- No alarms or warnings
+- Each suggestion must have a clear "why this helps now" rationale
 
-L'objectif est d'aider l'athlete a mieux s'entrainer sans surcharge cognitive."""
+The goal is to help the athlete train better without cognitive overload."""
 
 
 def get_system_prompt(language: str) -> str:
@@ -2155,7 +2155,7 @@ def calculate_training_zones(vma_kmh: float, language: str = "en") -> dict:
     
     zones = {
         "z1": {
-            "name": "Recovery" if language == "en" else "Récupération",
+            "name": "Recovery" if language == "en" else "Recovery",
             "pct_vma": "60-65%",
             "pace_range": f"{kmh_to_pace(vma_kmh * 0.60)} - {kmh_to_pace(vma_kmh * 0.65)}"
         },
@@ -2202,10 +2202,10 @@ async def get_vma_estimate(user_id: str = "default", language: str = "en"):
             has_sufficient_data=False,
             confidence="insufficient",
             confidence_score=0,
-            message="Données insuffisantes. Aucune séance de course enregistrée." if language == "fr" else "Insufficient data. No running workouts recorded.",
+            message="Insufficient data. No running workouts recorded." if language == "fr" else "Insufficient data. No running workouts recorded.",
             recommendations=[
-                "Synchronise tes séances Strava" if language == "fr" else "Sync your Strava workouts",
-                "Fais quelques sorties avec cardiofréquencemètre" if language == "fr" else "Do some runs with heart rate monitor"
+                "Sync your Strava workouts" if language == "fr" else "Sync your Strava workouts",
+                "Do some runs with heart rate monitor" if language == "fr" else "Do some runs with heart rate monitor"
             ]
         )
     
@@ -2220,7 +2220,7 @@ async def get_vma_estimate(user_id: str = "default", language: str = "en"):
         )
         if race_estimate:
             result = race_estimate
-            data_source = f"Objectif: {user_goal['event_name']}" if language == "fr" else f"Goal: {user_goal['event_name']}"
+            data_source = f"Goal: {user_goal['event_name']}" if language == "fr" else f"Goal: {user_goal['event_name']}"
     
     # Priority 2: Analyze workout data
     if not result:
@@ -2228,18 +2228,18 @@ async def get_vma_estimate(user_id: str = "default", language: str = "en"):
         
         if not workout_estimate.get("has_sufficient_data"):
             reason = workout_estimate.get("reason")
-            
+
             if reason == "need_more_workouts":
-                msg = f"Données insuffisantes. Seulement {workout_estimate.get('count')} séances avec données cardio." if language == "fr" else f"Insufficient data. Only {workout_estimate.get('count')} workouts with HR data."
+                msg = f"Insufficient data. Only {workout_estimate.get('count')} workouts with HR data." if language == "fr" else f"Insufficient data. Only {workout_estimate.get('count')} workouts with HR data."
                 recs = [
-                    "Continue à synchroniser tes séances" if language == "fr" else "Keep syncing your workouts",
-                    "Au moins 3 séances avec cardiofréquencemètre nécessaires" if language == "fr" else "At least 3 workouts with HR monitor needed"
+                    "Keep syncing your workouts" if language == "fr" else "Keep syncing your workouts",
+                    "At least 3 workouts with HR monitor needed" if language == "fr" else "At least 3 workouts with HR monitor needed"
                 ]
             else:  # need_high_intensity
-                msg = f"Données insuffisantes. Pas assez d'efforts intenses (Z4/Z5) pour estimer la VMA." if language == "fr" else f"Insufficient data. Not enough high-intensity efforts (Z4/Z5) to estimate VMA."
+                msg = f"Insufficient data. Not enough high-intensity efforts (Z4/Z5) to estimate VMA." if language == "fr" else f"Insufficient data. Not enough high-intensity efforts (Z4/Z5) to estimate VMA."
                 recs = [
-                    "Fais une séance de fractionné ou un test VMA" if language == "fr" else "Do an interval session or VMA test",
-                    f"Séances Z5 trouvées: {workout_estimate.get('z5_count', 0)}, Z4: {workout_estimate.get('z4_count', 0)}"
+                    "Do an interval session or VMA test" if language == "fr" else "Do an interval session or VMA test",
+                    f"Z5 sessions found: {workout_estimate.get('z5_count', 0)}, Z4: {workout_estimate.get('z4_count', 0)}"
                 ]
             
             return VMAEstimationResponse(
@@ -2253,9 +2253,9 @@ async def get_vma_estimate(user_id: str = "default", language: str = "en"):
         result = workout_estimate
         method = result.get("method")
         if method == "z5_efforts":
-            data_source = f"Analyse de {result.get('sample_count')} efforts Z5" if language == "fr" else f"Analysis of {result.get('sample_count')} Z5 efforts"
+            data_source = f"Analysis of {result.get('sample_count')} Z5 efforts" if language == "fr" else f"Analysis of {result.get('sample_count')} Z5 efforts"
         else:
-            data_source = f"Extrapolation depuis {result.get('sample_count')} séances Z4" if language == "fr" else f"Extrapolation from {result.get('sample_count')} Z4 sessions"
+            data_source = f"Extrapolation from {result.get('sample_count')} Z4 sessions" if language == "fr" else f"Extrapolation from {result.get('sample_count')} Z4 sessions"
     
     # Calculate training zones
     vma_kmh = result["vma_kmh"]
@@ -2269,18 +2269,18 @@ async def get_vma_estimate(user_id: str = "default", language: str = "en"):
     
     # Build message
     if confidence == "high":
-        msg = f"VMA estimée avec bonne fiabilité depuis ton objectif de course." if language == "fr" else "VMA estimated with good reliability from your race goal."
+        msg = f"VMA estimated with good reliability from your race goal." if language == "fr" else "VMA estimated with good reliability from your race goal."
     elif confidence == "medium":
-        msg = f"VMA estimée depuis tes efforts intenses. Fiabilité correcte." if language == "fr" else "VMA estimated from your intense efforts. Decent reliability."
+        msg = f"VMA estimated from your intense efforts. Decent reliability." if language == "fr" else "VMA estimated from your intense efforts. Decent reliability."
     else:
-        msg = f"VMA estimée par extrapolation. Fiabilité limitée - un test VMA serait plus précis." if language == "fr" else "VMA estimated by extrapolation. Limited reliability - a VMA test would be more accurate."
+        msg = f"VMA estimated by extrapolation. Limited reliability - a VMA test would be more accurate." if language == "fr" else "VMA estimated by extrapolation. Limited reliability - a VMA test would be more accurate."
     
     # Recommendations based on VMA
     if language == "fr":
         recs = [
-            f"Endurance fondamentale: {training_zones['z2']['pace_range']}/km",
-            f"Allure seuil (tempo): {training_zones['z4']['pace_range']}/km",
-            f"Fractionné VMA: {training_zones['z5']['pace_range']}/km"
+            f"Easy/endurance pace: {training_zones['z2']['pace_range']}/km",
+            f"Threshold (tempo) pace: {training_zones['z4']['pace_range']}/km",
+            f"VMA intervals: {training_zones['z5']['pace_range']}/km"
         ]
     else:
         recs = [
@@ -2337,20 +2337,20 @@ DONNEES MOIS: {month_data}
 Regles:
 - UNE seule phrase, max 15 mots
 - Parle comme un vrai coach, pas comme un rapport
-- Rassure et guide
-- Pas de chiffres, pas de stats, pas de jargon
-- L'utilisateur doit se dire: "Ok, je comprends. Je sais quoi faire."
+- Reassure and guide
+- No numbers, no stats, no jargon
+- The user should think: "Ok, I understand. I know what to do."
 
-Bons exemples:
-- "Semaine tranquille avec une seule sortie, coherent pour une reprise."
-- "Le corps est pret pour une deuxieme sortie facile."
-- "La regularite compte plus que l'intensite pour l'instant."
+Good examples:
+- "Easy week with just one run, consistent with recovery."
+- "Your body is ready for a second easy run."
+- "Consistency matters more than intensity right now."
 
-Mauvais (interdit):
-- "Analyse du volume montrant une charge moderee par rapport a la baseline."
-- Toute mention de zones, bpm, ou termes techniques
+Bad (forbidden):
+- "Volume analysis showing moderate load compared to baseline."
+- Any mention of zones, bpm, or technical terms
 
-100% FRANCAIS uniquement."""
+100% FRENCH only."""
 
 
 class DashboardInsightResponse(BaseModel):
@@ -2828,28 +2828,28 @@ async def get_stats():
 
 @api_router.post("/coach/analyze", response_model=CoachResponse)
 async def analyze_with_coach(request: CoachRequest):
-    """Chat Coach conversationnel avec GPT-4o-mini
-    
-    Le coach a accès à:
-    - L'historique des conversations
-    - Les données d'entraînement (séances, stats)
-    - Le contexte fitness (ACWR, TSB, volume)
-    
-    Il peut répondre à des questions ouvertes sur l'entraînement.
+    """Conversational Chat Coach with GPT-4o-mini
+
+    The coach has access to:
+    - Conversation history
+    - Training data (workouts, stats)
+    - Fitness context (ACWR, TSB, volume)
+
+    It can respond to open-ended questions about training.
     """
     from llm_coach import enrich_chat_response
     
     user_id = request.user_id or "default"
     language = request.language or "en"
     user_message = request.message or ""
-    
-    # 1. Récupérer l'historique des conversations (5 derniers messages)
+
+    # 1. Retrieve conversation history (last 5 messages)
     conversation_history = await db.conversations.find(
         {"user_id": user_id}
     ).sort("timestamp", -1).limit(5).to_list(5)
-    conversation_history = list(reversed(conversation_history))  # Ordre chronologique
-    
-    # 2. Récupérer les données d'entraînement
+    conversation_history = list(reversed(conversation_history))  # Chronological order
+
+    # 2. Retrieve training data
     today = datetime.now(timezone.utc)
     seven_days_ago = today - timedelta(days=7)
     twenty_eight_days_ago = today - timedelta(days=28)
@@ -2890,11 +2890,11 @@ async def analyze_with_coach(request: CoachRequest):
     ctl = km_28 / 4
     atl = km_7
     tsb = round(ctl - atl, 1)
-    
-    # 4. Préparer le résumé de TOUTES les séances (pas seulement 5)
+
+    # 4. Prepare summary of ALL sessions (not just 5)
     all_sessions_summary = []
     for act in all_activities:
-        name = act.get("name", "Séance")
+        name = act.get("name", "Session")
         dist = get_distance_km(act)
         duration = act.get("moving_time", act.get("duration_minutes", 0) * 60)
         if duration > 100:
@@ -2931,8 +2931,8 @@ async def analyze_with_coach(request: CoachRequest):
             sessions_per_week = plan_data.get("sessions_per_week", 4)
             sessions = plan_data.get("sessions", [])
             if sessions:
-                training_plan_summary = f"Objectif: {current_goal} | {sessions_per_week} séances/semaine\n"
-                training_plan_summary += "Planning de la semaine:\n"
+                training_plan_summary = f"Goal: {current_goal} | {sessions_per_week} sessions/week\n"
+                training_plan_summary += "Week schedule:\n"
                 for s in sessions:
                     day = s.get("day", "")
                     stype = s.get("type", "")
@@ -2941,7 +2941,7 @@ async def analyze_with_coach(request: CoachRequest):
                     training_plan_summary += f"  • {day}: {stype}"
                     if dist > 0:
                         training_plan_summary += f" ({dist}km)"
-                    if details and stype != "Repos":
+                    if details and stype != "Rest":
                         training_plan_summary += f" - {details[:60]}"
                     training_plan_summary += "\n"
     except Exception as e:
@@ -2964,7 +2964,7 @@ async def analyze_with_coach(request: CoachRequest):
             }).to_list(500)
         
         if pred_activities:
-            # Calculer la VMA avec la méthode correcte
+            # Calculate VMA with the correct method
             def get_pred_distance(a):
                 dist = a.get("distance", 0)
                 if dist > 1000:
@@ -3014,13 +3014,13 @@ async def analyze_with_coach(request: CoachRequest):
             
             if paces:
                 avg_pace = sum(paces) / len(paces)
-                
-                # Calculer VMA avec la méthode correcte
+
+                # Calculate VMA with the correct method
                 if vma_efforts:
                     best_vma_effort = max(vma_efforts, key=lambda x: x["speed_kmh"])
                     best_sustained_speed = best_vma_effort["speed_kmh"]
                     duration = best_vma_effort["duration"]
-                    
+
                     if duration >= 20:
                         estimated_vma = best_sustained_speed / 0.85
                     elif duration >= 12:
@@ -3030,11 +3030,11 @@ async def analyze_with_coach(request: CoachRequest):
                 else:
                     avg_speed_kmh = 60 / avg_pace
                     estimated_vma = avg_speed_kmh / 0.70
-                
+
                 estimated_vma = round(estimated_vma, 1)
-                vma_info = f"VMA estimée: {estimated_vma} km/h"
-                
-                # Prédictions basées sur VMA
+                vma_info = f"Estimated VMA: {estimated_vma} km/h"
+
+                # VMA-based predictions
                 pred_5k_speed = estimated_vma * 0.95
                 pred_5k_pace = 60 / pred_5k_speed
                 time_5k = (pred_5k_pace * 5)
@@ -3076,16 +3076,16 @@ async def analyze_with_coach(request: CoachRequest):
             "acwr": acwr,
             "acwr_status": "optimal" if 0.8 <= acwr <= 1.3 else "attention",
             "tsb": tsb,
-            "tsb_status": "frais" if tsb > 0 else "fatigué" if tsb < -10 else "en charge"
+            "tsb_status": "fresh" if tsb > 0 else "fatigued" if tsb < -10 else "loaded"
         },
-        "all_sessions": "\n".join(all_sessions_summary) if all_sessions_summary else "Aucune séance enregistrée",
-        "training_plan": training_plan_summary if training_plan_summary else "Aucun plan d'entraînement actif",
+        "all_sessions": "\n".join(all_sessions_summary) if all_sessions_summary else "No recorded sessions",
+        "training_plan": training_plan_summary if training_plan_summary else "No active training plan",
         "current_goal": current_goal,
         "vma": vma_info,
         "predictions": predictions_summary
     }
-    
-    # 5. Si workout_id spécifié, enrichir le contexte avec les détails de la séance
+
+    # 5. If workout_id specified, enrich context with session details
     if request.workout_id:
         workout = await db.strava_activities.find_one({"id": request.workout_id})
         if not workout:
@@ -5531,8 +5531,8 @@ async def set_training_goal(
 @api_router.get("/training/plan")
 async def get_training_plan_v2(user: dict = Depends(auth_user)):
     """
-    Génère ou met à jour le plan d'entraînement dynamique
-    selon les dernières données fitness.
+    Generate or update the dynamic training plan
+    based on latest fitness data.
     """
     return await generate_dynamic_training_plan(db, user["id"])
 
@@ -5540,17 +5540,17 @@ async def get_training_plan_v2(user: dict = Depends(auth_user)):
 @api_router.post("/training/refresh")
 async def refresh_training_plan(sessions: int = None, user: dict = Depends(auth_user)):
     """
-    Force le recalcul complet du plan
-    (après sync Strava par exemple).
-    sessions: nombre de séances souhaitées (3, 4, 5, 6)
+    Force complete plan recalculation
+    (after Strava sync for example).
+    sessions: number of desired sessions (3, 4, 5, 6)
     """
-    # Vider le cache pour cet utilisateur
+    # Clear cache for this user
     from coach_service import _plan_cache
     keys_to_remove = [k for k in _plan_cache if user["id"] in k]
     for k in keys_to_remove:
         del _plan_cache[k]
-    
-    # Sauvegarder le nombre de séances si spécifié
+
+    # Save number of sessions if specified
     if sessions and sessions in [3, 4, 5, 6]:
         await db.training_prefs.update_one(
             {"user_id": user["id"]},
@@ -5563,23 +5563,23 @@ async def refresh_training_plan(sessions: int = None, user: dict = Depends(auth_
 
 @api_router.delete("/training/goal")
 async def delete_training_goal(user_id: str = "default"):
-    """Supprime l'objectif d'entraînement"""
-    
+    """Delete the training goal"""
+
     result = await db.training_goals.delete_one({"user_id": user_id})
     await db.training_context.delete_one({"user_id": user_id})
     await db.training_cycles.delete_one({"user_id": user_id})
-    
+
     return {
         "success": result.deleted_count > 0,
-        "message": "Objectif supprimé" if result.deleted_count > 0 else "Aucun objectif trouvé"
+        "message": "Goal deleted" if result.deleted_count > 0 else "No goal found"
     }
 
 
 @api_router.get("/training-plan")
 async def get_training_plan(user: dict = Depends(auth_user)):
     """
-    Récupère le plan d'entraînement dynamique pour l'utilisateur.
-    Génère automatiquement les séances via LLM basé sur le cycle.
+    Retrieve the dynamic training plan for the user.
+    Automatically generates sessions via LLM based on the cycle.
     """
     return await generate_dynamic_training_plan(db, user["id"])
 
@@ -5587,7 +5587,7 @@ async def get_training_plan(user: dict = Depends(auth_user)):
 @api_router.post("/training-plan/set-goal")
 async def set_training_plan_goal(goal: str, user: dict = Depends(auth_user)):
     """
-    Définit l'objectif d'entraînement (10K, SEMI, MARATHON, etc.)
+    Set the training goal (10K, SEMI, MARATHON, etc.)
     """
     if goal.upper() not in ["5K", "10K", "SEMI", "MARATHON", "ULTRA"]:
         return {"error": "Invalid goal"}
@@ -5641,25 +5641,25 @@ async def get_available_goals():
 @api_router.get("/training/metrics")
 async def get_training_metrics(user: dict = Depends(auth_user)):
     """
-    Retourne les métriques d'entraînement: ACWR, TSB, charge, monotonie.
-    Utilisé par le Dashboard pour afficher l'état de forme.
+    Returns training metrics: ACWR, TSB, load, monotony.
+    Used by Dashboard to display fitness status.
     """
     today = datetime.now(timezone.utc)
     seven_days_ago = today - timedelta(days=7)
     twenty_eight_days_ago = today - timedelta(days=28)
-    
-    # Récupérer les activités Strava
+
+    # Retrieve Strava activities
     activities_7 = await db.strava_activities.find({
         "user_id": user["id"],
         "start_date_local": {"$gte": seven_days_ago.isoformat()}
     }).to_list(100)
-    
+
     activities_28 = await db.strava_activities.find({
         "user_id": user["id"],
         "start_date_local": {"$gte": twenty_eight_days_ago.isoformat()}
     }).to_list(300)
-    
-    # Fallback sur workouts manuels si pas de Strava
+
+    # Fallback to manual workouts if no Strava
     if not activities_28:
         activities_7 = await db.workouts.find({
             "date": {"$gte": seven_days_ago.isoformat()}
@@ -5785,11 +5785,11 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
     if not activities:
         return {
             "has_data": False,
-            "message": "Pas assez de données pour prédire. Continue à t'entraîner !",
+            "message": "Not enough data to predict. Keep training!",
             "predictions": []
         }
-    
-    # Extraire les métriques clés
+
+    # Extract key metrics
     def get_distance(a):
         dist = a.get("distance", 0)
         if dist > 1000:
@@ -5863,11 +5863,11 @@ async def get_race_predictions(user: dict = Depends(auth_user)):
     if not paces:
         return {
             "has_data": False,
-            "message": "Pas assez de données d'allure. Assure-toi que tes séances ont des données GPS.",
+            "message": "Not enough pace data. Make sure your sessions have GPS data.",
             "predictions": []
         }
-    
-    # Calculer les métriques de base
+
+    # Calculate basic metrics
     weekly_km = total_km / 6  # 6 semaines
     avg_pace = sum(paces) / len(paces)
     best_pace = min(paces) if paces else avg_pace
@@ -6259,11 +6259,11 @@ async def get_full_training_cycle(
     Returns the full training cycle overview with all weeks.
     Phase names/focus and session type keys are returned; frontend translates keys via i18n.
     """
-    # Récupérer le cycle utilisateur
+    # Retrieve user cycle
     cycle = await db.training_cycles.find_one({"user_id": user["id"]})
-    
+
     if not cycle:
-        # Créer un cycle par défaut
+        # Create a default cycle
         default_cycle = {
             "user_id": user["id"],
             "goal": "SEMI",
@@ -6272,22 +6272,22 @@ async def get_full_training_cycle(
         }
         await db.training_cycles.insert_one(default_cycle)
         cycle = await db.training_cycles.find_one({"user_id": user["id"]})
-    
+
     goal = cycle.get("goal", "SEMI")
     config = GOAL_CONFIG.get(goal, GOAL_CONFIG["SEMI"])
     total_weeks = config["cycle_weeks"]
-    
-    # Récupérer les préférences de séances
+
+    # Retrieve session preferences
     prefs = await db.training_prefs.find_one({"user_id": user["id"]})
     sessions_per_week = prefs.get("sessions_per_week", 4) if prefs else 4
-    
-    # Calculer la semaine actuelle
+
+    # Calculate current week
     start_date = cycle.get("start_date")
     if isinstance(start_date, str):
         start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
     current_week = compute_week_number(start_date.date() if isinstance(start_date, datetime) else start_date)
-    
-    # Récupérer le volume actuel de l'athlète (basé sur les 28 derniers jours)
+
+    # Retrieve athlete's current volume (based on last 28 days)
     today = datetime.now(timezone.utc)
     twenty_eight_days_ago = today - timedelta(days=28)
     
@@ -6295,17 +6295,17 @@ async def get_full_training_cycle(
         "user_id": user["id"],
         "start_date_local": {"$gte": twenty_eight_days_ago.isoformat()}
     }).to_list(200)
-    
-    # Si pas de données Strava, essayer les workouts manuels
+
+    # If no Strava data, try manual workouts
     if not workouts_28:
         workouts_28 = await db.workouts.find({
             "date": {"$gte": twenty_eight_days_ago.isoformat()}
         }).to_list(200)
     
     km_28 = sum(w.get("distance", w.get("distance_km", 0) * 1000) / 1000 for w in workouts_28)
-    base_weekly_km = km_28 / 4 if km_28 > 0 else 25  # Volume hebdo de base
-    
-    # Générer l'aperçu de toutes les semaines
+    base_weekly_km = km_28 / 4 if km_28 > 0 else 25  # Base weekly volume
+
+    # Generate overview of all weeks
     weeks_overview = []
     
     for week_num in range(1, total_weeks + 1):
@@ -6380,9 +6380,9 @@ async def get_week_plan(user_id: str = "default"):
     goal = await db.training_goals.find_one({"user_id": user_id}, {"_id": 0})
     
     if not goal:
-        raise HTTPException(status_code=400, detail="Aucun objectif défini. Utilisez /api/training/set-goal d'abord.")
-    
-    # Récupérer les données récentes pour le contexte
+        raise HTTPException(status_code=400, detail="No goal defined. Use /api/training/set-goal first.")
+
+    # Retrieve recent data for context
     today = datetime.now(timezone.utc)
     seven_days_ago = today - timedelta(days=7)
     twenty_eight_days_ago = today - timedelta(days=28)
@@ -6495,36 +6495,36 @@ def _generate_fallback_week_plan(context: dict, phase: str, target_load: int, go
         "z5": "175-185",
     }
     
-    # Templates par phase avec détails enrichis
+    # Templates by phase with enriched details
     if phase == "deload":
         sessions = [
-            {"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Étirements ou yoga", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Mardi", "type": "Endurance", "duration": "30min", "details": f"5 km • {paces['z1']}/km • FC {hr_zones['z1']} bpm", "intensity": "easy", "estimated_tss": 25, "distance_km": 5},
-            {"day": "Mercredi", "type": "Repos", "duration": "0min", "details": "Récupération active • Marche ou natation légère", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Jeudi", "type": "Endurance", "duration": "35min", "details": f"6 km • {paces['z2']}/km • FC {hr_zones['z2']} bpm", "intensity": "easy", "estimated_tss": 30, "distance_km": 6},
-            {"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Sommeil prioritaire", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Samedi", "type": "Endurance", "duration": "40min", "details": f"7 km progressif • {paces['z2']}/km → {paces['z3']}/km • FC {hr_zones['z2']} bpm", "intensity": "easy", "estimated_tss": 35, "distance_km": 7},
-            {"day": "Dimanche", "type": "Repos", "duration": "0min", "details": "Récupération complète • Prépare la semaine suivante", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Monday", "type": "Rest", "duration": "0min", "details": "Complete recovery • Stretching or yoga", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Tuesday", "type": "Endurance", "duration": "30min", "details": f"5 km • {paces['z1']}/km • HR {hr_zones['z1']} bpm", "intensity": "easy", "estimated_tss": 25, "distance_km": 5},
+            {"day": "Wednesday", "type": "Rest", "duration": "0min", "details": "Active recovery • Walk or light swimming", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Thursday", "type": "Endurance", "duration": "35min", "details": f"6 km • {paces['z2']}/km • HR {hr_zones['z2']} bpm", "intensity": "easy", "estimated_tss": 30, "distance_km": 6},
+            {"day": "Friday", "type": "Rest", "duration": "0min", "details": "Complete recovery • Sleep priority", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Saturday", "type": "Endurance", "duration": "40min", "details": f"7 km progressive • {paces['z2']}/km → {paces['z3']}/km • HR {hr_zones['z2']} bpm", "intensity": "easy", "estimated_tss": 35, "distance_km": 7},
+            {"day": "Sunday", "type": "Rest", "duration": "0min", "details": "Complete recovery • Prepare for next week", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
         ]
     elif phase == "taper":
         sessions = [
-            {"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Hydratation ++", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Mardi", "type": "Endurance", "duration": "30min", "details": f"5 km + 4×100m vite • {paces['z2']}/km puis sprint • FC {hr_zones['z2']} bpm", "intensity": "easy", "estimated_tss": 30, "distance_km": 5.5},
-            {"day": "Mercredi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Préparation mentale", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Jeudi", "type": "Tempo court", "duration": "25min", "details": f"4 km dont 2 km à allure course • {paces['semi']}/km • FC {hr_zones['z3']} bpm", "intensity": "moderate", "estimated_tss": 35, "distance_km": 4},
-            {"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Repos total • Dernière préparation équipement", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Samedi", "type": "Activation", "duration": "20min", "details": f"3 km + 3×200m allure course • {paces['z2']}/km • FC {hr_zones['z2']} bpm", "intensity": "easy", "estimated_tss": 25, "distance_km": 3.6},
-            {"day": "Dimanche", "type": "Repos", "duration": "0min", "details": "VEILLE DE COURSE • Repos total, alimentation glucides", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Monday", "type": "Rest", "duration": "0min", "details": "Complete recovery • Hydration ++", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Tuesday", "type": "Endurance", "duration": "30min", "details": f"5 km + 4×100m fast • {paces['z2']}/km then sprint • HR {hr_zones['z2']} bpm", "intensity": "easy", "estimated_tss": 30, "distance_km": 5.5},
+            {"day": "Wednesday", "type": "Rest", "duration": "0min", "details": "Complete recovery • Mental preparation", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Thursday", "type": "Short tempo", "duration": "25min", "details": f"4 km including 2 km at race pace • {paces['semi']}/km • HR {hr_zones['z3']} bpm", "intensity": "moderate", "estimated_tss": 35, "distance_km": 4},
+            {"day": "Friday", "type": "Rest", "duration": "0min", "details": "Total rest • Final gear preparation", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Saturday", "type": "Activation", "duration": "20min", "details": f"3 km + 3×200m race pace • {paces['z2']}/km • HR {hr_zones['z2']} bpm", "intensity": "easy", "estimated_tss": 25, "distance_km": 3.6},
+            {"day": "Sunday", "type": "Rest", "duration": "0min", "details": "RACE EVE • Total rest, carb loading", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
         ]
     else:  # build, intensification
         sessions = [
-            {"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Étirements recommandés", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Mardi", "type": "Endurance", "duration": "50min", "details": f"8 km • {paces['z2']}/km • FC {hr_zones['z2']} bpm • Zone 2 stricte", "intensity": "easy", "estimated_tss": 50, "distance_km": 8},
-            {"day": "Mercredi", "type": "Seuil", "duration": "40min", "details": f"7 km dont 20min à {paces['z4']}/km • FC {hr_zones['z4']} bpm • Récup 2min entre blocs", "intensity": "hard", "estimated_tss": 55, "distance_km": 7},
-            {"day": "Jeudi", "type": "Récupération", "duration": "30min", "details": f"5 km très léger • {paces['z1']}/km • FC <{hr_zones['z1'].split('-')[1]} bpm max", "intensity": "easy", "estimated_tss": 25, "distance_km": 5},
-            {"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Cross-training possible (vélo, natation)", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Samedi", "type": "Tempo", "duration": "45min", "details": f"8 km dont 25min à {paces['semi']}/km • FC {hr_zones['z3']} bpm • Allure semi-marathon", "intensity": "moderate", "estimated_tss": 60, "distance_km": 8},
-            {"day": "Dimanche", "type": "Sortie longue", "duration": "70min", "details": f"12 km progressif • {paces['z2']}/km → {paces['z3']}/km • FC {hr_zones['z2']} → {hr_zones['z3']} bpm", "intensity": "moderate", "estimated_tss": 45, "distance_km": 12},
+            {"day": "Monday", "type": "Rest", "duration": "0min", "details": "Complete recovery • Stretching recommended", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Tuesday", "type": "Endurance", "duration": "50min", "details": f"8 km • {paces['z2']}/km • HR {hr_zones['z2']} bpm • Strict Zone 2", "intensity": "easy", "estimated_tss": 50, "distance_km": 8},
+            {"day": "Wednesday", "type": "Threshold", "duration": "40min", "details": f"7 km including 20min at {paces['z4']}/km • HR {hr_zones['z4']} bpm • 2min recovery between blocks", "intensity": "hard", "estimated_tss": 55, "distance_km": 7},
+            {"day": "Thursday", "type": "Recovery", "duration": "30min", "details": f"5 km very easy • {paces['z1']}/km • HR <{hr_zones['z1'].split('-')[1]} bpm max", "intensity": "easy", "estimated_tss": 25, "distance_km": 5},
+            {"day": "Friday", "type": "Rest", "duration": "0min", "details": "Complete recovery • Cross-training possible (cycling, swimming)", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Saturday", "type": "Tempo", "duration": "45min", "details": f"8 km including 25min at {paces['semi']}/km • HR {hr_zones['z3']} bpm • Half-marathon pace", "intensity": "moderate", "estimated_tss": 60, "distance_km": 8},
+            {"day": "Sunday", "type": "Long run", "duration": "70min", "details": f"12 km progressive • {paces['z2']}/km → {paces['z3']}/km • HR {hr_zones['z2']} → {hr_zones['z3']} bpm", "intensity": "moderate", "estimated_tss": 45, "distance_km": 12},
         ]
     
     total_tss = sum(s["estimated_tss"] for s in sessions)
@@ -6536,7 +6536,7 @@ def _generate_fallback_week_plan(context: dict, phase: str, target_load: int, go
         "weekly_km": round(total_km, 1),
         "sessions": sessions,
         "total_tss": total_tss,
-        "advice": get_phase_description(phase).get("advice", "Continue sur ta lancée !")
+        "advice": get_phase_description(phase).get("advice", "Keep it up!")
     }
 
 
@@ -7005,10 +7005,10 @@ async def send_chat_message(request: ChatRequest):
         if is_unlimited and message_count < 200:  # Hard cap for fair-use
             pass  # Allow but warn
         else:
-            tier_name = tier_config.get("name", "Gratuit")
+            tier_name = tier_config.get("name", "Free")
             raise HTTPException(
                 status_code=429,
-                detail=f"Tu as atteint ta limite de {messages_limit} messages ce mois-ci ({tier_name}). Passe au palier supérieur pour continuer ! 😊"
+                detail=f"You've reached your limit of {messages_limit} messages this month ({tier_name}). Upgrade to the next tier to continue!"
             )
     
     # Get user's recent workouts for context
@@ -7021,7 +7021,7 @@ async def send_chat_message(request: ChatRequest):
     
     # Generate response using local chat engine (NO LLM) - fallback mode
     # Note: If client uses WebLLM, it sends use_local_llm=True and we just store the message
-    # LLM serveur uniquement – pas d'exécution client-side
+    # Server-side LLM only – no client-side execution
     response_text = ""
     suggestions = []
     category = ""
@@ -7275,7 +7275,7 @@ async def cancel_user_subscription(user_id: str = "default"):
 @api_router.post("/subscription/simulate-trial-end")
 async def simulate_trial_end(user_id: str = "default"):
     """
-    [DEV ONLY] Simule la fin de l'essai gratuit pour tester le paywall.
+    [DEV ONLY] Simulate end of free trial to test paywall.
     """
     await db.subscriptions.update_one(
         {"user_id": user_id},
@@ -7286,21 +7286,21 @@ async def simulate_trial_end(user_id: str = "default"):
             }
         }
     )
-    
+
     return {
         "success": True,
-        "message": "Essai terminé, utilisateur passé en FREE"
+        "message": "Trial ended, user set to FREE"
     }
 
 
 @api_router.post("/subscription/reset-to-trial")
 async def reset_to_trial(user_id: str = "default"):
     """
-    [DEV ONLY] Remet l'utilisateur en essai gratuit de 7 jours.
+    [DEV ONLY] Reset user to 7-day free trial.
     """
     now = datetime.now(timezone.utc)
     trial_end = now + timedelta(days=7)
-    
+
     await db.subscriptions.update_one(
         {"user_id": user_id},
         {
@@ -7313,17 +7313,17 @@ async def reset_to_trial(user_id: str = "default"):
         },
         upsert=True
     )
-    
+
     return {
         "success": True,
-        "message": f"Essai gratuit réactivé jusqu'au {trial_end.isoformat()}"
+        "message": f"Free trial reactivated until {trial_end.isoformat()}"
     }
 
 
 @api_router.get("/subscription/early-adopter-offer")
 async def get_early_adopter_offer(language: str = "en"):
     """
-    Retourne les détails de l'offre Early Adopter.
+    Returns details of the Early Adopter offer.
     """
     if language == "fr":
         return {
@@ -7370,32 +7370,32 @@ async def get_early_adopter_offer(language: str = "en"):
 @api_router.post("/subscription/early-adopter/checkout")
 async def create_early_adopter_checkout(http_request: Request, user_id: str = "default", origin_url: str = None):
     """
-    Crée une session Stripe Checkout pour l'offre Early Adopter.
-    Prix: 4.99€/mois, garanti à vie.
+    Create a Stripe Checkout session for the Early Adopter offer.
+    Price: 4.99€/month, guaranteed for life.
     """
     if not STRIPE_API_KEY:
         raise HTTPException(status_code=500, detail="Stripe not configured")
-    
-    # Déterminer l'URL d'origine
+
+    # Determine origin URL
     if not origin_url:
         origin_url = str(http_request.base_url).rstrip('/')
-        # En preview, utiliser l'URL frontend
+        # In preview, use frontend URL
         if "preview.emergentagent.com" in origin_url:
             origin_url = origin_url.replace("/api", "").rstrip('/')
-    
-    # URLs de redirection
+
+    # Redirect URLs
     success_url = f"{origin_url}/settings?session_id={{CHECKOUT_SESSION_ID}}&subscription=early_adopter_success"
     cancel_url = f"{origin_url}/settings?subscription=cancelled"
-    
+
     # Webhook URL
     webhook_url = f"{str(http_request.base_url).rstrip('/')}/api/webhook/stripe/early-adopter"
-    
-    # Initialiser Stripe
+
+    # Initialize Stripe
     stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
-    
-    # Créer la session checkout
+
+    # Create checkout session
     checkout_request = CheckoutSessionRequest(
-        amount=float(EARLY_ADOPTER_PRICE),  # En euros (format float requis par Stripe Emergent)
+        amount=float(EARLY_ADOPTER_PRICE),  # In euros (float format required by Stripe Emergent)
         currency="eur",
         success_url=success_url,
         cancel_url=cancel_url,

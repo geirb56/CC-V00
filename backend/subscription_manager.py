@@ -2,11 +2,11 @@
 Subscription Management System
 ==============================
 
-Statuts utilisateur:
-- trial: Essai gratuit 7 jours (accès complet)
-- free: Accès limité (pas d'API, pas de LLM, pas de sync)
-- early_adopter: 4.99€/mois à vie (accès complet)
-- premium: Réservé pour le futur
+User statuses:
+- trial: 7-day free trial (full access)
+- free: Limited access (no API, no LLM, no sync)
+- early_adopter: €4.99/month for life (full access)
+- premium: Reserved for future
 
 """
 
@@ -17,21 +17,21 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Durée de l'essai gratuit en jours
+# Free trial duration in days
 TRIAL_DURATION_DAYS = 7
 
-# Prix Early Adopter
+# Early Adopter price
 EARLY_ADOPTER_PRICE = 4.99
 EARLY_ADOPTER_PRICE_ID = "price_early_adopter_499"  # Stripe Price ID
 
-# Statuts d'abonnement
+# Subscription statuses
 class SubscriptionStatus:
     TRIAL = "trial"
     FREE = "free"
     EARLY_ADOPTER = "early_adopter"
     PREMIUM = "premium"
 
-# Fonctionnalités par statut
+# Features by status
 FEATURES = {
     SubscriptionStatus.TRIAL: {
         "training_plan": True,
@@ -71,7 +71,7 @@ FEATURES = {
     }
 }
 
-# Routes protégées (nécessitent un abonnement actif)
+# Protected routes (require an active subscription)
 PROTECTED_ROUTES = [
     "/api/training/plan",
     "/api/training/refresh",
@@ -82,10 +82,10 @@ PROTECTED_ROUTES = [
     "/api/coach/detailed-analysis",
     "/api/strava/sync",
     "/api/rag/",
-    "/api/workouts",  # Liste des séances
+    "/api/workouts",  # Workout list
 ]
 
-# Routes toujours accessibles (même en free)
+# Always accessible routes (even in free)
 PUBLIC_ROUTES = [
     "/api/health",
     "/api/subscription/",
@@ -94,29 +94,29 @@ PUBLIC_ROUTES = [
     "/api/strava/callback",
     "/api/strava/status",
     "/api/user/",
-    "/api/dashboard/insight",  # Insight basique
+    "/api/dashboard/insight",  # Basic insight
 ]
 
 
 async def get_user_subscription(db: AsyncIOMotorDatabase, user_id: str) -> Dict:
     """
-    Récupère le statut d'abonnement d'un utilisateur.
-    Crée un compte trial si l'utilisateur n'existe pas.
+    Retrieves a user's subscription status.
+    Creates a trial account if the user doesn't exist.
     """
     subscription = await db.subscriptions.find_one({"user_id": user_id})
     
     if not subscription:
-        # Nouvel utilisateur -> créer un essai gratuit
+        # New user -> create a free trial
         subscription = await create_trial_subscription(db, user_id)
-    
-    # Vérifier si l'essai est expiré
+
+    # Check if trial has expired
     subscription = await check_trial_expiration(db, subscription)
     
     return subscription
 
 
 async def create_trial_subscription(db: AsyncIOMotorDatabase, user_id: str) -> Dict:
-    """Crée un abonnement trial pour un nouvel utilisateur."""
+    """Creates a trial subscription for a new user."""
     now = datetime.now(timezone.utc)
     trial_end = now + timedelta(days=TRIAL_DURATION_DAYS)
     
@@ -134,14 +134,14 @@ async def create_trial_subscription(db: AsyncIOMotorDatabase, user_id: str) -> D
     
     await db.subscriptions.insert_one(subscription)
     logger.info(f"Created trial subscription for user {user_id}, expires {trial_end}")
-    
-    # Retourner sans _id
+
+    # Return without _id
     subscription.pop("_id", None)
     return subscription
 
 
 async def check_trial_expiration(db: AsyncIOMotorDatabase, subscription: Dict) -> Dict:
-    """Vérifie si l'essai gratuit est expiré et met à jour le statut."""
+    """Checks if the free trial has expired and updates the status."""
     if subscription.get("status") != SubscriptionStatus.TRIAL:
         return subscription
     
@@ -154,7 +154,7 @@ async def check_trial_expiration(db: AsyncIOMotorDatabase, subscription: Dict) -
         now = datetime.now(timezone.utc)
         
         if now > trial_end:
-            # Essai expiré -> passer en free
+            # Trial expired -> switch to free
             await db.subscriptions.update_one(
                 {"user_id": subscription["user_id"]},
                 {
@@ -173,12 +173,12 @@ async def check_trial_expiration(db: AsyncIOMotorDatabase, subscription: Dict) -
 
 
 async def activate_early_adopter(
-    db: AsyncIOMotorDatabase, 
+    db: AsyncIOMotorDatabase,
     user_id: str,
     stripe_customer_id: str,
     stripe_subscription_id: str
 ) -> Dict:
-    """Active l'abonnement Early Adopter pour un utilisateur."""
+    """Activates the Early Adopter subscription for a user."""
     now = datetime.now(timezone.utc)
     
     result = await db.subscriptions.update_one(
@@ -204,7 +204,7 @@ async def activate_early_adopter(
 
 
 async def cancel_subscription(db: AsyncIOMotorDatabase, user_id: str) -> Dict:
-    """Annule l'abonnement et passe l'utilisateur en free."""
+    """Cancels the subscription and switches the user to free."""
     now = datetime.now(timezone.utc)
     
     await db.subscriptions.update_one(
@@ -226,7 +226,7 @@ async def cancel_subscription(db: AsyncIOMotorDatabase, user_id: str) -> Dict:
 
 
 def get_trial_days_remaining(subscription: Dict) -> Optional[int]:
-    """Calcule le nombre de jours restants dans l'essai."""
+    """Calculates the number of days remaining in the trial."""
     if subscription.get("status") != SubscriptionStatus.TRIAL:
         return None
     
@@ -244,20 +244,20 @@ def get_trial_days_remaining(subscription: Dict) -> Optional[int]:
 
 
 def has_feature_access(subscription: Dict, feature: str) -> bool:
-    """Vérifie si l'utilisateur a accès à une fonctionnalité."""
+    """Checks if the user has access to a feature."""
     status = subscription.get("status", SubscriptionStatus.FREE)
     features = FEATURES.get(status, FEATURES[SubscriptionStatus.FREE])
     return features.get(feature, False)
 
 
 def is_route_protected(path: str) -> bool:
-    """Vérifie si une route nécessite un abonnement actif."""
-    # Vérifier si c'est une route publique
+    """Checks if a route requires an active subscription."""
+    # Check if it's a public route
     for public in PUBLIC_ROUTES:
         if path.startswith(public):
             return False
     
-    # Vérifier si c'est une route protégée
+    # Check if it's a protected route
     for protected in PROTECTED_ROUTES:
         if path.startswith(protected):
             return True
@@ -329,8 +329,8 @@ def get_subscription_display(subscription: Dict, lang: str = "en") -> Dict:
     }
     
     display = displays.get(status, displays[SubscriptionStatus.FREE]).get(lang, displays[status]["fr"])
-    
-    # Ajouter les jours restants pour trial
+
+    # Add remaining days for trial
     if status == SubscriptionStatus.TRIAL:
         days_remaining = get_trial_days_remaining(subscription)
         if days_remaining is not None:
