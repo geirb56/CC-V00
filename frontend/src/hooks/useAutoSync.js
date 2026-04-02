@@ -4,30 +4,27 @@ import axios from "axios";
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 /**
- * Hook to automatically sync Strava data on app startup
+ * Hook to automatically sync Terra wearable data on app startup
  * Only syncs if:
- * - User is connected to Strava
+ * - User is connected to Terra
  * - Last sync was more than 1 hour ago OR no sync has been done
  */
 export function useAutoSync() {
   const hasTriedSync = useRef(false);
 
   useEffect(() => {
-    // Prevent multiple sync attempts in same session
     if (hasTriedSync.current) return;
     hasTriedSync.current = true;
 
     const autoSync = async () => {
       try {
-        // Check Strava connection status
-        const statusRes = await axios.get(`${API}/strava/status`);
+        const statusRes = await axios.get(`${API}/terra/status`);
         const { connected, last_sync } = statusRes.data;
 
         if (!connected) {
           return;
         }
 
-        // Check if sync is needed (more than 1 hour since last sync)
         const ONE_HOUR_MS = 60 * 60 * 1000;
         const now = Date.now();
         const lastSyncTime = last_sync ? new Date(last_sync).getTime() : 0;
@@ -37,14 +34,12 @@ export function useAutoSync() {
           return;
         }
 
-        // Perform sync
-        await axios.post(`${API}/strava/sync`);
+        await axios.post(`${API}/terra/sync`);
       } catch (error) {
         // Silent fail - don't disrupt user experience
       }
     };
 
-    // Delay sync slightly to not block initial render
     const timeoutId = setTimeout(autoSync, 2000);
 
     return () => clearTimeout(timeoutId);

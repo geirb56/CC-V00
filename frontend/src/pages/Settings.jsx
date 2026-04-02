@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useUnitSystem } from "@/context/UnitContext";
-import { Globe, Info, Link2, Loader2, Check, X, RefreshCw, Target, Calendar, Trash2, Clock, Route, Crown, Sparkles, Dumbbell } from "lucide-react";
+import { Globe, Info, Loader2, Check, Target, Calendar, Trash2, Clock, Route, Crown, Sparkles, Dumbbell } from "lucide-react";
 import { toast } from "sonner";
 import { TerraConnection } from "@/components/TerraConnection";
 
@@ -48,13 +48,7 @@ export default function Settings() {
   } = useSubscription();
   const { unitSystem, setUnitSystem } = useUnitSystem();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [stravaStatus, setStravaStatus] = useState(null);
-  const [loadingStrava, setLoadingStrava] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [connecting, setConnecting] = useState(false);
 
-  // Terra state
-  
   // Premium state
   const [processingPayment, setProcessingPayment] = useState(false);
   
@@ -75,21 +69,9 @@ export default function Settings() {
   const [updatingTrainingPlan, setUpdatingTrainingPlan] = useState(false);
 
   useEffect(() => {
-    loadStravaStatus();
     loadGoal();
     loadPremiumStatus();
     loadTrainingPlan();
-    
-    // Handle OAuth callback
-    const stravaParam = searchParams.get("strava");
-    if (stravaParam === "connected") {
-      toast.success(t("settingsExtended.accountConnected"));
-      setSearchParams({});
-      triggerInitialSync();
-    } else if (stravaParam === "error") {
-      toast.error(t("settingsExtended.connectionFailed"));
-      setSearchParams({});
-    }
     
     // Handle Stripe callback
     const sessionId = searchParams.get("session_id");
@@ -294,75 +276,6 @@ export default function Settings() {
     } catch (error) {
       console.error("Failed to delete goal:", error);
       toast.error(t("common.error"));
-    }
-  };
-
-  const triggerInitialSync = async () => {
-    setSyncing(true);
-    try {
-      const res = await axios.post(`${API}/strava/sync?user_id=${USER_ID}`);
-      if (res.data.success) {
-        toast.success(t("settingsExtended.syncImported").replace("{count}", res.data.synced_count));
-      }
-      loadStravaStatus();
-    } catch (error) {
-      console.error("Initial sync failed:", error);
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const loadStravaStatus = async () => {
-    try {
-      const res = await axios.get(`${API}/strava/status?user_id=${USER_ID}`);
-      setStravaStatus(res.data);
-    } catch (error) {
-      console.error("Failed to load connection status:", error);
-      setStravaStatus({ connected: false, last_sync: null, workout_count: 0 });
-    } finally {
-      setLoadingStrava(false);
-    }
-  };
-
-  const handleConnect = async () => {
-    setConnecting(true);
-    try {
-      const res = await axios.get(`${API}/strava/authorize?user_id=${USER_ID}`);
-      window.location.href = res.data.authorization_url;
-    } catch (error) {
-      console.error("Failed to initiate auth:", error);
-      const message = error.response?.data?.detail || t("settingsExtended.connectionFailed");
-      toast.error(message);
-      setConnecting(false);
-    }
-  };
-
-  const handleDisconnect = async () => {
-    try {
-      await axios.delete(`${API}/strava/disconnect?user_id=${USER_ID}`);
-      setStravaStatus({ connected: false, last_sync: null, workout_count: 0 });
-      toast.success(t("settingsExtended.accountDisconnected"));
-    } catch (error) {
-      console.error("Failed to disconnect:", error);
-      toast.error(t("common.error"));
-    }
-  };
-
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const res = await axios.post(`${API}/strava/sync?user_id=${USER_ID}`);
-      if (res.data.success) {
-        toast.success(res.data.message);
-        loadStravaStatus();
-      } else {
-        toast.error(res.data.message);
-      }
-    } catch (error) {
-      console.error("Failed to sync:", error);
-      toast.error(t("settingsExtended.syncFailed"));
-    } finally {
-      setSyncing(false);
     }
   };
 
@@ -756,109 +669,6 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Data Sync Section */}
-        <Card className="bg-card border-border">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 flex items-center justify-center bg-muted border border-border flex-shrink-0">
-                <Link2 className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h2 className="font-heading text-lg uppercase tracking-tight font-semibold mb-1">
-                  {t("settings.dataSync")}
-                </h2>
-                <p className="font-mono text-xs text-muted-foreground mb-4">
-                  {t("settings.dataSyncDesc")}
-                </p>
-                
-                {loadingStrava ? (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="font-mono text-xs">{t("common.loading")}</span>
-                  </div>
-                ) : stravaStatus?.connected ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-chart-2">
-                      <Check className="w-4 h-4" />
-                      <span className="font-mono text-xs uppercase tracking-wider">
-                        {t("settings.connected")}
-                      </span>
-                    </div>
-                    
-                    <div className="p-3 bg-muted/50 border border-border">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                            {t("settings.lastSync")}
-                          </p>
-                          <p className="font-mono text-sm">
-                            {formatLastSync(stravaStatus.last_sync)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                            {t("settings.workouts")}
-                          </p>
-                          <p className="font-mono text-sm">
-                            {stravaStatus.workout_count}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={handleSync}
-                        disabled={syncing}
-                        data-testid="sync-strava"
-                        className="bg-primary text-white hover:bg-primary/90 rounded-none uppercase font-bold tracking-wider text-xs h-9 px-4 flex items-center gap-2"
-                      >
-                        {syncing ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="w-4 h-4" />
-                        )}
-                        {t("settings.sync")}
-                      </Button>
-                      <Button
-                        onClick={handleDisconnect}
-                        variant="ghost"
-                        data-testid="disconnect-strava"
-                        className="text-muted-foreground hover:text-destructive rounded-none uppercase font-mono text-xs h-9 px-4"
-                      >
-                        {t("settings.disconnect")}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <X className="w-4 h-4" />
-                      <span className="font-mono text-xs uppercase tracking-wider">
-                        {t("settings.notConnected")}
-                      </span>
-                    </div>
-                    <Button
-                      onClick={handleConnect}
-                      disabled={connecting}
-                      data-testid="connect-strava"
-                      className="bg-primary text-white hover:bg-primary/90 rounded-none uppercase font-bold tracking-wider text-xs h-9 px-4 flex items-center gap-2"
-                    >
-                      {connecting ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Link2 className="w-4 h-4" />
-                      )}
-                      {t("settings.connect")}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Terra Wearables Integration */}
         <TerraConnection lang={lang} t={t} />
 
