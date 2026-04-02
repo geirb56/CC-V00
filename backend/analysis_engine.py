@@ -3,9 +3,9 @@ CardioCoach Analysis Engine
 100% Backend, Deterministic, No LLM Dependencies
 Strava API Compliant - No data leaves the infrastructure
 
-RÈGLE DE PRIORITÉ DES DONNÉES (OBLIGATOIRE)
-1. SI données de fréquence cardiaque disponibles : Analyse physiologique PRIORITAIRE
-2. SI PAS de fréquence cardiaque : Analyse STRUCTURELLE uniquement (JAMAIS de fatigue/zones/surcharge)
+DATA PRIORITY RULE (MANDATORY)
+1. IF heart rate data available: Physiological analysis PRIORITY
+2. IF NO heart rate: STRUCTURAL analysis only (NEVER fatigue/zones/overload)
 """
 
 import random
@@ -14,241 +14,241 @@ from datetime import datetime, timezone
 
 
 # ============================================================
-# TEMPLATES DE TEXTES - FRANÇAIS (variés, ton coach humain)
+# TEXT TEMPLATES - ENGLISH (varied, human coach tone)
 # ============================================================
 
-# --- RÉSUMÉ DU COACH (1 phrase courte) ---
+# --- COACH SUMMARY (1 short sentence) ---
 SUMMARY_TEMPLATES_WITH_HR = {
     "easy": [
-        "Sortie maîtrisée, avec une intensité bien contrôlée du début à la fin.",
-        "Séance confortable, pensée pour accumuler du volume sans forcer.",
-        "Sortie facile bien exécutée, parfaite pour la récupération active.",
-        "Effort mesuré, exactement ce qu'il faut pour construire la base.",
+        "Controlled session with intensity well managed from start to finish.",
+        "Comfortable workout designed to build volume without pushing hard.",
+        "Easy run well executed, perfect for active recovery.",
+        "Measured effort, exactly what's needed to build the base.",
     ],
     "moderate": [
-        "Séance équilibrée avec un effort bien dosé.",
-        "Sortie correctement menée, ni trop facile ni trop dure.",
-        "Entraînement modéré qui construit la forme progressivement.",
-        "Séance de travail solide, bon équilibre effort/récupération.",
+        "Balanced session with well-dosed effort.",
+        "Run properly managed, neither too easy nor too hard.",
+        "Moderate training that builds fitness progressively.",
+        "Solid workout, good balance between effort and recovery.",
     ],
     "hard": [
-        "Séance soutenue, plus exigeante que tes sorties habituelles.",
-        "Séance plus dense que la moyenne, avec un vrai engagement cardio.",
-        "Effort soutenu aujourd'hui, le corps a bien travaillé.",
-        "Sortie exigeante qui sollicite bien l'organisme.",
+        "Sustained session, more demanding than your usual runs.",
+        "Denser session than average, with real cardio engagement.",
+        "Sustained effort today, the body worked hard.",
+        "Demanding run that challenges the system well.",
     ],
     "very_hard": [
-        "Séance très intense, proche de tes limites.",
-        "Gros effort fourni, le corps va avoir besoin de repos.",
-        "Entraînement à haute intensité, récupère bien après ça.",
-        "Sortie vraiment appuyée, tu as poussé fort.",
+        "Very intense session, close to your limits.",
+        "Big effort delivered, the body will need rest.",
+        "High-intensity training, recover well after this.",
+        "Really pushed hard today, you went all out.",
     ],
 }
 
 SUMMARY_TEMPLATES_WITHOUT_HR = {
     "short": [
-        "Sortie courte mais utile pour maintenir le rythme.",
-        "Séance brève, parfois c'est ce qu'il faut.",
-        "Petit entraînement efficace.",
+        "Short run but useful to maintain rhythm.",
+        "Brief session, sometimes that's what's needed.",
+        "Quick efficient workout.",
     ],
     "medium": [
-        "Séance de volume correct cette sortie.",
-        "Entraînement standard, bon pour la régularité.",
-        "Sortie classique au compteur.",
+        "Decent volume this session.",
+        "Standard training, good for consistency.",
+        "Classic run on the log.",
     ],
     "long": [
-        "Belle sortie longue pour développer l'endurance.",
-        "Volume conséquent aujourd'hui, bon travail de fond.",
-        "Séance longue réussie, ça construit la caisse.",
+        "Nice long run to develop endurance.",
+        "Solid volume today, good foundation work.",
+        "Long session completed, building the engine.",
     ],
 }
 
-# --- EXÉCUTION DE LA SÉANCE ---
+# --- SESSION EXECUTION ---
 EXECUTION_TEMPLATES_WITH_HR = [
-    "Ta fréquence cardiaque est restée majoritairement en zones {zones_dominantes}, ce qui correspond à un effort {qualificatif}.",
-    "L'intensité a été {qualificatif} avec {pct_principal}% du temps en zone {zone_principale}.",
-    "Répartition de l'effort : {pct_z1_z2}% en zones faciles, {pct_z3}% en tempo, {pct_z4_z5}% en zones hautes.",
-    "FC moyenne de {fc_moy} bpm, majoritairement en {zones_dominantes}.",
+    "Your heart rate stayed mostly in {zones_dominantes} zones, corresponding to {qualificatif} effort.",
+    "Intensity was {qualificatif} with {pct_principal}% of time in zone {zone_principale}.",
+    "Effort distribution: {pct_z1_z2}% in easy zones, {pct_z3}% in tempo, {pct_z4_z5}% in high zones.",
+    "Average HR of {fc_moy} bpm, mostly in {zones_dominantes}.",
 ]
 
 EXECUTION_TEMPLATES_WITH_HR_HARD = [
-    "La présence marquée en zones hautes ({pct_z4_z5}%) montre une séance clairement appuyée.",
-    "Beaucoup de temps en Z4-Z5, l'intensité était au rendez-vous.",
-    "L'effort est monté haut avec {pct_z4_z5}% du temps au-dessus du seuil.",
+    "Significant presence in high zones ({pct_z4_z5}%) shows a clearly pushed session.",
+    "Lots of time in Z4-Z5, intensity was there.",
+    "Effort climbed high with {pct_z4_z5}% of time above threshold.",
 ]
 
 EXECUTION_TEMPLATES_WITH_HR_EASY = [
-    "L'effort est resté en zones basses, parfait pour l'endurance fondamentale.",
-    "Intensité bien maîtrisée avec {pct_z1_z2}% en zones faciles.",
-    "FC sous contrôle tout au long de la séance.",
+    "Effort stayed in low zones, perfect for base endurance.",
+    "Intensity well controlled with {pct_z1_z2}% in easy zones.",
+    "HR under control throughout the session.",
 ]
 
 EXECUTION_TEMPLATES_WITHOUT_HR = [
-    "La séance est homogène en durée et en allure.",
-    "L'allure varie peu, ce qui montre une bonne régularité d'exécution.",
-    "{distance_km} km parcourus en {duree} ({allure_moy}/km de moyenne).",
-    "Sortie de {distance_km} km à {allure_moy}/km, durée {duree}.",
+    "The session is consistent in duration and pace.",
+    "Pace varies little, showing good execution consistency.",
+    "{distance_km} km covered in {duree} ({allure_moy}/km average).",
+    "Run of {distance_km} km at {allure_moy}/km, duration {duree}.",
 ]
 
-# --- CE QUE ÇA SIGNIFIE (lecture coach) ---
+# --- WHAT IT MEANS (coach reading) ---
 MEANING_TEMPLATES_WITH_HR = {
     "aerobic": [
-        "Cette séance stimule clairement l'endurance aérobie.",
-        "Tu as travaillé la base, c'est fondamental pour progresser.",
-        "L'effort en zone facile développe le système cardiovasculaire en douceur.",
+        "This session clearly stimulates aerobic endurance.",
+        "You worked on the base, that's fundamental for progress.",
+        "Easy zone effort develops the cardiovascular system gently.",
     ],
     "threshold": [
-        "Cette séance travaille le seuil, c'est exigeant mais efficace.",
-        "L'effort soutenu améliore ta capacité à tenir l'allure.",
-        "Tu as sollicité le système lactique, ça fait progresser.",
+        "This session works the threshold, it's demanding but effective.",
+        "Sustained effort improves your ability to hold pace.",
+        "You challenged the lactate system, that drives progress.",
     ],
     "mixed": [
-        "L'effort était varié, bon pour la polyvalence.",
-        "Tu as alterné les zones, c'est intéressant pour le corps.",
-        "Séance mixte qui stimule plusieurs filières énergétiques.",
+        "The effort was varied, good for versatility.",
+        "You alternated zones, interesting for the body.",
+        "Mixed session that stimulates multiple energy systems.",
     ],
     "overload": [
-        "C'est un type d'effort qui augmente la charge globale de la semaine.",
-        "Séance exigeante qui crée un stimulus fort pour progresser.",
-        "Le corps a été bien sollicité, il va s'adapter si tu récupères.",
+        "This type of effort increases the overall weekly load.",
+        "Demanding session that creates a strong stimulus for progress.",
+        "The body was well challenged, it will adapt if you recover.",
     ],
 }
 
 MEANING_TEMPLATES_WITHOUT_HR = [
-    "Cette séance augmente surtout ton volume d'entraînement.",
-    "Elle s'inscrit comme une sortie structurante dans ta semaine.",
-    "C'est du temps de jambes accumulé, ça compte.",
-    "Sortie qui contribue à la régularité de l'entraînement.",
+    "This session mainly increases your training volume.",
+    "It fits as a structural run in your week.",
+    "That's accumulated time on legs, it counts.",
+    "Run that contributes to training consistency.",
 ]
 
-# --- RÉCUPÉRATION ---
+# --- RECOVERY ---
 RECOVERY_TEMPLATES_WITH_HR = {
     "needs_rest": [
-        "Compte tenu de l'intensité, une récupération active ou une journée facile est recommandée.",
-        "La charge de cette séance mérite d'être absorbée avant un nouvel effort soutenu.",
-        "Après cet effort, une journée de repos ou très facile demain serait idéale.",
-        "Laisse le temps à l'organisme d'absorber cette séance avant de forcer à nouveau.",
+        "Given the intensity, active recovery or an easy day is recommended.",
+        "The load of this session deserves to be absorbed before another hard effort.",
+        "After this effort, a rest day or very easy run tomorrow would be ideal.",
+        "Give your body time to absorb this session before pushing hard again.",
     ],
     "light_recovery": [
-        "Une sortie facile demain aidera à bien récupérer.",
-        "Récupération active conseillée : footing très léger ou repos.",
-        "Pas de grosse séance demain, le corps doit assimiler.",
+        "An easy run tomorrow will help recovery.",
+        "Active recovery advised: very light jog or rest.",
+        "No hard session tomorrow, the body needs to adapt.",
     ],
     "ready": [
-        "Tu peux enchaîner demain si tu te sens bien.",
-        "L'effort était gérable, tu as de la marge pour continuer.",
-        "Bonne gestion, tu peux repartir sans problème.",
+        "You can continue tomorrow if you feel good.",
+        "The effort was manageable, you have margin to continue.",
+        "Good management, you can go again without issue.",
     ],
 }
 
 RECOVERY_TEMPLATES_WITHOUT_HR = [
-    "Une récupération standard est suffisante si les sensations restent bonnes.",
-    "Écoute ton corps pour ajuster la prochaine séance.",
-    "Pas de recommandation particulière, adapte selon tes sensations.",
+    "Standard recovery is sufficient if sensations remain good.",
+    "Listen to your body to adjust the next session.",
+    "No particular recommendation, adapt based on how you feel.",
 ]
 
-# --- CONSEIL DU COACH (OBLIGATOIRE, 1 phrase actionnable) ---
+# --- COACH ADVICE (MANDATORY, 1 actionable sentence) ---
 ADVICE_TEMPLATES = {
     "reduce_intensity": [
-        "Sur la prochaine séance, vise une intensité plus basse pour équilibrer la charge.",
-        "Baisse un peu l'intensité générale, tu forces beaucoup.",
-        "Privilégie les sorties faciles cette semaine.",
+        "For your next session, aim for lower intensity to balance the load.",
+        "Lower the overall intensity a bit, you're pushing hard.",
+        "Favor easy runs this week.",
     ],
     "maintain": [
-        "Continue comme ça, la régularité paie sur le long terme.",
-        "Garde ce rythme d'entraînement, c'est la clé de la progression.",
-        "Tu es sur la bonne voie, reste constant.",
+        "Keep it up, consistency pays off in the long run.",
+        "Maintain this training rhythm, it's the key to progress.",
+        "You're on the right track, stay consistent.",
     ],
     "space_sessions": [
-        "Garde ce type de séance, mais espace-la davantage dans la semaine.",
-        "Laisse plus de récupération entre les séances soutenues.",
+        "Keep this type of session, but space it out more in the week.",
+        "Allow more recovery between hard sessions.",
     ],
     "add_easy": [
-        "Ajoute une sortie facile de 30-40 min en zone 2 cette semaine.",
-        "Prévois une course tranquille pour équilibrer l'intensité.",
+        "Add an easy 30-40 min run in zone 2 this week.",
+        "Plan a relaxed run to balance the intensity.",
     ],
     "add_intensity": [
-        "Tu pourrais intégrer une séance plus rythmée cette semaine.",
-        "Une séance tempo ou fractionné court serait bénéfique.",
+        "You could add a more intense session this week.",
+        "A tempo or short interval session would be beneficial.",
     ],
     "shorten": [
-        "Si tu répètes ce format, limite légèrement la durée.",
-        "Même effort mais un peu plus court la prochaine fois.",
+        "If you repeat this format, slightly reduce the duration.",
+        "Same effort but a bit shorter next time.",
     ],
 }
 
-# --- BILAN HEBDOMADAIRE ---
+# --- WEEKLY SUMMARY ---
 WEEKLY_SUMMARY_TEMPLATES = [
-    "Semaine globalement bien maîtrisée, avec une charge en progression.",
-    "Semaine dense, marquée par des efforts plus soutenus que d'habitude.",
-    "Semaine équilibrée, sans excès notable.",
-    "Bonne semaine d'entraînement avec {nb_seances} séances et {volume_km} km.",
-    "Semaine solide : {nb_seances} sorties pour un total de {volume_km} km.",
+    "Week overall well managed, with progressive load increase.",
+    "Dense week, marked by efforts more sustained than usual.",
+    "Balanced week, no notable excess.",
+    "Good training week with {nb_seances} sessions and {volume_km} km.",
+    "Solid week: {nb_seances} runs for a total of {volume_km} km.",
 ]
 
 WEEKLY_SUMMARY_LIGHT = [
-    "Semaine légère avec {nb_seances} séance(s) et {volume_km} km.",
-    "Volume réduit cette semaine, parfois nécessaire.",
-    "Semaine tranquille côté entraînement.",
+    "Light week with {nb_seances} session(s) and {volume_km} km.",
+    "Reduced volume this week, sometimes necessary.",
+    "Quiet week training-wise.",
 ]
 
 WEEKLY_SUMMARY_INTENSE = [
-    "Semaine orientée intensité avec beaucoup de temps en zones hautes.",
-    "L'intensité était au rendez-vous cette semaine.",
-    "Semaine exigeante, le corps a été bien sollicité.",
+    "Intensity-oriented week with lots of time in high zones.",
+    "Intensity was there this week.",
+    "Demanding week, the body was well challenged.",
 ]
 
 WEEKLY_READING_TEMPLATES = {
     "balanced": [
-        "La répartition effort facile/intense est bonne. Tu construis une base solide.",
-        "Bon équilibre entre endurance et intensité cette semaine.",
-        "L'entraînement est bien dosé, continue comme ça.",
+        "The easy/hard effort distribution is good. You're building a solid base.",
+        "Good balance between endurance and intensity this week.",
+        "Training is well dosed, keep it up.",
     ],
     "too_intense": [
-        "L'augmentation du volume combinée à une intensité plus élevée demande de la vigilance.",
-        "L'intensité domine, le risque de fatigue augmente. Plus de Z2 nécessaire.",
-        "Beaucoup de temps en zones hautes ({pct_z4_z5}%). Ajoute plus de sorties faciles.",
+        "The increase in volume combined with higher intensity requires vigilance.",
+        "Intensity dominates, fatigue risk increases. More Z2 needed.",
+        "Lots of time in high zones ({pct_z4_z5}%). Add more easy runs.",
     ],
     "too_easy": [
-        "Principalement en zone facile. C'est bien pour la base, mais un peu d'intensité aiderait.",
-        "Semaine tranquille, tu peux te permettre une séance plus rythmée.",
+        "Mainly in easy zone. Good for the base, but some intensity would help.",
+        "Quiet week, you can afford a more intense session.",
     ],
     "good_continuity": [
-        "La semaine montre une bonne continuité, sans rupture majeure.",
-        "Bon enchaînement des séances, c'est ce qui fait progresser.",
+        "The week shows good continuity, no major break.",
+        "Good session flow, that's what drives progress.",
     ],
 }
 
 WEEKLY_ADVICE_TEMPLATES = {
     "reduce": [
-        "Allège légèrement l'intensité sur les prochaines sorties.",
-        "Baisse le rythme quelques jours pour absorber la charge.",
+        "Lighten the intensity slightly on upcoming runs.",
+        "Lower the pace a few days to absorb the load.",
     ],
     "maintain_reduce_hard": [
-        "Garde le volume mais réduis les séances soutenues.",
-        "Continue sur ce volume, en privilégiant les sorties faciles.",
+        "Keep the volume but reduce hard sessions.",
+        "Continue on this volume, favoring easy runs.",
     ],
     "maintain": [
-        "Continue sur ce rythme, c'est efficace.",
-        "Garde cette dynamique pour la semaine prochaine.",
+        "Continue at this pace, it's effective.",
+        "Keep this momentum for next week.",
     ],
     "add_volume": [
-        "Tu peux ajouter une sortie supplémentaire la semaine prochaine.",
-        "Augmente légèrement le volume si tu te sens frais.",
+        "You can add an extra run next week.",
+        "Slightly increase volume if you feel fresh.",
     ],
     "add_intensity": [
-        "Une séance plus intense serait bénéfique.",
-        "Ajoute un peu de rythme : tempo ou fractionné.",
+        "A more intense session would be beneficial.",
+        "Add some pace: tempo or intervals.",
     ],
     "recover": [
-        "Semaine de récupération conseillée.",
-        "Baisse le volume et l'intensité quelques jours.",
+        "Recovery week advised.",
+        "Lower volume and intensity for a few days.",
     ],
 }
 
 
 # ============================================================
-# FONCTIONS UTILITAIRES
+# UTILITY FUNCTIONS
 # ============================================================
 
 def has_hr_data(workout: dict) -> bool:
@@ -299,33 +299,33 @@ def calculate_intensity_from_zones(zones: dict) -> str:
 def get_dominant_zones_label(zones: dict) -> str:
     """Get human-readable label for dominant zones"""
     if not zones:
-        return "modérées"
-    
+        return "moderate"
+
     z1_z2 = (zones.get("z1", 0) or 0) + (zones.get("z2", 0) or 0)
     z3 = zones.get("z3", 0) or 0
     z4_z5 = (zones.get("z4", 0) or 0) + (zones.get("z5", 0) or 0)
-    
+
     if z1_z2 >= 60:
-        return "Z1-Z2 (faciles)"
+        return "Z1-Z2 (easy)"
     elif z4_z5 >= 40:
-        return "Z4-Z5 (hautes)"
+        return "Z4-Z5 (high)"
     elif z3 >= 40:
         return "Z3 (tempo)"
     elif z4_z5 >= 20:
-        return "Z3-Z4 (soutenues)"
+        return "Z3-Z4 (sustained)"
     else:
-        return "intermédiaires"
+        return "intermediate"
 
 
 def get_intensity_qualifier(intensity: str) -> str:
-    """Get French qualifier for intensity level"""
+    """Get English qualifier for intensity level"""
     qualifiers = {
-        "easy": "facile",
-        "moderate": "modéré",
-        "hard": "soutenu",
-        "very_hard": "très intense"
+        "easy": "easy",
+        "moderate": "moderate",
+        "hard": "sustained",
+        "very_hard": "very intense"
     }
-    return qualifiers.get(intensity, "modéré")
+    return qualifiers.get(intensity, "moderate")
 
 
 def calculate_session_type_structural(distance_km: float, duration_min: int) -> str:
@@ -364,14 +364,14 @@ def pick(templates: list) -> str:
 
 
 # ============================================================
-# GÉNÉRATEUR D'ANALYSE DE SÉANCE
+# SESSION ANALYSIS GENERATOR
 # ============================================================
 
 def generate_session_analysis(workout: dict, baseline: dict = None, language: str = "en") -> dict:
     """
     Generate complete session analysis following mandatory structure.
-    PRIORITÉ FC: Si données FC disponibles → analyse physiologique
-    SINON: Analyse structurelle uniquement (JAMAIS de fatigue/zones/surcharge)
+    HR PRIORITY: If HR data available → physiological analysis
+    OTHERWISE: Structural analysis only (NEVER fatigue/zones/overload)
     """
     
     # Extract workout data
@@ -407,24 +407,24 @@ def generate_session_analysis(workout: dict, baseline: dict = None, language: st
     }
     
     # ============================================
-    # MODE 1: AVEC DONNÉES FC (analyse physiologique)
+    # MODE 1: WITH HR DATA (physiological analysis)
     # ============================================
     if hr_available:
         intensity = calculate_intensity_from_zones(zones)
         placeholders["qualificatif"] = get_intensity_qualifier(intensity)
-        
-        # 1. RÉSUMÉ DU COACH
+
+        # 1. COACH SUMMARY
         summary = pick(SUMMARY_TEMPLATES_WITH_HR.get(intensity, SUMMARY_TEMPLATES_WITH_HR["moderate"]))
-        
-        # 2. EXÉCUTION
+
+        # 2. EXECUTION
         if intensity in ["hard", "very_hard"]:
             execution = pick(EXECUTION_TEMPLATES_WITH_HR_HARD).format(**placeholders)
         elif intensity == "easy":
             execution = pick(EXECUTION_TEMPLATES_WITH_HR_EASY).format(**placeholders)
         else:
             execution = pick(EXECUTION_TEMPLATES_WITH_HR).format(**placeholders)
-        
-        # 3. CE QUE ÇA SIGNIFIE
+
+        # 3. WHAT IT MEANS
         if z1_z2 >= 70:
             meaning = pick(MEANING_TEMPLATES_WITH_HR["aerobic"])
         elif z4_z5 >= 25:
@@ -433,16 +433,16 @@ def generate_session_analysis(workout: dict, baseline: dict = None, language: st
             meaning = pick(MEANING_TEMPLATES_WITH_HR["overload"])
         else:
             meaning = pick(MEANING_TEMPLATES_WITH_HR["mixed"])
-        
-        # 4. RÉCUPÉRATION
+
+        # 4. RECOVERY
         if intensity == "very_hard" or (intensity == "hard" and duration_min >= 60):
             recovery = pick(RECOVERY_TEMPLATES_WITH_HR["needs_rest"])
         elif intensity == "hard":
             recovery = pick(RECOVERY_TEMPLATES_WITH_HR["light_recovery"])
         else:
             recovery = pick(RECOVERY_TEMPLATES_WITH_HR["ready"])
-        
-        # 5. CONSEIL DU COACH
+
+        # 5. COACH ADVICE
         if intensity == "very_hard":
             advice = pick(ADVICE_TEMPLATES["reduce_intensity"])
         elif intensity == "hard" and z1_z2 < 30:
@@ -453,26 +453,26 @@ def generate_session_analysis(workout: dict, baseline: dict = None, language: st
             advice = pick(ADVICE_TEMPLATES["shorten"])
         else:
             advice = pick(ADVICE_TEMPLATES["maintain"])
-    
+
     # ============================================
-    # MODE 2: SANS FC (analyse structurelle UNIQUEMENT)
+    # MODE 2: WITHOUT HR (structural analysis ONLY)
     # ============================================
     else:
         session_type = calculate_session_type_structural(distance_km, duration_min)
-        
-        # 1. RÉSUMÉ DU COACH
+
+        # 1. COACH SUMMARY
         summary = pick(SUMMARY_TEMPLATES_WITHOUT_HR.get(session_type, SUMMARY_TEMPLATES_WITHOUT_HR["medium"]))
-        
-        # 2. EXÉCUTION
+
+        # 2. EXECUTION
         execution = pick(EXECUTION_TEMPLATES_WITHOUT_HR).format(**placeholders)
-        
-        # 3. CE QUE ÇA SIGNIFIE
+
+        # 3. WHAT IT MEANS
         meaning = pick(MEANING_TEMPLATES_WITHOUT_HR)
-        
-        # 4. RÉCUPÉRATION (sans parler de fatigue/charge)
+
+        # 4. RECOVERY (without talking about fatigue/load)
         recovery = pick(RECOVERY_TEMPLATES_WITHOUT_HR)
-        
-        # 5. CONSEIL DU COACH
+
+        # 5. COACH ADVICE
         if duration_min >= 90:
             advice = pick(ADVICE_TEMPLATES["shorten"])
         elif duration_min <= 25:
@@ -502,7 +502,7 @@ def generate_session_analysis(workout: dict, baseline: dict = None, language: st
 
 
 # ============================================================
-# GÉNÉRATEUR DE BILAN HEBDOMADAIRE
+# WEEKLY REVIEW GENERATOR
 # ============================================================
 
 def generate_weekly_review(
@@ -512,15 +512,15 @@ def generate_weekly_review(
     language: str = "en"
 ) -> dict:
     """
-    Generate weekly review ("Bilan de la semaine") following mandatory 6-bloc structure.
+    Generate weekly review ("Week Summary") following mandatory 6-block structure.
     """
-    
+
     if not workouts:
         return {
-            "summary": "Aucune séance cette semaine.",
-            "meaning": "Une semaine de repos complet, parfois nécessaire.",
-            "recovery": "Tu es probablement bien reposé.",
-            "advice": "Reprends doucement avec une sortie facile.",
+            "summary": "No sessions this week.",
+            "meaning": "A complete rest week, sometimes necessary.",
+            "recovery": "You're probably well rested.",
+            "advice": "Resume gently with an easy run.",
             "metrics": {"total_sessions": 0, "total_km": 0, "total_duration_min": 0}
         }
     
@@ -561,7 +561,7 @@ def generate_weekly_review(
     }
     
     # ========================================
-    # 1. SYNTHÈSE DU COACH (1 phrase)
+    # 1. COACH SUMMARY (1 sentence)
     # ========================================
     if volume_km < 15 or nb_seances <= 1:
         summary = pick(WEEKLY_SUMMARY_LIGHT).format(**placeholders)
@@ -569,21 +569,21 @@ def generate_weekly_review(
         summary = pick(WEEKLY_SUMMARY_INTENSE)
     else:
         summary = pick(WEEKLY_SUMMARY_TEMPLATES).format(**placeholders)
-    
+
     # ========================================
-    # 2. SIGNAUX CLÉS (built in signals dict)
+    # 2. KEY SIGNALS (built in signals dict)
     # ========================================
     signals = {
-        "volume": "bas" if volume_km < 20 else ("élevé" if volume_km > 50 else "modéré"),
+        "volume": "low" if volume_km < 20 else ("high" if volume_km > 50 else "moderate"),
         "regularity": "stable" if nb_seances >= 3 else "variable"
     }
-    
+
     # ONLY add intensity if HR available
     if hr_available:
-        signals["intensity"] = "élevée" if z4_z5 >= 30 else ("basse" if z1_z2 >= 75 else "modérée")
-    
+        signals["intensity"] = "high" if z4_z5 >= 30 else ("low" if z1_z2 >= 75 else "moderate")
+
     # ========================================
-    # 3. CHIFFRES ESSENTIELS (in metrics)
+    # 3. ESSENTIAL NUMBERS (in metrics)
     # ========================================
     metrics = {
         "total_sessions": nb_seances,
@@ -591,12 +591,12 @@ def generate_weekly_review(
         "total_duration_min": total_duration,
         "volume_change_pct": volume_change
     }
-    
+
     if hr_available:
         metrics["avg_zones"] = avg_zones
-    
+
     # ========================================
-    # 4. LECTURE DU COACH (2 phrases max)
+    # 4. COACH READING (2 sentences max)
     # ========================================
     if hr_available:
         if z4_z5 >= 35:
@@ -607,9 +607,9 @@ def generate_weekly_review(
             meaning = pick(WEEKLY_READING_TEMPLATES["balanced"])
     else:
         meaning = pick(WEEKLY_READING_TEMPLATES["good_continuity"])
-    
+
     # ========================================
-    # 5. PRÉCONISATIONS (OBLIGATOIRE)
+    # 5. RECOMMENDATIONS (MANDATORY)
     # ========================================
     if hr_available and z4_z5 >= 35:
         advice = pick(WEEKLY_ADVICE_TEMPLATES["reduce"])
@@ -623,7 +623,7 @@ def generate_weekly_review(
         advice = pick(WEEKLY_ADVICE_TEMPLATES["recover"])
     else:
         advice = pick(WEEKLY_ADVICE_TEMPLATES["maintain"])
-    
+
     # Add goal context if present
     if user_goal and user_goal.get("event_name"):
         try:
@@ -631,10 +631,10 @@ def generate_weekly_review(
             today = datetime.now(timezone.utc).date()
             days_until = (event_date - today).days
             if days_until and days_until > 0:
-                advice += f" Objectif {user_goal['event_name']} dans {days_until} jours."
+                advice += f" Goal {user_goal['event_name']} in {days_until} days."
         except:
             pass
-    
+
     # ========================================
     # 6. Recovery suggestion
     # ========================================
@@ -644,7 +644,7 @@ def generate_weekly_review(
         recovery = pick(RECOVERY_TEMPLATES_WITH_HR["light_recovery"])
     else:
         recovery = pick(RECOVERY_TEMPLATES_WITH_HR["ready"])
-    
+
     return {
         "summary": summary,
         "meaning": meaning,
@@ -660,22 +660,22 @@ def generate_weekly_review(
             },
             {
                 "key": "intensity",
-                "label": "Intensité",
+                "label": "Intensity",
                 "status": signals.get("intensity", "N/A"),
                 "value": f"{z4_z5}% Z4-Z5" if hr_available else "N/A"
             },
             {
                 "key": "consistency",
-                "label": "Régularité",
+                "label": "Consistency",
                 "status": "high" if nb_seances >= 4 else "moderate" if nb_seances >= 2 else "low",
-                "value": f"{nb_seances} séances"
+                "value": f"{nb_seances} sessions"
             }
         ]
     }
 
 
 # ============================================================
-# GÉNÉRATEUR D'INSIGHT DASHBOARD
+# DASHBOARD INSIGHT GENERATOR
 # ============================================================
 
 def generate_dashboard_insight(
@@ -685,37 +685,37 @@ def generate_dashboard_insight(
     language: str = "en"
 ) -> str:
     """Generate single dashboard insight sentence without LLM"""
-    
+
     sessions = week_stats.get("sessions", 0)
     volume = week_stats.get("volume_km", 0)
-    
+
     if sessions == 0:
         return pick([
-            "Pas encore de séance cette semaine, c'est le moment de s'y mettre.",
-            "Semaine vierge pour l'instant, une sortie facile serait parfaite.",
-            "Aucune activité cette semaine, le corps est reposé.",
+            "No sessions yet this week, time to get moving.",
+            "Blank week so far, an easy run would be perfect.",
+            "No activity this week, body is rested.",
         ])
     elif sessions == 1:
         return pick([
-            "Une séance cette semaine, bon début. Continue sur cette lancée.",
-            "Première sortie faite, ajoute une sortie facile.",
-            "C'est parti pour la semaine avec une séance au compteur.",
+            "One session this week, good start. Keep the momentum.",
+            "First run done, add an easy session.",
+            "Week started with one session logged.",
         ])
     elif volume > 40:
         return pick([
-            "Belle charge cette semaine, pense à bien récupérer.",
-            "Volume conséquent, le corps travaille dur.",
-            "Grosse semaine en cours, écoute ton corps.",
+            "Good load this week, remember to recover well.",
+            "Solid volume, body is working hard.",
+            "Big week underway, listen to your body.",
         ])
     elif recovery_score and recovery_score < 50:
         return pick([
-            "Récupération correcte, privilégie une séance facile.",
-            "Corps un peu fatigué, pas de forcing aujourd'hui.",
-            "Récupération en cours, reste tranquille.",
+            "Recovery decent, favor an easy session.",
+            "Body a bit tired, no pushing hard today.",
+            "Recovery ongoing, take it easy.",
         ])
     else:
         return pick([
-            "Entraînement en cours, continue comme ça.",
-            "Bonne dynamique cette semaine, garde le rythme.",
-            "Tu avances bien, reste régulier.",
+            "Training in progress, keep it up.",
+            "Good momentum this week, maintain the rhythm.",
+            "You're progressing well, stay consistent.",
         ])

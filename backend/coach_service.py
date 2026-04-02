@@ -1,11 +1,11 @@
 """
-CardioCoach - Service de Coaching Cascade avec Cache et Métriques
+CardioCoach - Cascade Coaching Service with Cache and Metrics
 
-Stratégie:
-1. Vérifier cache (0ms)
-2. Analyse déterministe (instantanée) via rag_engine
-3. Enrichissement LLM (~500ms) si disponible
-4. Stocker en cache + métriques
+Strategy:
+1. Check cache (0ms)
+2. Deterministic analysis (instant) via rag_engine
+3. LLM enrichment (~500ms) if available
+4. Store in cache + metrics
 
 Usage:
     from coach_service import analyze_workout, weekly_review, chat_response, get_metrics
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CoachMetrics:
-    """Métriques du service de coaching"""
+    """Coaching service metrics"""
     llm_success: int = 0
     llm_fallback: int = 0
     cache_hits: int = 0
@@ -61,7 +61,7 @@ metrics = CoachMetrics()
 
 
 def get_metrics() -> dict:
-    """Retourne les métriques actuelles"""
+    """Returns current metrics"""
     data = asdict(metrics)
     total_llm = metrics.llm_success + metrics.llm_fallback
     data["llm_success_rate"] = round(metrics.llm_success / total_llm * 100, 1) if total_llm > 0 else 0
@@ -70,7 +70,7 @@ def get_metrics() -> dict:
 
 
 def reset_metrics() -> dict:
-    """Reset les métriques"""
+    """Reset metrics"""
     global metrics
     old = get_metrics()
     metrics = CoachMetrics()
@@ -78,7 +78,7 @@ def reset_metrics() -> dict:
 
 
 def _update_latency(latency_ms: float, is_llm: bool = False, is_cache: bool = False) -> None:
-    """Met à jour les moyennes mobiles de latence"""
+    """Updates moving average latencies"""
     alpha = 0.1
     metrics.avg_latency_ms = (metrics.avg_latency_ms * (1 - alpha)) + (latency_ms * alpha)
     if is_llm:
@@ -122,7 +122,7 @@ def _cleanup_cache(cache: dict) -> None:
 
 
 # ============================================================
-# FONCTIONS PRINCIPALES
+# MAIN FUNCTIONS
 # ============================================================
 
 async def analyze_workout(
@@ -130,7 +130,7 @@ async def analyze_workout(
     rag_result: dict,
     user_id: str = "default"
 ) -> Tuple[str, bool]:
-    """Analyse séance avec cache + métriques + stratégie cascade."""
+    """Session analysis with cache + metrics + cascade strategy."""
     start = time.time()
     metrics.total_requests += 1
     metrics.workout_requests += 1
@@ -149,17 +149,17 @@ async def analyze_workout(
     try:
         workout_stats = {
             "distance_km": workout.get("distance_km", 0),
-            "duree_min": workout.get("duration_minutes", 0),
-            "allure": rag_result.get("pace_str", "N/A"),
-            "fc_moy": workout.get("avg_heart_rate"),
-            "fc_max": workout.get("max_heart_rate"),
-            "denivele": workout.get("elevation_gain_m"),
+            "duration_min": workout.get("duration_minutes", 0),
+            "pace": rag_result.get("pace_str", "N/A"),
+            "avg_hr": workout.get("avg_heart_rate"),
+            "max_hr": workout.get("max_heart_rate"),
+            "elevation": workout.get("elevation_gain_m"),
             "type": workout.get("type"),
             "zones": workout.get("effort_zone_distribution", {}),
             "splits": rag_result.get("splits_analysis", {}),
             "comparison": rag_result.get("comparison", {}).get("progression", ""),
-            "points_forts": rag_result.get("points_forts", []),
-            "points_ameliorer": rag_result.get("points_ameliorer", []),
+            "strengths": rag_result.get("points_forts", []),
+            "areas_to_improve": rag_result.get("points_ameliorer", []),
         }
         
         enriched, success, meta = await enrich_workout_analysis(
@@ -176,7 +176,7 @@ async def analyze_workout(
             return enriched, True
             
     except Exception as e:
-        logger.warning(f"[Coach] Séance fallback: {e}")
+        logger.warning(f"[Coach] Session fallback: {e}")
     
     metrics.llm_fallback += 1
     latency = (time.time() - start) * 1000
@@ -190,7 +190,7 @@ async def weekly_review(
     rag_result: dict,
     user_id: str = "default"
 ) -> Tuple[str, bool]:
-    """Bilan hebdomadaire avec cache + métriques + stratégie cascade."""
+    """Weekly review with cache + metrics + cascade strategy."""
     start = time.time()
     metrics.total_requests += 1
     metrics.weekly_requests += 1
@@ -215,15 +215,15 @@ async def weekly_review(
     
     try:
         weekly_stats = {
-            "km_semaine": m.get("km_total", 0),
-            "nb_seances": m.get("nb_seances", 0),
-            "allure_moy": m.get("allure_moyenne", "N/A"),
-            "cadence_moy": m.get("cadence_moyenne", 0),
+            "weekly_km": m.get("km_total", 0),
+            "num_sessions": m.get("nb_seances", 0),
+            "avg_pace": m.get("allure_moyenne", "N/A"),
+            "avg_cadence": m.get("cadence_moyenne", 0),
             "zones": m.get("zones", {}),
-            "ratio_charge": m.get("ratio", 1.0),
-            "points_forts": rag_result.get("points_forts", []),
-            "points_ameliorer": rag_result.get("points_ameliorer", []),
-            "tendance": rag_result.get("comparison", {}).get("evolution", "stable"),
+            "load_ratio": m.get("ratio", 1.0),
+            "strengths": rag_result.get("points_forts", []),
+            "areas_to_improve": rag_result.get("points_ameliorer", []),
+            "trend": rag_result.get("comparison", {}).get("evolution", "stable"),
         }
         
         enriched, success, meta = await enrich_weekly_review(
@@ -240,7 +240,7 @@ async def weekly_review(
             return enriched, True
             
     except Exception as e:
-        logger.warning(f"[Coach] Bilan fallback: {e}")
+        logger.warning(f"[Coach] Review fallback: {e}")
     
     metrics.llm_fallback += 1
     latency = (time.time() - start) * 1000
@@ -258,7 +258,7 @@ async def chat_response(
     workouts: List[dict] = None,
     user_goal: dict = None
 ) -> Tuple[str, bool, dict]:
-    """Réponse chat avec métriques (pas de cache)."""
+    """Chat response with metrics (no cache)."""
     start = time.time()
     metrics.total_requests += 1
     metrics.chat_requests += 1
@@ -290,38 +290,38 @@ async def chat_response(
 
 
 # ============================================================
-# GÉNÉRATION DE PLAN D'ENTRAÎNEMENT DYNAMIQUE
+# DYNAMIC TRAINING PLAN GENERATION
 # ============================================================
 
 async def generate_dynamic_training_plan(db, user_id: str, sessions_override: int = None) -> dict:
     """
-    Génère un plan d'entraînement dynamique basé sur les données utilisateur.
-    
-    Intègre:
-    - VMA pour calculer les allures personnalisées
-    - Prédictions de course pour adapter la durée de préparation
-    
+    Generates a dynamic training plan based on user data.
+
+    Integrates:
+    - VMA to calculate personalized paces
+    - Race predictions to adapt preparation duration
+
     Args:
-        db: Instance de base de données MongoDB (async)
-        user_id: ID utilisateur
-        sessions_override: Nombre de séances forcé (3, 4, 5, 6)
-        
+        db: MongoDB database instance (async)
+        user_id: User ID
+        sessions_override: Forced number of sessions (3, 4, 5, 6)
+
     Returns:
-        Plan d'entraînement avec semaine, phase, objectif et séances
+        Training plan with week, phase, goal and sessions
     """
     start = time.time()
     metrics.total_requests += 1
     metrics.plan_requests += 1
     
-    # Récupérer les préférences utilisateur (nombre de séances)
+    # Retrieve user preferences (number of sessions)
     prefs = await db.training_prefs.find_one({"user_id": user_id})
     sessions_per_week = sessions_override or (prefs.get("sessions_per_week") if prefs else None)
-    
-    # 1. Récupérer ou créer le cycle d'entraînement
+
+    # 1. Retrieve or create training cycle
     cycle = await db.training_cycles.find_one({"user_id": user_id})
-    
+
     if not cycle:
-        # Créer un cycle par défaut
+        # Create a default cycle
         default_cycle = {
             "user_id": user_id,
             "goal": "SEMI",
@@ -331,7 +331,7 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         }
         await db.training_cycles.insert_one(default_cycle)
         cycle = await db.training_cycles.find_one({"user_id": user_id})
-        logger.info(f"[Coach] Cycle créé pour user {user_id}")
+        logger.info(f"[Coach] Cycle created for user {user_id}")
     
     goal = cycle.get("goal", "SEMI")
     
@@ -339,14 +339,14 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         goal = "SEMI"
     
     config = GOAL_CONFIG[goal]
-    
-    # 2. Récupérer les données d'entraînement (6 semaines pour cohérence avec VMA)
+
+    # 2. Retrieve training data (6 weeks for VMA consistency)
     today = datetime.now(timezone.utc)
     seven_days_ago = today - timedelta(days=7)
     six_weeks_ago = today - timedelta(days=42)
     twenty_eight_days_ago = today - timedelta(days=28)
-    
-    # Essayer d'abord les activités Strava (avec ou sans user_id car certaines sont globales)
+
+    # Try Strava activities first (with or without user_id as some are global)
     workouts_7 = await db.strava_activities.find({
         "$or": [
             {"user_id": user_id},
@@ -364,8 +364,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         ],
         "start_date_local": {"$gte": twenty_eight_days_ago.isoformat()}
     }).to_list(300)
-    
-    # Données sur 6 semaines pour le calcul VMA
+
+    # 6-week data for VMA calculation
     workouts_6w = await db.strava_activities.find({
         "$or": [
             {"user_id": user_id},
@@ -374,8 +374,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         ],
         "start_date_local": {"$gte": six_weeks_ago.isoformat()}
     }).to_list(500)
-    
-    # Fallback sur workouts locaux si pas de données Strava
+
+    # Fallback to local workouts if no Strava data
     if not workouts_28:
         workouts_7 = await db.workouts.find({
             "date": {"$gte": seven_days_ago.isoformat()}
@@ -388,17 +388,17 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         workouts_6w = await db.workouts.find({
             "date": {"$gte": six_weeks_ago.isoformat()}
         }).to_list(500)
-    
-    # 3. Calculer les métriques de base
+
+    # 3. Calculate base metrics
     def get_distance_km(w):
-        """Extrait la distance en km (Strava = mètres, workouts = km)"""
+        """Extracts distance in km (Strava = meters, workouts = km)"""
         dist = w.get("distance", 0)
-        if dist > 1000:  # Strava retourne en mètres
+        if dist > 1000:  # Strava returns meters
             return dist / 1000
         return w.get("distance_km", dist) or 0
     
     def get_duration_min(w):
-        """Extrait la durée en minutes"""
+        """Extracts duration in minutes"""
         moving_time = w.get("moving_time", 0)
         if moving_time > 0:
             return moving_time / 60
@@ -408,7 +408,7 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         return w.get("duration_minutes", 0)
     
     def get_pace(w):
-        """Calcule l'allure en min/km"""
+        """Calculates pace in min/km"""
         dist = get_distance_km(w)
         duration = get_duration_min(w)
         if dist > 0 and duration > 0:
@@ -418,8 +418,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     km_7 = sum(get_distance_km(w) for w in workouts_7)
     km_28 = sum(get_distance_km(w) for w in workouts_28)
     weekly_km = km_28 / 4 if km_28 > 0 else 20
-    
-    # 4. CALCULER LA VMA (même logique que /api/training/vma-history)
+
+    # 4. CALCULATE VMA (same logic as /api/training/vma-history)
     vma_efforts = []
     paces = []
     MIN_VMA_DURATION = 6
@@ -431,15 +431,15 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         
         if dist > 0 and pace and 3 < pace < 10:
             paces.append(pace)
-            # Efforts >= 6 min avec allure rapide (< 5:30/km)
+            # Efforts >= 6 min with fast pace (< 5:30/km)
             if duration >= MIN_VMA_DURATION and pace < 5.5:
                 vma_efforts.append({
                     "pace": pace,
                     "duration": duration,
                     "speed_kmh": 60 / pace
                 })
-    
-    # Calcul de la VMA
+
+    # VMA calculation
     if paces:
         avg_pace = sum(paces) / len(paces)
         
@@ -462,18 +462,18 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         
         # Sanity check
         if estimated_vma * 3.5 > 70:
-            estimated_vma = 14.0  # Valeur par défaut réaliste
+            estimated_vma = 14.0  # Realistic default value
             vma_method = "default"
     else:
-        estimated_vma = 12.0  # VMA par défaut
+        estimated_vma = 12.0  # Default VMA
         vma_method = "default"
     
     estimated_vma = round(estimated_vma, 1)
     vo2max = round(estimated_vma * 3.5, 1)
-    
-    # 5. CALCULER LES ZONES D'ALLURE PERSONNALISÉES basées sur la VMA
+
+    # 5. CALCULATE PERSONALIZED PACE ZONES based on VMA
     def vma_to_pace(vma_pct):
-        """Convertit un % de VMA en allure min/km"""
+        """Converts a VMA % to pace in min/km"""
         speed = estimated_vma * vma_pct
         if speed > 0:
             pace = 60 / speed
@@ -481,23 +481,23 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         return 6.0
     
     def format_pace(pace):
-        """Formate une allure en min:sec/km"""
+        """Formats a pace as min:sec/km"""
         mins = int(pace)
         secs = int((pace % 1) * 60)
         return f"{mins}:{secs:02d}"
     
     personalized_paces = {
-        "z1": f"{format_pace(vma_to_pace(0.65))}-{format_pace(vma_to_pace(0.70))}",  # 65-70% VMA (récup)
+        "z1": f"{format_pace(vma_to_pace(0.65))}-{format_pace(vma_to_pace(0.70))}",  # 65-70% VMA (recovery)
         "z2": f"{format_pace(vma_to_pace(0.75))}-{format_pace(vma_to_pace(0.80))}",  # 75-80% VMA (endurance)
         "z3": f"{format_pace(vma_to_pace(0.82))}-{format_pace(vma_to_pace(0.87))}",  # 82-87% VMA (tempo)
-        "z4": f"{format_pace(vma_to_pace(0.88))}-{format_pace(vma_to_pace(0.93))}",  # 88-93% VMA (seuil)
+        "z4": f"{format_pace(vma_to_pace(0.88))}-{format_pace(vma_to_pace(0.93))}",  # 88-93% VMA (threshold)
         "z5": f"{format_pace(vma_to_pace(0.95))}-{format_pace(vma_to_pace(1.00))}",  # 95-100% VMA
         "marathon": f"{format_pace(vma_to_pace(0.78))}-{format_pace(vma_to_pace(0.82))}",  # 78-82% VMA
         "semi": f"{format_pace(vma_to_pace(0.82))}-{format_pace(vma_to_pace(0.85))}",  # 82-85% VMA
     }
-    
-    # 6. ADAPTER LA DURÉE DE PRÉPARATION selon le niveau
-    # Calculer le "readiness score" pour l'objectif
+
+    # 6. ADAPT PREPARATION DURATION according to level
+    # Calculate "readiness score" for the goal
     goal_requirements = {
         "5K": {"min_weekly_km": 15, "min_vo2max": 35, "base_weeks": 6},
         "10K": {"min_weekly_km": 25, "min_vo2max": 38, "base_weeks": 8},
@@ -507,35 +507,35 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     }
     
     req = goal_requirements.get(goal, goal_requirements["SEMI"])
-    
-    # Score de préparation (0-100)
+
+    # Preparation score (0-100)
     volume_score = min(100, (weekly_km / req["min_weekly_km"]) * 100) if req["min_weekly_km"] > 0 else 50
     fitness_score = min(100, (vo2max / req["min_vo2max"]) * 100) if req["min_vo2max"] > 0 else 50
-    readiness_score = (volume_score * 0.6 + fitness_score * 0.4)  # Volume compte plus
-    
-    # Adapter le nombre de semaines
+    readiness_score = (volume_score * 0.6 + fitness_score * 0.4)  # Volume counts more
+
+    # Adjust number of weeks
     base_weeks = req["base_weeks"]
     if readiness_score >= 90:
-        # Très prêt → préparation courte (-25%)
+        # Very ready → short preparation (-25%)
         adjusted_weeks = max(4, int(base_weeks * 0.75))
-        prep_status = "avancé"
+        prep_status = "advanced"
     elif readiness_score >= 70:
-        # Prêt → préparation normale
+        # Ready → normal preparation
         adjusted_weeks = base_weeks
         prep_status = "normal"
     elif readiness_score >= 50:
-        # Besoin de progresser → préparation longue (+25%)
+        # Need to progress → long preparation (+25%)
         adjusted_weeks = int(base_weeks * 1.25)
-        prep_status = "progressif"
+        prep_status = "progressive"
     else:
-        # Débutant → préparation très longue (+50%)
+        # Beginner → very long preparation (+50%)
         adjusted_weeks = int(base_weeks * 1.5)
-        prep_status = "débutant"
-    
-    # Mettre à jour la config avec la durée adaptée
+        prep_status = "beginner"
+
+    # Update config with adapted duration
     config = {**config, "cycle_weeks": adjusted_weeks}
-    
-    # 7. Calculer la semaine et la phase
+
+    # 7. Calculate week and phase
     start_date = cycle.get("start_date")
     if isinstance(start_date, str):
         start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
@@ -544,8 +544,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     
     week = compute_week_number(start_date.date() if isinstance(start_date, datetime) else start_date)
     phase = determine_phase(week, adjusted_weeks)
-    
-    # 8. Calcul ACWR et TSB
+
+    # 8. Calculate ACWR and TSB
     chronic_avg = km_28 / 4 if km_28 > 0 else 1
     acwr = round(km_7 / chronic_avg, 2) if chronic_avg > 0 else 1.0
     
@@ -564,8 +564,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         "load_28": load_28,
         "acwr": acwr
     }
-    
-    # 9. Construire le contexte enrichi avec VMA
+
+    # 9. Build enriched context with VMA
     context = build_training_context(fitness_data, weekly_km)
     context["vma"] = estimated_vma
     context["vo2max"] = vo2max
@@ -574,11 +574,11 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     context["readiness_score"] = round(readiness_score, 1)
     context["prep_status"] = prep_status
     context["adjusted_weeks"] = adjusted_weeks
-    
-    # 10. Calculer la charge cible
+
+    # 10. Calculate target load
     target_load = determine_target_load(context, phase)
-    
-    # 11. Vérifier le cache
+
+    # 11. Check cache
     cache_key = f"plan_{user_id}_{week}_{phase}_{goal}_{estimated_vma}"
     if cache_key in _plan_cache:
         cached_plan, timestamp = _plan_cache[cache_key]
@@ -588,8 +588,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
             _update_latency(latency, is_cache=True)
             logger.debug(f"[Coach] Plan cache hit ({latency:.1f}ms)")
             return cached_plan
-    
-    # 12. Générer le plan via LLM avec allures personnalisées
+
+    # 12. Generate plan via LLM with personalized paces
     try:
         week_plan, success, meta = await generate_cycle_week(
             context=context,
@@ -613,8 +613,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         logger.warning(f"[Coach] Plan fallback: {e}")
         metrics.llm_fallback += 1
         week_plan = _deterministic_plan(context, phase, target_load, goal, sessions_per_week, personalized_paces)
-    
-    # 13. Construire le résultat
+
+    # 13. Build result
     result = {
         "week": week,
         "phase": phase,
@@ -632,8 +632,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
         "adjusted_weeks": adjusted_weeks,
         "generated_at": datetime.now(timezone.utc).isoformat()
     }
-    
-    # 14. Mettre à jour le cycle en base
+
+    # 14. Update cycle in database
     await db.training_cycles.update_one(
         {"user_id": user_id},
         {"$set": {
@@ -645,8 +645,8 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
             "updated_at": datetime.now(timezone.utc)
         }}
     )
-    
-    # 15. Stocker en cache
+
+    # 15. Store in cache
     _plan_cache[cache_key] = (result, time.time())
     _cleanup_cache(_plan_cache)
     
@@ -657,12 +657,12 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
 
 
 def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str, sessions_per_week: int = None, personalized_paces: dict = None) -> dict:
-    """Génère un plan déterministe de secours avec allures personnalisées basées sur la VMA."""
-    
-    # Volume actuel de l'athlète (basé sur les 4 dernières semaines)
+    """Generates a deterministic fallback plan with personalized VMA-based paces."""
+
+    # Athlete's current volume (based on last 4 weeks)
     current_weekly_km = context.get("weekly_km", 30)
-    
-    # Volumes minimum RECOMMANDÉS (basés sur données réelles d'entraînement)
+
+    # RECOMMENDED minimum volumes (based on real training data)
     goal_configs = {
         "5K": {"min": 15, "max": 45, "sessions": 3, "long_min": 8, "long_max": 10},
         "10K": {"min": 20, "max": 60, "sessions": 3, "long_min": 10, "long_max": 14},
@@ -672,82 +672,82 @@ def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str, 
     }
     
     config = goal_configs.get(goal, goal_configs["SEMI"])
-    
-    # Utiliser le nombre de séances spécifié ou celui par défaut
+
+    # Use specified number of sessions or default
     num_sessions = sessions_per_week if sessions_per_week in [3, 4, 5, 6] else config["sessions"]
     num_rest_days = 7 - num_sessions
-    
-    # Volume minimum = max(volume actuel, minimum recommandé)
+
+    # Minimum volume = max(current volume, recommended minimum)
     volume_min = max(current_weekly_km, config["min"])
-    
-    # Calcul du volume cible: +7% progressif
+
+    # Target volume calculation: +7% progressive
     target_km = max(volume_min, min(config["max"], round(current_weekly_km * 1.07)))
-    
-    # Multiplicateur de phase
+
+    # Phase multiplier
     phase_multipliers = {"build": 1.0, "deload": 0.7, "intensification": 1.05, "taper": 0.5, "race": 0.3}
     target_km = round(target_km * phase_multipliers.get(phase, 1.0))
-    
-    # Sortie longue proportionnelle
+
+    # Proportional long run
     long_ratio = (target_km - config["min"]) / (config["max"] - config["min"]) if config["max"] > config["min"] else 0.5
     long_run = round(config["long_min"] + long_ratio * (config["long_max"] - config["long_min"]))
     long_run = max(config["long_min"], min(config["long_max"], long_run))
-    
-    # Répartition du reste du volume
+
+    # Distribution of remaining volume
     remaining = target_km - long_run
     easy_km = round(remaining * 0.35)
     tempo_km = round(remaining * 0.25)
     seuil_km = round(remaining * 0.22)
     recup_km = remaining - easy_km - tempo_km - seuil_km
-    
-    # Allures personnalisées (basées sur VMA) ou valeurs par défaut
+
+    # Personalized paces (VMA-based) or default values
     if personalized_paces:
         paces = personalized_paces
     else:
         paces = {"z1": "6:30-7:00", "z2": "5:45-6:15", "z3": "5:15-5:30", "z4": "4:45-5:00", "z5": "4:15-4:30", "semi": "5:00-5:15", "marathon": "5:15-5:30"}
     
     hr = {"z1": "120-135", "z2": "135-150", "z3": "150-165", "z4": "165-175", "z5": "175-185"}
-    
-    # Templates par phase - adapté à l'objectif
+
+    # Templates by phase - adapted to goal
     if phase == "deload":
         sessions = [
-            {"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Étirements recommandés", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Mardi", "type": "Endurance", "duration": f"{easy_km*6}min", "details": f"{easy_km} km • {paces['z1']}/km • FC {hr['z1']} bpm • Zone 1-2", "intensity": "easy", "estimated_tss": easy_km*5, "distance_km": easy_km},
-            {"day": "Mercredi", "type": "Récupération", "duration": f"{recup_km*7}min", "details": f"{recup_km} km • {paces['z1']}/km • FC {hr['z1']} bpm • Très léger", "intensity": "easy", "estimated_tss": recup_km*5, "distance_km": recup_km},
-            {"day": "Jeudi", "type": "Endurance", "duration": f"{easy_km*6}min", "details": f"{easy_km} km • {paces['z2']}/km • FC {hr['z2']} bpm", "intensity": "easy", "estimated_tss": easy_km*5, "distance_km": easy_km},
-            {"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Récupération • Marche légère possible", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Samedi", "type": "Endurance", "duration": f"{tempo_km*6}min", "details": f"{tempo_km} km progressif • {paces['z2']}/km → {paces['z3']}/km", "intensity": "easy", "estimated_tss": tempo_km*6, "distance_km": tempo_km},
-            {"day": "Dimanche", "type": "Sortie longue", "duration": f"{long_run*6}min", "details": f"{long_run} km • {paces['z2']}/km • FC {hr['z2']} bpm • Sortie calme", "intensity": "moderate", "estimated_tss": long_run*6, "distance_km": long_run},
+            {"day": "Monday", "type": "Rest", "duration": "0min", "details": "Complete recovery • Stretching recommended", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Tuesday", "type": "Endurance", "duration": f"{easy_km*6}min", "details": f"{easy_km} km • {paces['z1']}/km • HR {hr['z1']} bpm • Zone 1-2", "intensity": "easy", "estimated_tss": easy_km*5, "distance_km": easy_km},
+            {"day": "Wednesday", "type": "Recovery", "duration": f"{recup_km*7}min", "details": f"{recup_km} km • {paces['z1']}/km • HR {hr['z1']} bpm • Very easy", "intensity": "easy", "estimated_tss": recup_km*5, "distance_km": recup_km},
+            {"day": "Thursday", "type": "Endurance", "duration": f"{easy_km*6}min", "details": f"{easy_km} km • {paces['z2']}/km • HR {hr['z2']} bpm", "intensity": "easy", "estimated_tss": easy_km*5, "distance_km": easy_km},
+            {"day": "Friday", "type": "Rest", "duration": "0min", "details": "Recovery • Light walking possible", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Saturday", "type": "Endurance", "duration": f"{tempo_km*6}min", "details": f"{tempo_km} km progressive • {paces['z2']}/km → {paces['z3']}/km", "intensity": "easy", "estimated_tss": tempo_km*6, "distance_km": tempo_km},
+            {"day": "Sunday", "type": "Long run", "duration": f"{long_run*6}min", "details": f"{long_run} km • {paces['z2']}/km • HR {hr['z2']} bpm • Easy run", "intensity": "moderate", "estimated_tss": long_run*6, "distance_km": long_run},
         ]
     elif phase == "taper":
         sessions = [
-            {"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Hydratation ++", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Mardi", "type": "Endurance", "duration": "30min", "details": f"{recup_km} km + 4×100m • {paces['z2']}/km • FC {hr['z2']} bpm", "intensity": "easy", "estimated_tss": 30, "distance_km": recup_km + 0.5},
-            {"day": "Mercredi", "type": "Récupération", "duration": "20min", "details": f"{recup_km-1} km • {paces['z1']}/km • FC {hr['z1']} bpm", "intensity": "easy", "estimated_tss": 15, "distance_km": max(3, recup_km-1)},
-            {"day": "Jeudi", "type": "Tempo court", "duration": "25min", "details": f"{recup_km} km dont 2 km allure course • {paces['semi']}/km • FC {hr['z3']} bpm", "intensity": "moderate", "estimated_tss": 35, "distance_km": recup_km},
-            {"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Repos total • Préparation équipement", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Samedi", "type": "Activation", "duration": "20min", "details": f"3 km + 3×200m • {paces['z2']}/km", "intensity": "easy", "estimated_tss": 25, "distance_km": 3.6},
-            {"day": "Dimanche", "type": "Repos", "duration": "0min", "details": "VEILLE DE COURSE • Repos, glucides", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Monday", "type": "Rest", "duration": "0min", "details": "Complete recovery • Hydration ++", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Tuesday", "type": "Endurance", "duration": "30min", "details": f"{recup_km} km + 4×100m • {paces['z2']}/km • HR {hr['z2']} bpm", "intensity": "easy", "estimated_tss": 30, "distance_km": recup_km + 0.5},
+            {"day": "Wednesday", "type": "Recovery", "duration": "20min", "details": f"{recup_km-1} km • {paces['z1']}/km • HR {hr['z1']} bpm", "intensity": "easy", "estimated_tss": 15, "distance_km": max(3, recup_km-1)},
+            {"day": "Thursday", "type": "Short tempo", "duration": "25min", "details": f"{recup_km} km including 2 km race pace • {paces['semi']}/km • HR {hr['z3']} bpm", "intensity": "moderate", "estimated_tss": 35, "distance_km": recup_km},
+            {"day": "Friday", "type": "Rest", "duration": "0min", "details": "Complete rest • Gear preparation", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Saturday", "type": "Activation", "duration": "20min", "details": f"3 km + 3×200m • {paces['z2']}/km", "intensity": "easy", "estimated_tss": 25, "distance_km": 3.6},
+            {"day": "Sunday", "type": "Rest", "duration": "0min", "details": "DAY BEFORE RACE • Rest, carbs", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
         ]
     elif phase == "race":
         race_km = {"5K": 5, "10K": 10, "SEMI": 21.1, "MARATHON": 42.2, "ULTRA": 50}.get(goal, 21.1)
         sessions = [
-            {"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération totale", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Mardi", "type": "Activation", "duration": "20min", "details": f"3 km • {paces['z1']}/km • FC {hr['z1']} bpm", "intensity": "easy", "estimated_tss": 15, "distance_km": 3},
-            {"day": "Mercredi", "type": "Récupération", "duration": "15min", "details": f"2.5 km • {paces['z1']}/km • FC {hr['z1']} bpm", "intensity": "easy", "estimated_tss": 12, "distance_km": 2.5},
-            {"day": "Jeudi", "type": "Activation", "duration": "15min", "details": f"2 km + 2×100m • {paces['z1']}/km", "intensity": "easy", "estimated_tss": 10, "distance_km": 2.2},
-            {"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Repos complet", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Samedi", "type": "Repos", "duration": "0min", "details": "VEILLE • Glucides", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Dimanche", "type": "COURSE", "duration": "Variable", "details": f"🏆 {goal} ({race_km} km) • Objectif: {paces.get('semi')}/km", "intensity": "race", "estimated_tss": int(race_km * 7), "distance_km": race_km},
+            {"day": "Monday", "type": "Rest", "duration": "0min", "details": "Complete recovery", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Tuesday", "type": "Activation", "duration": "20min", "details": f"3 km • {paces['z1']}/km • HR {hr['z1']} bpm", "intensity": "easy", "estimated_tss": 15, "distance_km": 3},
+            {"day": "Wednesday", "type": "Recovery", "duration": "15min", "details": f"2.5 km • {paces['z1']}/km • HR {hr['z1']} bpm", "intensity": "easy", "estimated_tss": 12, "distance_km": 2.5},
+            {"day": "Thursday", "type": "Activation", "duration": "15min", "details": f"2 km + 2×100m • {paces['z1']}/km", "intensity": "easy", "estimated_tss": 10, "distance_km": 2.2},
+            {"day": "Friday", "type": "Rest", "duration": "0min", "details": "Complete rest", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Saturday", "type": "Rest", "duration": "0min", "details": "DAY BEFORE • Carbs", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Sunday", "type": "RACE", "duration": "Variable", "details": f"🏆 {goal} ({race_km} km) • Target: {paces.get('semi')}/km", "intensity": "race", "estimated_tss": int(race_km * 7), "distance_km": race_km},
         ]
-    else:  # build, intensification - Plan standard adapté à l'objectif
+    else:  # build, intensification - Standard plan adapted to goal
         sessions = [
-            {"day": "Lundi", "type": "Repos", "duration": "0min", "details": "Récupération complète • Étirements recommandés", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Mardi", "type": "Endurance", "duration": f"{easy_km*6}min", "details": f"{easy_km} km • {paces['z2']}/km • FC {hr['z2']} bpm • Zone 2 stricte", "intensity": "easy", "estimated_tss": easy_km*6, "distance_km": easy_km},
-            {"day": "Mercredi", "type": "Seuil", "duration": f"{seuil_km*5}min", "details": f"{seuil_km} km dont 20min à {paces['z4']}/km • FC {hr['z4']} bpm • Récup 2min", "intensity": "hard", "estimated_tss": seuil_km*8, "distance_km": seuil_km},
-            {"day": "Jeudi", "type": "Récupération", "duration": f"{recup_km*7}min", "details": f"{recup_km} km • {paces['z1']}/km • FC <135 bpm • Footing léger", "intensity": "easy", "estimated_tss": recup_km*5, "distance_km": recup_km},
-            {"day": "Vendredi", "type": "Repos", "duration": "0min", "details": "Récupération • Cross-training possible (vélo, natation)", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
-            {"day": "Samedi", "type": "Tempo", "duration": f"{tempo_km*5}min", "details": f"{tempo_km} km dont 25min à {paces['semi']}/km • FC {hr['z3']} bpm", "intensity": "moderate", "estimated_tss": tempo_km*7, "distance_km": tempo_km},
-            {"day": "Dimanche", "type": "Sortie longue", "duration": f"{long_run*5}min", "details": f"{long_run} km progressif • {paces['z2']}/km → {paces['z3']}/km • FC {hr['z2']}→{hr['z3']} bpm", "intensity": "moderate", "estimated_tss": long_run*6, "distance_km": long_run},
+            {"day": "Monday", "type": "Rest", "duration": "0min", "details": "Complete recovery • Stretching recommended", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Tuesday", "type": "Endurance", "duration": f"{easy_km*6}min", "details": f"{easy_km} km • {paces['z2']}/km • HR {hr['z2']} bpm • Strict zone 2", "intensity": "easy", "estimated_tss": easy_km*6, "distance_km": easy_km},
+            {"day": "Wednesday", "type": "Threshold", "duration": f"{seuil_km*5}min", "details": f"{seuil_km} km including 20min at {paces['z4']}/km • HR {hr['z4']} bpm • 2min recovery", "intensity": "hard", "estimated_tss": seuil_km*8, "distance_km": seuil_km},
+            {"day": "Thursday", "type": "Recovery", "duration": f"{recup_km*7}min", "details": f"{recup_km} km • {paces['z1']}/km • HR <135 bpm • Easy jog", "intensity": "easy", "estimated_tss": recup_km*5, "distance_km": recup_km},
+            {"day": "Friday", "type": "Rest", "duration": "0min", "details": "Recovery • Cross-training possible (bike, swim)", "intensity": "rest", "estimated_tss": 0, "distance_km": 0},
+            {"day": "Saturday", "type": "Tempo", "duration": f"{tempo_km*5}min", "details": f"{tempo_km} km including 25min at {paces['semi']}/km • HR {hr['z3']} bpm", "intensity": "moderate", "estimated_tss": tempo_km*7, "distance_km": tempo_km},
+            {"day": "Sunday", "type": "Long run", "duration": f"{long_run*5}min", "details": f"{long_run} km progressive • {paces['z2']}/km → {paces['z3']}/km • HR {hr['z2']}→{hr['z3']} bpm", "intensity": "moderate", "estimated_tss": long_run*6, "distance_km": long_run},
         ]
     
     total_tss = sum(s["estimated_tss"] for s in sessions)
@@ -759,7 +759,7 @@ def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str, 
         "weekly_km": round(total_km, 1),
         "sessions": sessions,
         "total_tss": total_tss,
-        "advice": get_phase_description(phase).get("advice", f"Focus sur la préparation {goal}. Respecte les allures cibles !")
+        "advice": get_phase_description(phase).get("advice", f"Focus on {goal} preparation. Respect target paces!")
     }
 
 
@@ -768,7 +768,7 @@ def _deterministic_plan(context: dict, phase: str, target_load: int, goal: str, 
 # ============================================================
 
 def clear_cache() -> dict:
-    """Vide les caches."""
+    """Clears caches."""
     global _workout_cache, _weekly_cache, _plan_cache
     result = {
         "cleared_workout": len(_workout_cache),
@@ -782,7 +782,7 @@ def clear_cache() -> dict:
 
 
 def get_cache_stats() -> dict:
-    """Retourne les statistiques du cache."""
+    """Returns cache statistics."""
     return {
         "workout_cache_size": len(_workout_cache),
         "weekly_cache_size": len(_weekly_cache),
