@@ -694,7 +694,7 @@ export default function Dashboard() {
                 {/* Metric widgets */}
                 <div>
                   <h2 className="text-xs uppercase tracking-widest mb-3 font-semibold" style={{ color: "var(--text-tertiary)" }}>
-                    Today's Metrics
+                    {t("dashboard.todaysMetrics")}
                   </h2>
                   <div
                     className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4"
@@ -703,43 +703,43 @@ export default function Dashboard() {
                   >
                     <MetricWidget
                       icon={Heart}
-                      label="HRV Deviation"
+                      label={t("dashboard.hrvDeviation")}
                       value={m.hrv_delta !== undefined ? (m.hrv_delta >= 0 ? `+${m.hrv_delta}` : `${m.hrv_delta}`) : "—"}
                       unit="ms"
                       status={m.hrv_status || "green"}
-                      detail={`Today ${m.hrv_today ?? "—"} ms`}
+                      detail={`${t("dashboard.today")} ${m.hrv_today ?? "—"} ms`}
                     />
                     <MetricWidget
                       icon={Moon}
-                      label="Resting HR"
+                      label={t("dashboard.restingHR")}
                       value={m.rhr_today ?? "—"}
                       unit="bpm"
                       status={m.rhr_status || "green"}
-                      detail={`Baseline ${m.rhr_baseline ?? "—"} bpm`}
+                      detail={`${t("dashboard.baseline")} ${m.rhr_baseline ?? "—"} bpm`}
                     />
                     <MetricWidget
                       icon={Zap}
-                      label="Sleep"
+                      label={t("dashboard.sleep")}
                       value={m.sleep_hours ?? "—"}
                       unit="h"
                       status={m.sleep_status || "green"}
-                      detail={`${m.sleep_efficiency !== undefined ? Math.round(m.sleep_efficiency * 100) : "—"}% efficiency`}
+                      detail={`${m.sleep_efficiency !== undefined ? Math.round(m.sleep_efficiency * 100) : "—"}% ${t("dashboard.efficiency")}`}
                     />
                     <MetricWidget
                       icon={BarChart2}
-                      label="Training Load"
+                      label={t("dashboard.trainingLoad")}
                       value={m.training_load ?? "—"}
                       unit="ACWR"
                       status={m.training_load_status || "green"}
-                      detail={m.training_load >= LOAD_OPTIMAL_MIN && m.training_load <= LOAD_OPTIMAL_MAX ? "Optimal zone" : "Outside zone"}
+                      detail={m.training_load >= LOAD_OPTIMAL_MIN && m.training_load <= LOAD_OPTIMAL_MAX ? t("dashboard.optimalZone") : t("dashboard.outsideZone")}
                     />
                     <MetricWidget
                       icon={Activity}
-                      label="Fatigue Ratio"
+                      label={t("dashboard.fatigueRatio")}
                       value={m.fatigue_ratio ?? "—"}
                       unit=""
                       status={m.fatigue_status || "green"}
-                      detail={m.fatigue_ratio <= FATIGUE_EASY_THRESHOLD ? "Low fatigue" : m.fatigue_ratio <= FATIGUE_REST_THRESHOLD ? "Moderate" : "High fatigue"}
+                      detail={m.fatigue_ratio <= FATIGUE_EASY_THRESHOLD ? t("dashboard.lowFatigue") : m.fatigue_ratio <= FATIGUE_REST_THRESHOLD ? t("dashboard.moderate") : t("dashboard.highFatigue")}
                     />
                   </div>
                 </div>
@@ -751,7 +751,7 @@ export default function Dashboard() {
                   data-testid="trend-graph"
                 >
                   <h2 className="text-xs uppercase tracking-widest mb-4 font-semibold" style={{ color: "var(--text-tertiary)" }}>
-                    7-Day Trend — Load vs Recovery
+                    {t("dashboard.sevenDayTrend")}
                   </h2>
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={history} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barCategoryGap="20%">
@@ -761,18 +761,18 @@ export default function Dashboard() {
                       <YAxis yAxisId="right" orientation="right" tick={{ fill: "var(--text-tertiary)", fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, "auto"]} />
                       <Tooltip content={<TrendTooltip />} />
                       <Legend iconType="circle" iconSize={8} formatter={(v) => (<span style={{ color: "var(--text-secondary)", fontSize: 10 }}>{v}</span>)} />
-                      <Bar yAxisId="left" dataKey="training_load" name="Training Load (ACWR)" fill="#8b5cf680" radius={[4, 4, 0, 0]} maxBarSize={24} />
-                      <Line yAxisId="right" type="monotone" dataKey="fatigue_ratio" name="Fatigue Ratio" stroke="#ec4899" strokeWidth={2} dot={{ r: 3, fill: "#ec4899" }} activeDot={{ r: 5 }} />
+                      <Bar yAxisId="left" dataKey="training_load" name={t("dashboard.trainingLoadAcwr")} fill="#8b5cf680" radius={[4, 4, 0, 0]} maxBarSize={24} />
+                      <Line yAxisId="right" type="monotone" dataKey="fatigue_ratio" name={t("dashboard.fatigueRatio")} stroke="#ec4899" strokeWidth={2} dot={{ r: 3, fill: "#ec4899" }} activeDot={{ r: 5 }} />
                     </BarChart>
                   </ResponsiveContainer>
                   <div className="flex gap-4 mt-2 justify-center">
                     <div className="flex items-center gap-1 text-[10px]" style={{ color: "var(--text-tertiary)" }}>
                       <div className="w-2 h-2 rounded-full" style={{ background: "#ec4899" }} />
-                      <span>Fatigue &gt;{FATIGUE_REST_THRESHOLD} → REST</span>
+                      <span>{t("dashboard.fatigueRest")} &gt;{FATIGUE_REST_THRESHOLD} → {t("dashboard.rest")}</span>
                     </div>
                     <div className="flex items-center gap-1 text-[10px]" style={{ color: "var(--text-tertiary)" }}>
                       <div className="w-2 h-2 rounded-full" style={{ background: "#f59e0b" }} />
-                      <span>&gt;{FATIGUE_EASY_THRESHOLD} → EASY</span>
+                      <span>&gt;{FATIGUE_EASY_THRESHOLD} → {t("dashboard.easy")}</span>
                     </div>
                   </div>
                 </div>
