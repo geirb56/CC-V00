@@ -248,11 +248,15 @@ export default function Dashboard() {
   const fetchedRef = useRef(false);
   const lastLangRef = useRef(lang);
 
-  // Mapping des jours FR vers index
-  const dayMapping = {
-    "Lundi": 1, "Mardi": 2, "Mercredi": 3, "Jeudi": 4,
-    "Vendredi": 5, "Samedi": 6, "Dimanche": 0
+  // Mapping des jours vers index selon la langue
+  // The merged object covers all three languages so the lookup works regardless
+  // of whether the backend returns English (fallback plan), French (LLM) or Spanish day names.
+  const dayMappings = {
+    fr: { "Lundi": 1, "Mardi": 2, "Mercredi": 3, "Jeudi": 4, "Vendredi": 5, "Samedi": 6, "Dimanche": 0 },
+    en: { "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6, "Sunday": 0 },
+    es: { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 0 },
   };
+  const dayMapping = { ...dayMappings.fr, ...dayMappings.en, ...dayMappings.es };
 
   useEffect(() => {
     if (fetchedRef.current && lastLangRef.current === lang) {

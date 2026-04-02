@@ -48,18 +48,18 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
 
   const handleConnect = async () => {
     if (!token.trim()) {
-      toast.error(t("terra.tokenRequired") || "Please enter a Terra token");
+      toast.error(t("terra.tokenRequired"));
       return;
     }
     setConnecting(true);
     try {
       await axios.post(`${API_BASE}/terra/connect?user_id=${USER_ID}`, { token: token.trim() });
-      toast.success(t("terra.connected") || "Terra connected successfully");
+      toast.success(t("terra.connected"));
       setToken("");
       loadStatus();
     } catch (error) {
       console.error("Failed to connect Terra:", error);
-      toast.error(error.response?.data?.detail || t("terra.connectionFailed") || "Connection failed");
+      toast.error(error.response?.data?.detail || t("terra.connectionFailed"));
     } finally {
       setConnecting(false);
     }
@@ -71,7 +71,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
       const res = await axios.post(`${API_BASE}/terra/sync?user_id=${USER_ID}`);
       if (res.data.success) {
         toast.success(
-          (t("terra.syncImported") || "Synced {count} workouts").replace(
+          t("terra.syncImported").replace(
             "{count}",
             res.data.synced_count
           )
@@ -80,7 +80,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
       loadStatus();
     } catch (error) {
       console.error("Terra sync failed:", error);
-      toast.error(t("terra.syncFailed") || "Sync failed");
+      toast.error(t("terra.syncFailed"));
     } finally {
       setSyncing(false);
     }
@@ -90,28 +90,28 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
     try {
       await axios.delete(`${API_BASE}/terra/disconnect?user_id=${USER_ID}`);
       setStatus({ connected: false });
-      toast.success(t("terra.disconnected") || "Terra disconnected");
+      toast.success(t("terra.disconnected"));
     } catch (error) {
       toast.error(t("common.error") || "Error");
     }
   };
 
   const formatLastSync = (isoString) => {
-    if (!isoString) return t("common.never") || "Never";
+    if (!isoString) return t("common.never");
     const date = new Date(isoString);
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    const locale = lang === "fr" ? "fr-FR" : "en-US";
-    if (diffMins < 1) return t("common.justNow") || "Just now";
+    const locale = lang === "fr" ? "fr-FR" : lang === "es" ? "es-ES" : "en-US";
+    if (diffMins < 1) return t("common.justNow");
     if (diffMins < 60)
-      return (t("common.timeAgoMins") || "{n} min ago").replace("{n}", diffMins);
+      return t("common.timeAgoMins").replace("{n}", diffMins);
     if (diffHours < 24)
-      return (t("common.timeAgoHours") || "{n}h ago").replace("{n}", diffHours);
+      return t("common.timeAgoHours").replace("{n}", diffHours);
     if (diffDays < 7)
-      return (t("common.timeAgoDays") || "{n}d ago").replace("{n}", diffDays);
+      return t("common.timeAgoDays").replace("{n}", diffDays);
     return date.toLocaleDateString(locale, { day: "numeric", month: "short" });
   };
 
@@ -121,7 +121,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
         <CardContent className="p-6">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="font-mono text-xs">{t("common.loading") || "Loading..."}</span>
+            <span className="font-mono text-xs">{t("common.loading")}</span>
           </div>
         </CardContent>
       </Card>
@@ -137,11 +137,10 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
           </div>
           <div className="flex-1">
             <h2 className="font-heading text-lg uppercase tracking-tight font-semibold mb-1">
-              {t("terra.title") || "Terra Wearables"}
+              {t("terra.title")}
             </h2>
             <p className="font-mono text-xs text-muted-foreground mb-4">
-              {t("terra.description") ||
-                "Connect your wearable data (HRV, sleep, HR) via Terra"}
+              {t("terra.description")}
             </p>
 
             {status?.connected ? (
@@ -206,7 +205,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
                 </div>
                 <Input
                   type="text"
-                  placeholder={t("terra.tokenPlaceholder") || "Paste your Terra token here"}
+                  placeholder={t("terra.tokenPlaceholder")}
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
                   className="font-mono text-xs h-9 rounded-sm"
@@ -223,7 +222,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
                   ) : (
                     <Activity className="w-4 h-4" />
                   )}
-                  {t("terra.connect") || "Connect Terra"}
+                  {t("terra.connect")}
                 </Button>
               </div>
             )}
