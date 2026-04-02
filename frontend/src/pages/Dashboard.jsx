@@ -303,38 +303,15 @@ export default function Dashboard() {
       const res = await axios.get(`${API}/cardio-coach?user_id=default`);
       setCardioData(res.data);
     } catch (err) {
-      console.error("CardioCoach fetch failed:", err);
-      setCardioError("Unable to load data. Showing cached demo.");
-      setCardioData({
-        mock: true,
-        recommendation: "RUN HARD",
-        recommendation_emoji: "🟢",
-        recommendation_color: "green",
-        next_workout: { label: "Intervals – 6 x 800 m", icon: "run" },
-        metrics: {
-          hrv_today: 58, hrv_baseline: 55, hrv_delta: -3, hrv_status: "green",
-          rhr_today: 48, rhr_baseline: 50, rhr_delta: -2, rhr_status: "green",
-          sleep_hours: 7.5, sleep_efficiency: 0.88, sleep_score: 0.74, sleep_status: "yellow",
-          training_load: 1.05, training_load_status: "green",
-          fatigue_physio: 0.0, fatigue_ratio: 0.7, fatigue_status: "green",
-        },
-        reasons: [
-          "HRV above baseline (+3 ms) → good recovery",
-          "RHR below baseline (−2 bpm) → rested",
-          "Sleep 7.5 h at 88% efficiency",
-          "Training load (ACWR) 1.05 → optimal",
-          "Fatigue Ratio 0.70 → ready to perform",
-        ],
-        history: [
-          { day: "Mon", hrv: 52, training_load: 1.1, fatigue_ratio: 0.85 },
-          { day: "Tue", hrv: 55, training_load: 1.05, fatigue_ratio: 0.8 },
-          { day: "Wed", hrv: 50, training_load: 1.2, fatigue_ratio: 1.1 },
-          { day: "Thu", hrv: 48, training_load: 1.3, fatigue_ratio: 1.3 },
-          { day: "Fri", hrv: 54, training_load: 1.0, fatigue_ratio: 0.9 },
-          { day: "Sat", hrv: 57, training_load: 0.9, fatigue_ratio: 0.75 },
-          { day: "Sun", hrv: 58, training_load: 1.05, fatigue_ratio: 0.7 },
-        ],
-      });
+      console.error("CardioCoach fetch failed, trying mock API:", err);
+      try {
+        const mockRes = await axios.get(`${API}/mock-runner`);
+        setCardioData(mockRes.data.today);
+        setCardioError("Live data unavailable — showing dynamic demo.");
+      } catch (mockErr) {
+        console.error("Mock API also failed:", mockErr);
+        setCardioError("Unable to load data.");
+      }
     } finally {
       setCardioLoading(false);
     }

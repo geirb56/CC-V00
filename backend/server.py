@@ -81,6 +81,9 @@ from subscription_manager import (
 # Import physiological engine dashboard router
 from api.dashboard import dashboard_router
 
+# Import dynamic mock runner API
+from api.mock_runner import mock_runner_router
+
 # Import Terra integration module
 from terra_integration import (
     syncDailyMetrics,
@@ -5300,6 +5303,9 @@ async def verify_checkout_session(session_id: str, user_id: str = "default"):
         logger.error(f"Verify checkout error: {e}")
         return {"success": False, "error": str(e)}
 
+
+# Register mock runner endpoints under /api
+api_router.include_router(mock_runner_router)
 
 # Include the router
 app.include_router(api_router)
