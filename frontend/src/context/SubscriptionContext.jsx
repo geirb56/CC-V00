@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useLanguage } from "@/context/LanguageContext";
+import { Loader2 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const USER_ID = "default";
@@ -34,8 +35,8 @@ export function SubscriptionProvider({ children }) {
           full_access: true
         },
         display: {
-          label: lang === "fr" ? "Essai gratuit" : "Free trial",
-          badge: lang === "fr" ? "ESSAI" : "TRIAL",
+          label: lang === "fr" ? "Essai gratuit" : lang === "es" ? "Prueba gratuita" : "Free trial",
+          badge: lang === "fr" ? "ESSAI" : lang === "es" ? "PRUEBA" : "TRIAL",
           badge_color: "blue"
         }
       });
@@ -111,7 +112,7 @@ export function withSubscription(Component, requiredFeature = "full_access") {
     const { hasFeature, isFree, loading } = useSubscription();
     
     if (loading) {
-      return <div className="p-4 text-center text-muted-foreground">Chargement...</div>;
+      return <div className="p-4 flex justify-center text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin" /></div>;
     }
     
     if (isFree || !hasFeature(requiredFeature)) {

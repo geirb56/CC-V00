@@ -28,9 +28,9 @@ export const Layout = () => {
           const now = new Date();
           const diffMins = Math.round((now - syncDate) / 60000);
           if (diffMins < 60) {
-            setLastSync(`${diffMins} min`);
+            setLastSync(t("common.timeAgoMins").replace("{n}", diffMins));
           } else {
-            setLastSync(`${Math.round(diffMins / 60)}h`);
+            setLastSync(t("common.timeAgoHours").replace("{n}", Math.round(diffMins / 60)));
           }
         }
       } catch (err) {
@@ -64,7 +64,7 @@ export const Layout = () => {
             {lastSync && (
               <div className="sync-status">
                 <span className="sync-dot" />
-                <span>{t("common.syncAgo").replace("{time}", lastSync)}</span>
+                <span>{lastSync}</span>
               </div>
             )}
           </div>

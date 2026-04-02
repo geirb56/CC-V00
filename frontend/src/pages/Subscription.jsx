@@ -78,7 +78,7 @@ export default function Subscription() {
       window.location.href = res.data.checkout_url;
     } catch (e) {
       console.error(e);
-      toast.error("Erreur");
+      toast.error(t("common.error"));
       setSubscribing(null);
     }
   };
