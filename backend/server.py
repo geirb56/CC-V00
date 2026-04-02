@@ -78,6 +78,9 @@ from subscription_manager import (
     EARLY_ADOPTER_PRICE
 )
 
+# Import demo mode patch
+from demo_mode import get_demo_subscription, patch_subscription_status_response
+
 # Import physiological engine dashboard router
 from api.dashboard import dashboard_router
 
@@ -339,7 +342,7 @@ async def subscription_middleware(request: Request, call_next):
     
     try:
         # Get subscription status
-        subscription = await get_user_subscription(db, user_id)
+        subscription = await get_demo_subscription(db, user_id)
         status = subscription.get("status", SubscriptionStatus.FREE)
         
         # Check if user has access
@@ -4378,7 +4381,7 @@ async def get_subscription_status(user_id: str = "default"):
     messages_limit = tier_config.get("messages_limit", 10)
     is_unlimited = tier_config.get("unlimited", False)
     
-    return SubscriptionStatusResponse(
+    result = SubscriptionStatusResponse(
         tier=tier,
         tier_name=tier_config["name"],
         is_premium=is_premium,
@@ -4390,6 +4393,9 @@ async def get_subscription_status(user_id: str = "default"):
         messages_remaining=max(0, messages_limit - message_count) if not is_unlimited else 999,
         is_unlimited=is_unlimited
     )
+    response_dict = result.model_dump()
+    patched = patch_subscription_status_response(response_dict, user_id)
+    return patched
 
 
 # Keep old endpoint for backward compatibility
@@ -4397,6 +4403,18 @@ async def get_subscription_status(user_id: str = "default"):
 async def get_premium_status(user_id: str = "default"):
     """Check if user has active premium subscription (backward compat)"""
     status = await get_subscription_status(user_id)
+    if isinstance(status, dict):
+        return {
+            "is_premium": status.get("is_premium") or status.get("tier", "free") != "free",
+            "subscription_id": status.get("subscription_id"),
+            "expires_at": status.get("expires_at"),
+            "messages_used": status.get("messages_used"),
+            "messages_remaining": status.get("messages_remaining"),
+            "tier": status.get("tier"),
+            "tier_name": status.get("tier_name"),
+            "messages_limit": status.get("messages_limit"),
+            "is_unlimited": status.get("is_unlimited")
+        }
     return {
         "is_premium": status.is_premium or status.tier != "free",
         "subscription_id": status.subscription_id,
@@ -4985,7 +5003,7 @@ async def get_subscription_info(user_id: str = "default", language: str = "en"):
     - features: Accessible features
     - trial_days_remaining: Remaining days if in trial
     """
-    subscription = await get_user_subscription(db, user_id)
+    subscription = await get_demo_subscription(db, user_id)
     status = subscription.get("status", SubscriptionStatus.FREE)
     
     return {
