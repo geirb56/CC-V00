@@ -68,9 +68,26 @@ export default function Progress() {
         ]);
         setStats(statsRes.data);
         setWorkouts(workoutsRes.data);
-        if (predictionsRes.data) setPredictions(predictionsRes.data);
+
+        let vmaData = vmaHistoryRes.data;
+        if (!vmaData?.has_data) {
+          try {
+            const mockVma = await axios.get(`${API}/mock-runner/vma-history`);
+            vmaData = mockVma.data;
+          } catch {}
+        }
+        if (vmaData) setVmaHistory(vmaData);
+
+        let predData = predictionsRes.data;
+        if (!predData?.has_data) {
+          try {
+            const mockPred = await axios.get(`${API}/mock-runner/race-predictions`);
+            predData = mockPred.data;
+          } catch {}
+        }
+        if (predData) setPredictions(predData);
+
         if (cycleRes.data) setFullCycle(cycleRes.data);
-        if (vmaHistoryRes.data) setVmaHistory(vmaHistoryRes.data);
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {

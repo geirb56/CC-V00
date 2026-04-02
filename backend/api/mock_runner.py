@@ -1,11 +1,15 @@
 """
 mock_runner.py — Dynamic mock API for CardioCoach running data.
 
-This module exposes two FastAPI endpoints under the ``/api`` prefix:
+This module exposes four FastAPI endpoints under the ``/api`` prefix:
 
 * ``GET /api/mock-runner``   – full runner profile with 10 recent races,
   7-day daily biometrics, and a "today" summary derived from those metrics.
 * ``GET /api/mock-runner/races`` – only the list of 10 races.
+* ``GET /api/mock-runner/vma-history`` – 12-month VO2MAX history (24 data
+  points, 2 half-periods per month).
+* ``GET /api/mock-runner/race-predictions`` – predicted race times for common
+  distances derived from the mock athlete's VMA.
 
 All data is generated **dynamically** using a seeded PRNG whose seed is the
 current UTC date (``int(YYYYMMDD)``).  This means the values are stable
@@ -46,6 +50,18 @@ _USER_PROFILE = {
 
 # Abbreviated day-of-week labels (Mon = 0 … Sun = 6 via weekday())
 _DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+# Abbreviated month labels (index 0 = January)
+_MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+# Race distances for predictions: (label, km, % of VMA used during the race)
+_RACE_DISTANCES = [
+    ("5K",       5.0,  0.93),
+    ("10K",     10.0,  0.88),
+    ("Semi",    21.1,  0.83),
+    ("Marathon", 42.2, 0.77),
+]
 
 # Workout name pool for race generation
 _WORKOUT_NAMES = [
@@ -460,3 +476,174 @@ async def get_mock_runner_races():
         "count": len(races),
         "races": races,
     }
+
+
+# ---------------------------------------------------------------------------
+# VMA / VO2MAX history helpers
+# ---------------------------------------------------------------------------
+
+def _fmt_time(total_min: float) -> str:
+    """Format a duration in fractional minutes as ``H:MM:SS`` or ``MM:SS``."""
+    total_sec = int(round(total_min * 60))
+    hours = total_sec // 3600
+    mins = (total_sec % 3600) // 60
+    secs = total_sec % 60
+    if hours > 0:
+        return f"{hours}:{mins:02d}:{secs:02d}"
+    return f"{mins}:{secs:02d}"
+
+
+def _fmt_pace(pace_min_per_km: float) -> str:
+    """Format a pace in min/km as ``M:SS/km``."""
+    mins = int(pace_min_per_km)
+    secs = int(round((pace_min_per_km - mins) * 60))
+    if secs == 60:
+        mins += 1
+        secs = 0
+    return f"{mins}:{secs:02d}/km"
+
+
+def _generate_vma_history_data(rng: random.Random, today: datetime) -> dict:
+    """Generate 24 synthetic VO2MAX data points (12 months × 2 half-periods).
+
+    Values are in the physiologically realistic range 52–62 ml/kg/min and
+    trend gently upward or downward based on the seeded RNG.
+
+    Args:
+        rng:   Seeded Random instance for reproducibility.
+        today: Reference date (UTC).
+
+    Returns:
+        Dict with ``has_data``, ``current_vo2max``, ``trend``, and
+        ``history`` (list of 24 points, oldest first).
+    """
+    year = today.year
+    month = today.month
+
+    history = []
+    for i in range(11, -1, -1):
+        # Compute calendar month going back i months from today
+        m = month - i
+        y = year
+        while m <= 0:
+            m += 12
+            y -= 1
+        month_abbr = _MONTH_ABBR[m - 1]
+        for half in (1, 2):
+            vo2max = round(rng.uniform(52.0, 62.0), 1)
+            sessions = rng.randint(6, 12)
+            history.append({
+                "period_label": f"{month_abbr} {half}",
+                "month_label": month_abbr,
+                "half": half,
+                "vo2max": vo2max,
+                "sessions": sessions,
+            })
+
+    current_vo2max = history[-1]["vo2max"]
+    trend = round(history[-1]["vo2max"] - history[0]["vo2max"], 1)
+
+    return {
+        "has_data": True,
+        "current_vo2max": current_vo2max,
+        "trend": trend,
+        "history": history,
+    }
+
+
+def _generate_race_predictions_data(rng: random.Random, today: datetime) -> dict:
+    """Generate synthetic race predictions based on the mock athlete's VMA.
+
+    Prediction times are derived from ``_USER_PROFILE["vma"]`` using a
+    percentage-of-VMA model (a well-known approximation for trained runners).
+    The ``estimated_vo2max`` in the returned profile matches the
+    ``current_vo2max`` produced by :func:`_generate_vma_history_data` when
+    called with the same *rng* starting state — both endpoints seed fresh
+    ``random.Random`` instances from the same daily seed, guaranteeing
+    cross-endpoint consistency.
+
+    Args:
+        rng:   Seeded Random instance (must be in the *same* state as when
+               :func:`_generate_vma_history_data` starts, i.e., a fresh
+               instance seeded with ``_make_seed()``).
+        today: Reference date (UTC).
+
+    Returns:
+        Dict with ``has_data``, ``athlete_profile``, and ``predictions``.
+    """
+    # Consume the same random numbers as _generate_vma_history_data so that
+    # estimated_vo2max matches current_vo2max from the vma-history endpoint.
+    vma_data = _generate_vma_history_data(rng, today)
+    current_vo2max = vma_data["current_vo2max"]
+
+    vma_kmh = _USER_PROFILE["vma"]
+
+    predictions = []
+    for label, dist_km, vma_pct in _RACE_DISTANCES:
+        speed_kmh = vma_kmh * vma_pct
+        pace_min_per_km = 60.0 / speed_kmh
+        total_min = dist_km * pace_min_per_km
+
+        # Symmetric ±2 % time range
+        low_min = total_min * 0.98
+        high_min = total_min * 1.02
+
+        readiness_score = rng.randint(65, 95)
+        if readiness_score >= 80:
+            readiness_label = "PRÊT"
+            readiness_color = "#22c55e"
+        elif readiness_score >= 65:
+            readiness_label = "EN FORME"
+            readiness_color = "#f59e0b"
+        else:
+            readiness_label = "À TRAVAILLER"
+            readiness_color = "#ef4444"
+
+        predictions.append({
+            "distance": label,
+            "predicted_time": _fmt_time(total_min),
+            "predicted_pace": _fmt_pace(pace_min_per_km),
+            "predicted_range": f"{_fmt_time(low_min)} – {_fmt_time(high_min)}",
+            "readiness_score": readiness_score,
+            "readiness_label": readiness_label,
+            "readiness_color": readiness_color,
+        })
+
+    return {
+        "has_data": True,
+        "athlete_profile": {
+            "estimated_vo2max": current_vo2max,
+            "vma_kmh": vma_kmh,
+        },
+        "predictions": predictions,
+    }
+
+
+@mock_runner_router.get("/vma-history")
+async def get_mock_vma_history():
+    """Return a 12-month VO2MAX evolution history for the mock runner.
+
+    Generates 24 data points (2 half-periods per month) in the range
+    52–62 ml/kg/min, seeded by the current UTC date for daily stability.
+    """
+    rng = random.Random(_make_seed())
+    today_dt = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return _generate_vma_history_data(rng, today_dt)
+
+
+@mock_runner_router.get("/race-predictions")
+async def get_mock_race_predictions():
+    """Return predicted race times for 5K, 10K, Semi, and Marathon.
+
+    Times are derived from the mock athlete's VMA (18.5 km/h) using a
+    percentage-of-VMA model.  The ``estimated_vo2max`` in the response
+    matches the ``current_vo2max`` returned by ``/mock-runner/vma-history``
+    for the same calendar day.
+    """
+    rng = random.Random(_make_seed())
+    today_dt = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return _generate_race_predictions_data(rng, today_dt)
