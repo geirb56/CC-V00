@@ -4,8 +4,7 @@ Test suite for CardioCoach Terra Integration
 Tests: Terra connection endpoints, daily metrics sync, recovery scores,
        training load, workout recommendations.
 
-All tests target the running backend via HTTP.  The Terra mock API
-(https://b2871f69-4cec-49c8-b471-6fdf1569c41b.mock.pstmn.io) is used
+All tests target the running backend via HTTP.  The Terra API is used
 indirectly through the backend sync endpoints.
 """
 
@@ -53,14 +52,14 @@ class TestTerraConnectDisconnect:
             f"{BASE_URL}/api/terra/connect?user_id=test_terra_connect",
             json={"token": FAKE_TERRA_TOKEN},
         )
-        # May return 200 (success) even if Terra mock is unreachable — token is stored.
+        # May return 200 (success) or 500 if the Terra API is unreachable — token is stored regardless.
         assert response.status_code in [200, 500], response.text
         if response.status_code == 200:
             data = response.json()
             assert data.get("success") is True
             print(f"✓ Terra connect: {data}")
         else:
-            print("✓ Terra connect attempted (mock may be unreachable)")
+            print("✓ Terra connect attempted (Terra API may be unreachable in this environment)")
 
     def test_terra_connect_requires_token(self):
         """POST /terra/connect without a token should return 400."""
