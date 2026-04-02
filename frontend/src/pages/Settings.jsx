@@ -54,11 +54,8 @@ export default function Settings() {
   const [connecting, setConnecting] = useState(false);
 
   // Terra state
-  const [terraStatus, setTerraStatus] = useState(null);
   
   // Premium state
-  const [premiumStatus, setPremiumStatus] = useState(null);
-  const [loadingPremium, setLoadingPremium] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
   
   // Goal state
@@ -111,12 +108,9 @@ export default function Settings() {
 
   const loadPremiumStatus = async () => {
     try {
-      const res = await axios.get(`${API}/premium/status?user_id=${USER_ID}`);
-      setPremiumStatus(res.data);
+      await axios.get(`${API}/premium/status?user_id=${USER_ID}`);
     } catch (error) {
       console.error("Failed to load premium status:", error);
-    } finally {
-      setLoadingPremium(false);
     }
   };
 
@@ -866,7 +860,7 @@ export default function Settings() {
         </Card>
 
         {/* Terra Wearables Integration */}
-        <TerraConnection lang={lang} t={t} onStatusChange={setTerraStatus} />
+        <TerraConnection lang={lang} t={t} />
 
         {/* Language Setting */}
         <Card className="bg-card border-border">
