@@ -62,6 +62,7 @@ CardioCoach is a full-stack AI-powered sports coaching app for endurance athlete
 # Changelog
 
 ## 2025-04-02
+- **Fixed Coach LLM chat**: Added missing `EMERGENT_LLM_KEY` to backend .env - chat now works with GPT-4.1-mini
 - Fixed rate limiting (burst 10→30, requests/min 60→120) for SPA parallel API calls
 - VMA and Race Predictions now display correctly in Progress tab using mock fallback data
 - Git pull successful - repo already up to date with PR #38
