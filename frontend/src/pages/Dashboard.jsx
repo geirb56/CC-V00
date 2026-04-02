@@ -238,7 +238,6 @@ export default function Dashboard() {
   const [cardioData, setCardioData] = useState(null);
   const [cardioLoading, setCardioLoading] = useState(true);
   const [cardioError, setCardioError] = useState(null);
-  const [runStarted, setRunStarted] = useState(false);
   const [loading, setLoading] = useState(true);
   const { t, lang } = useLanguage();
   const { unitSystem } = useUnitSystem();
@@ -774,21 +773,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Start Run CTA */}
-                <button
-                  onClick={() => setRunStarted((v) => !v)}
-                  className="w-full py-4 rounded-2xl font-black text-white text-lg tracking-wider uppercase transition-all duration-200 active:scale-95 flex items-center justify-center gap-3 shadow-lg"
-                  style={{
-                    background: runStarted ? "var(--bg-card)" : `linear-gradient(135deg, ${recStyle.button} 0%, ${recStyle.buttonHover} 100%)`,
-                    border: `2px solid ${recStyle.accent}`,
-                    color: runStarted ? recStyle.accent : "white",
-                    boxShadow: runStarted ? "none" : `0 8px 24px ${recStyle.accent}40`,
-                  }}
-                  data-testid="start-run-btn"
-                >
-                  <Play size={22} fill={runStarted ? recStyle.accent : "white"} />
-                  {runStarted ? t("dashboard.running") : cardioData?.recommendation === "REST" ? t("dashboard.logRestDay") : t("dashboard.startRun")}
-                </button>
 
                 {cardioData?.mock && (
                   <p className="text-center text-[10px]" style={{ color: "var(--text-tertiary)" }}>
