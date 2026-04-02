@@ -757,13 +757,13 @@ export default function Settings() {
                     {t("settingsExtended.subscription")}
                   </h2>
                   {isEarlyAdopter && (
-                    <Badge className="bg-amber-500 text-white text-[9px]">EARLY ADOPTER</Badge>
+                    <Badge className="bg-amber-500 text-white text-[9px]">{t("settingsExtended.earlyAdopterBadge")}</Badge>
                   )}
                   {isTrial && (
-                    <Badge className="bg-blue-500 text-white text-[9px]">ESSAI GRATUIT</Badge>
+                    <Badge className="bg-blue-500 text-white text-[9px]">{t("settingsExtended.trialBadge")}</Badge>
                   )}
                   {isFree && (
-                    <Badge className="bg-gray-500 text-white text-[9px]">LIMITÉ</Badge>
+                    <Badge className="bg-gray-500 text-white text-[9px]">{t("settingsExtended.limitedBadge")}</Badge>
                   )}
                 </div>
                 

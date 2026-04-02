@@ -45,7 +45,7 @@ const formatDuration = (minutes) => {
 };
 
 // Splits Chart Component - Graphique des allures par km (barres horizontales)
-const SplitsChart = ({ splits, lang }) => {
+const SplitsChart = ({ splits, lang, t }) => {
   if (!splits || splits.length === 0) return null;
   
   // Calculate min/max pace for scaling
@@ -559,7 +559,7 @@ export default function WorkoutDetail() {
                 {workout.km_splits.length} km
               </span>
             </div>
-            <SplitsChart splits={workout.km_splits} lang={lang} />
+            <SplitsChart splits={workout.km_splits} lang={lang} t={t} />
           </CardContent>
         </Card>
       )}
@@ -704,15 +704,15 @@ export default function WorkoutDetail() {
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div>
-                    <p className="font-mono text-[10px] text-muted-foreground">Min</p>
+                    <p className="font-mono text-[10px] text-muted-foreground">{t("workoutDetailExtended.min")}</p>
                     <p className="font-mono font-semibold">{ragAnalysis.workout.hr_analysis.min_hr} bpm</p>
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] text-muted-foreground">Moy</p>
+                    <p className="font-mono text-[10px] text-muted-foreground">{t("workoutDetailExtended.avg")}</p>
                     <p className="font-mono font-semibold">{ragAnalysis.workout.hr_analysis.avg_hr} bpm</p>
                   </div>
                   <div>
-                    <p className="font-mono text-[10px] text-muted-foreground">Max</p>
+                    <p className="font-mono text-[10px] text-muted-foreground">{t("workoutDetailExtended.max")}</p>
                     <p className="font-mono font-semibold">{ragAnalysis.workout.hr_analysis.max_hr} bpm</p>
                   </div>
                 </div>

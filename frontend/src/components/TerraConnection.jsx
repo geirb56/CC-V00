@@ -148,7 +148,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
                 <div className="flex items-center gap-2 text-chart-2">
                   <Check className="w-4 h-4 flex-shrink-0" />
                   <span className="font-mono text-xs uppercase tracking-wider">
-                    {t("settings.connected") || "Connected"}
+                    {t("settings.connected")}
                   </span>
                 </div>
 
@@ -156,7 +156,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                        {t("settings.lastSync") || "Last sync"}
+                        {t("settings.lastSync")}
                       </p>
                       <p className="font-mono text-sm">
                         {formatLastSync(status.last_sync)}
@@ -164,7 +164,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
                     </div>
                     <div className="text-right">
                       <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                        {t("settings.workouts") || "Workouts"}
+                        {t("settings.workouts")}
                       </p>
                       <p className="font-mono text-sm">{status.workout_count}</p>
                     </div>
@@ -183,7 +183,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
                     ) : (
                       <RefreshCw className="w-4 h-4" />
                     )}
-                    {t("settings.sync") || "Sync"}
+                    {t("settings.sync")}
                   </Button>
                   <Button
                     onClick={handleDisconnect}
@@ -191,7 +191,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
                     data-testid="disconnect-terra"
                     className="flex-1 text-muted-foreground hover:text-destructive rounded-sm uppercase font-mono text-xs h-9"
                   >
-                    {t("settings.disconnect") || "Disconnect"}
+                    {t("settings.disconnect")}
                   </Button>
                 </div>
               </div>
@@ -200,7 +200,7 @@ export const TerraConnection = ({ lang, t, onStatusChange }) => {
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <X className="w-4 h-4 flex-shrink-0" />
                   <span className="font-mono text-xs uppercase tracking-wider">
-                    {t("settings.notConnected") || "Not connected"}
+                    {t("settings.notConnected")}
                   </span>
                 </div>
                 <Input
