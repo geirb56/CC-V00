@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Training Plan with VMA - Dynamic Paces', () => {
-  const BASE_URL = 'https://cardio-dynamic.preview.emergentagent.com';
+  const BASE_URL = 'https://endurance-ai-2.preview.emergentagent.com';
 
   test.beforeEach(async ({ page }) => {
     // Remove emergent badge to prevent click issues
@@ -214,7 +214,7 @@ test.describe('Training Plan with VMA - Dynamic Paces', () => {
 });
 
 test.describe('Training Plan API Integration', () => {
-  const BASE_URL = 'https://cardio-dynamic.preview.emergentagent.com';
+  const BASE_URL = 'https://endurance-ai-2.preview.emergentagent.com';
 
   test('API returns VMA and paces in plan response', async ({ request }) => {
     const response = await request.get(`${BASE_URL}/api/training/plan`, {

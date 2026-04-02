@@ -21,7 +21,7 @@ React environment variables (`REACT_APP_BACKEND_URL`) are not loaded properly wh
    ```bash
    cat /app/frontend/.env
    ```
-   Should show: `REACT_APP_BACKEND_URL=https://sweet-rosalind-5.preview.emergentagent.com`
+   Should show: `REACT_APP_BACKEND_URL=https://endurance-ai-2.preview.emergentagent.com`
 
 2. **Restart frontend service:**
    ```bash
@@ -40,7 +40,7 @@ React environment variables (`REACT_APP_BACKEND_URL`) are not loaded properly wh
    - Check preview URL loads correctly
    - Verify API calls are working:
      ```bash
-     curl https://sweet-rosalind-5.preview.emergentagent.com/api/training/plan?user_id=default
+     curl https://endurance-ai-2.preview.emergentagent.com/api/training/plan?user_id=default
      ```
 
 **Prevention:**
@@ -167,7 +167,7 @@ If the app is completely broken:
    ```
 
 4. **Verify app loads:**
-   - Visit: https://sweet-rosalind-5.preview.emergentagent.com
+   - Visit: https://endurance-ai-2.preview.emergentagent.com
    - Check console for errors
 
 5. **If still broken, check logs:**

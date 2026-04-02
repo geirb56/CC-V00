@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Subscription System Tests', () => {
-  const BASE_URL = 'https://cardio-dynamic.preview.emergentagent.com';
+  const BASE_URL = 'https://endurance-ai-2.preview.emergentagent.com';
 
   test.beforeEach(async ({ page }) => {
     // Remove emergent badge to prevent click issues

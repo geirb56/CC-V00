@@ -227,8 +227,8 @@ class RateLimiter:
         }
 
 
-# Initialize rate limiter
-rate_limiter = RateLimiter(requests_per_minute=60, burst_limit=10)
+# Initialize rate limiter (increased burst for SPA parallel API calls)
+rate_limiter = RateLimiter(requests_per_minute=120, burst_limit=30)
 
 # Endpoints exempt from rate limiting
 RATE_LIMIT_EXEMPT = {"/api/cache/stats"}

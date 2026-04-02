@@ -11,7 +11,7 @@ export default defineConfig({
     ['json', { outputFile: '/root/.emergent/automation_output/20260312_075405/results.json' }],
   ],
   use: {
-    baseURL: 'https://cardio-dynamic.preview.emergentagent.com',
+    baseURL: 'https://endurance-ai-2.preview.emergentagent.com',
     screenshot: 'only-on-failure',
     trace: 'off',
     headless: true,
