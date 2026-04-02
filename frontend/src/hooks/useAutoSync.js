@@ -24,7 +24,6 @@ export function useAutoSync() {
         const { connected, last_sync } = statusRes.data;
 
         if (!connected) {
-          console.log("[AutoSync] Strava not connected, skipping sync");
           return;
         }
 
@@ -35,22 +34,13 @@ export function useAutoSync() {
         const timeSinceLastSync = now - lastSyncTime;
 
         if (timeSinceLastSync < ONE_HOUR_MS) {
-          console.log("[AutoSync] Recent sync found, skipping");
           return;
         }
 
         // Perform sync
-        console.log("[AutoSync] Syncing Strava data...");
-        const syncRes = await axios.post(`${API}/strava/sync`);
-        
-        if (syncRes.data.success) {
-          console.log(`[AutoSync] Success: ${syncRes.data.synced_count} activities synced`);
-        } else {
-          console.log("[AutoSync] Sync completed with message:", syncRes.data.message);
-        }
+        await axios.post(`${API}/strava/sync`);
       } catch (error) {
         // Silent fail - don't disrupt user experience
-        console.log("[AutoSync] Error:", error.message);
       }
     };
 

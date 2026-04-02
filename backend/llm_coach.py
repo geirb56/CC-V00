@@ -30,10 +30,6 @@ LLM_PROVIDER = "openai"
 LLM_TIMEOUT = 15
 
 
-def is_llm_available() -> bool:
-    """Check if the LLM API is configured and available."""
-    return bool(EMERGENT_LLM_KEY and EMERGENT_LLM_KEY.startswith("sk-emergent"))
-
 # ============================================================
 # SYSTEM PROMPTS
 # ============================================================

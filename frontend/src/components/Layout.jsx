@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useLocation } from "react-router-dom";
-import { Home, BarChart3, CalendarDays, MessageCircle, Zap, RefreshCw, User, CreditCard, Settings, TrendingUp } from "lucide-react";
+import { Home, CalendarDays, MessageCircle, Zap, RefreshCw, Settings, TrendingUp } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAutoSync } from "@/hooks/useAutoSync";
 import ChatCoach from "@/components/ChatCoach";
