@@ -241,6 +241,12 @@ def get_trial_days_remaining(subscription: Dict) -> Optional[int]:
 
 def has_feature_access(subscription: Dict, feature: str) -> bool:
     """Checks if the user has access to a feature."""
+    # --- DEMO MODE PATCH ---
+    from demo_mode import DEMO_MODE
+    if DEMO_MODE:
+        return True
+    # --- fin patch ---
+
     status = subscription.get("status", SubscriptionStatus.FREE)
     features = FEATURES.get(status, FEATURES[SubscriptionStatus.FREE])
     return features.get(feature, False)

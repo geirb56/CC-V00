@@ -78,6 +78,8 @@ from subscription_manager import (
     EARLY_ADOPTER_PRICE
 )
 
+from demo_mode import get_demo_subscription, is_subscription_active, patch_subscription_status_response
+
 # Import physiological engine dashboard router
 from api.dashboard import dashboard_router
 
@@ -339,7 +341,7 @@ async def subscription_middleware(request: Request, call_next):
     
     try:
         # Get subscription status
-        subscription = await get_user_subscription(db, user_id)
+        subscription = await get_demo_subscription(db, user_id)
         status = subscription.get("status", SubscriptionStatus.FREE)
         
         # Check if user has access
@@ -4378,7 +4380,7 @@ async def get_subscription_status(user_id: str = "default"):
     messages_limit = tier_config.get("messages_limit", 10)
     is_unlimited = tier_config.get("unlimited", False)
     
-    return SubscriptionStatusResponse(
+    result = SubscriptionStatusResponse(
         tier=tier,
         tier_name=tier_config["name"],
         is_premium=is_premium,
@@ -4390,6 +4392,21 @@ async def get_subscription_status(user_id: str = "default"):
         messages_remaining=max(0, messages_limit - message_count) if not is_unlimited else 999,
         is_unlimited=is_unlimited
     )
+    patched = patch_subscription_status_response(result.__dict__, user_id)
+    if patched.get("_demo_mode"):
+        return SubscriptionStatusResponse(
+            tier=patched["tier"],
+            tier_name=patched["tier_name"],
+            is_premium=patched["is_premium"],
+            subscription_id=result.subscription_id,
+            billing_period=result.billing_period,
+            expires_at=result.expires_at,
+            messages_used=result.messages_used,
+            messages_limit=patched["messages_limit"],
+            messages_remaining=patched["messages_remaining"],
+            is_unlimited=patched["is_unlimited"]
+        )
+    return result
 
 
 # Keep old endpoint for backward compatibility
@@ -4985,7 +5002,7 @@ async def get_subscription_info(user_id: str = "default", language: str = "en"):
     - features: Accessible features
     - trial_days_remaining: Remaining days if in trial
     """
-    subscription = await get_user_subscription(db, user_id)
+    subscription = await get_demo_subscription(db, user_id)
     status = subscription.get("status", SubscriptionStatus.FREE)
     
     return {
