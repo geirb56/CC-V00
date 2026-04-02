@@ -4392,7 +4392,7 @@ async def get_subscription_status(user_id: str = "default"):
         messages_remaining=max(0, messages_limit - message_count) if not is_unlimited else 999,
         is_unlimited=is_unlimited
     )
-    patched = patch_subscription_status_response(result.__dict__, user_id)
+    patched = patch_subscription_status_response(result.model_dump(), user_id)
     if patched.get("_demo_mode"):
         return SubscriptionStatusResponse(
             tier=patched["tier"],

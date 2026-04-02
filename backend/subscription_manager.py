@@ -14,6 +14,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Tuple
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
+from demo_mode import DEMO_MODE
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +243,6 @@ def get_trial_days_remaining(subscription: Dict) -> Optional[int]:
 def has_feature_access(subscription: Dict, feature: str) -> bool:
     """Checks if the user has access to a feature."""
     # --- DEMO MODE PATCH ---
-    from demo_mode import DEMO_MODE
     if DEMO_MODE:
         return True
     # --- fin patch ---
