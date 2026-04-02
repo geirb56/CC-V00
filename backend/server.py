@@ -2712,7 +2712,6 @@ async def get_detailed_analysis(workout_id: str, language: str = "en", user_id: 
 
 # ========== TERRA INTEGRATION ENDPOINTS ==========
 # Terra is the primary wearable data aggregator replacing Strava.
-# Mock API base: https://b2871f69-4cec-49c8-b471-6fdf1569c41b.mock.pstmn.io
 
 class TerraConnectionStatus(BaseModel):
     connected: bool

@@ -3,7 +3,7 @@ Terra Integration Module for CardioCoach
 =========================================
 Replaces the Strava integration for wearable data aggregation.
 
-Uses the Terra API (mock: https://b2871f69-4cec-49c8-b471-6fdf1569c41b.mock.pstmn.io)
+Uses the Terra API (https://api.tryterra.co/v2)
 
 Terra endpoints consumed:
   GET /users      → create and retrieve Terra user profiles
@@ -20,15 +20,16 @@ Utility functions (async, require a motor ``db`` handle):
   generateWorkoutRecommendation(userId, db) → generate and persist workout recommendation
 
 Design:
-  - All Terra API calls use a configurable base URL (mock by default).
+  - All Terra API calls use a configurable base URL (read from TERRA_API_BASE_URL env var).
   - HRV fallback: if HRV is unavailable, RHR is used instead.
-  - Modular: swap the base URL to switch from mock to production.
+  - Modular: set TERRA_API_BASE_URL to switch between environments.
   - Matches the existing MVC / service-layer architecture.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Optional
@@ -46,8 +47,8 @@ logger = logging.getLogger(__name__)
 # Configuration
 # ---------------------------------------------------------------------------
 
-# Mock API base URL — swap for the real Terra base URL in production.
-TERRA_API_BASE = "https://b2871f69-4cec-49c8-b471-6fdf1569c41b.mock.pstmn.io"
+# Terra API base URL — read from the environment, defaulting to the real Terra API.
+TERRA_API_BASE = os.environ.get("TERRA_API_BASE_URL", "https://api.tryterra.co/v2")
 
 # HTTP timeout (seconds) for Terra API requests.
 TERRA_TIMEOUT = 20.0
@@ -58,7 +59,7 @@ TERRA_TIMEOUT = 20.0
 # ---------------------------------------------------------------------------
 
 async def _terra_get(endpoint: str, token: str, params: dict | None = None) -> dict | list:
-    """Perform an authenticated GET request to the Terra mock API.
+    """Perform an authenticated GET request to the Terra API.
 
     Parameters
     ----------
