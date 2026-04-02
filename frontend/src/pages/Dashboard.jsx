@@ -55,21 +55,18 @@ const REC_STYLES = {
     accent: "#22c55e",
     button: "#22c55e",
     buttonHover: "#16a34a",
-    label: "RUN HARD",
   },
   yellow: {
     bg: "linear-gradient(135deg, #1c1003 0%, #451a03 100%)",
     accent: "#f59e0b",
     button: "#d97706",
     buttonHover: "#b45309",
-    label: "EASY RUN",
   },
   red: {
     bg: "linear-gradient(135deg, #1c0202 0%, #450a0a 100%)",
     accent: "#ef4444",
     button: "#ef4444",
     buttonHover: "#dc2626",
-    label: "REST",
   },
 };
 
@@ -463,7 +460,7 @@ export default function Dashboard() {
             </span>
           </div>
           <p className="metric-objective" style={{ color: getTsbColor(trainingMetrics?.tsb_status) }}>
-            {trainingMetrics?.tsb_label || "En charge"}
+            {trainingMetrics?.tsb_label || t("dashboard.tsb_status.training")}
           </p>
         </div>
       </div>
@@ -493,7 +490,7 @@ export default function Dashboard() {
                 {todaySession.duration && todaySession.duration !== "0min" && `${todaySession.duration}`}
                 {todaySession.distance_km > 0 &&
                   ` • ${formatDistance(todaySession.distance_km, { unitSystem })}`}
-                {todaySession.target_pace && ` • Cible: ${todaySession.target_pace}`}
+                {todaySession.target_pace && ` • ${t("dashboard.targetLabel")}: ${todaySession.target_pace}`}
               </p>
               <div className="today-details">
                 <span>{todaySession.details}</span>
@@ -565,7 +562,7 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="workout-info">
-                  <p className="workout-type-name">{typeConfig.label}</p>
+                  <p className="workout-type-name">{t(`workoutTypes.${workoutType}`)}</p>
                   <div className="workout-stats">
                     <span>
                       {formatDistance(workout.distance_km || 0, { unitSystem })}
@@ -580,7 +577,7 @@ export default function Dashboard() {
                     {workout.avg_heart_rate && (
                       <>
                         <span className="dot" />
-                        <span>FC {workout.avg_heart_rate}</span>
+                        <span>{t("dashboard.hrLabel")} {workout.avg_heart_rate}</span>
                       </>
                     )}
                   </div>
@@ -599,7 +596,7 @@ export default function Dashboard() {
 
       {/* ── RUN RECOMMENDATION SECTION ────────────────────────────────────── */}
       <div className="animate-in" style={{ animationDelay: "300ms" }}>
-        <h2 className="section-header">Run Readiness</h2>
+        <h2 className="section-header">{t("dashboard.runReadiness")}</h2>
       </div>
 
       {cardioLoading ? (
@@ -613,7 +610,7 @@ export default function Dashboard() {
             style={{ color: "var(--accent-violet)" }}
           />
           <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-            Computing your readiness…
+            {t("dashboard.computingReadiness")}
           </p>
         </div>
       ) : (
@@ -642,7 +639,7 @@ export default function Dashboard() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: recStyle.accent }}>
-                      Today's Recommendation
+                      {t("dashboard.todaysRecommendation")}
                     </span>
                     <button
                       onClick={fetchCardioData}
@@ -682,7 +679,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs uppercase tracking-wider mb-0.5" style={{ color: "var(--text-tertiary)" }}>
-                      Next Workout
+                      {t("dashboard.nextWorkout")}
                     </p>
                     <p className="font-bold text-base truncate" style={{ color: "var(--text-primary)" }}>
                       {cardioData?.next_workout?.label || "—"}
@@ -790,12 +787,12 @@ export default function Dashboard() {
                   data-testid="start-run-btn"
                 >
                   <Play size={22} fill={runStarted ? recStyle.accent : "white"} />
-                  {runStarted ? "Running…" : cardioData?.recommendation === "REST" ? "Log Rest Day" : "Start Run"}
+                  {runStarted ? t("dashboard.running") : cardioData?.recommendation === "REST" ? t("dashboard.logRestDay") : t("dashboard.startRun")}
                 </button>
 
                 {cardioData?.mock && (
                   <p className="text-center text-[10px]" style={{ color: "var(--text-tertiary)" }}>
-                    Demo data — connect Terra wearable in Settings for live metrics
+                    {t("dashboard.demoDataNotice")}
                   </p>
                 )}
               </>
