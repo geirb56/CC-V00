@@ -1278,18 +1278,24 @@ def calculate_recovery_score(workouts: list, language: str = "en") -> dict:
         status = "ready"
         if language == "fr":
             phrase = "Corps repose, pret pour une seance intense si tu veux."
+        elif language == "es":
+            phrase = "Cuerpo descansado, listo para una sesión intensa."
         else:
             phrase = "Body is rested, ready for an intense session if you want."
     elif score >= 50:
         status = "moderate"
         if language == "fr":
             phrase = "Recuperation correcte, privilegie une seance facile."
+        elif language == "es":
+            phrase = "Recuperación correcta, favorece una sesión fácil."
         else:
             phrase = "Decent recovery, favor an easy session."
     else:
         status = "low"
         if language == "fr":
             phrase = "Fatigue accumulee, une journee de repos serait ideale."
+        elif language == "es":
+            phrase = "Fatiga acumulada, un día de descanso sería ideal."
         else:
             phrase = "Accumulated fatigue, a rest day would be ideal."
     
@@ -3084,14 +3090,6 @@ async def get_cardio_coach(user_id: str = "default"):
     sleep_score = max(0.0, 8.0 - sleep_hours) + (1.0 - sleep_efficiency) * 2.0
     fatigue_physio = 0.5 * hrv_delta + 0.3 * rhr_delta + 0.2 * sleep_score
     fatigue_ratio = fatigue_physio / training_load
-    planned_workout = get_today_workout(user)  # ou ton équivalent
-    user_goal = user.get("goal", "fitness")
-
-    final_workout = adapt_workout_advanced(
-    planned_workout,
-    fatigue_ratio,
-    user_goal
-    )
     # ----------------------------------------------------------------
     # Recommendation.
     # ----------------------------------------------------------------
@@ -3099,6 +3097,8 @@ async def get_cardio_coach(user_id: str = "default"):
         recommendation = "REST"
         recommendation_emoji = "🔴"
         recommendation_color = "red"
+        next_workout_label = "Rest Day"
+        next_workout_icon = "rest"
     elif fatigue_ratio > 1.2:
         recommendation = "EASY RUN"
         recommendation_emoji = "🟡"
@@ -3111,13 +3111,6 @@ async def get_cardio_coach(user_id: str = "default"):
         recommendation_color = "green"
         next_workout_label = "Intervals – 6 x 800 m"
         next_workout_icon = "run"
-
-    return {
-    "today": final_workout,
-    "next_workout": final_workout,
-    "fatigue_ratio": fatigue_ratio,
-    "recommendation": recommendation
-    }
 
     # ----------------------------------------------------------------
     # Per-metric status colours.
@@ -5128,6 +5121,26 @@ async def get_early_adopter_offer(language: str = "en"):
             ],
             "cta_button": "Activer mon coach",
             "trial_cta": "Profite de ton essai gratuit"
+        }
+    elif language == "es":
+        return {
+            "title": "Activa tu coach de running",
+            "subtitle": "Tu plan personalizado está listo",
+            "description": "Activa tu suscripción para acceder.",
+            "offer_name": "Early Adopter",
+            "price": EARLY_ADOPTER_PRICE,
+            "price_display": f"{EARLY_ADOPTER_PRICE:.2f} € / mes",
+            "price_guarantee": "Precio garantizado de por vida",
+            "features": [
+                "Plan de entrenamiento personalizado",
+                "Adaptación automática del plan",
+                "Análisis inteligente de sesiones",
+                "Coach IA conversacional",
+                "Sincronización relojes/apps",
+                "Predicciones de carrera"
+            ],
+            "cta_button": "Activar mi coach",
+            "trial_cta": "Disfruta tu prueba gratuita"
         }
     else:
         return {
