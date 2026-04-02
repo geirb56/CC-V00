@@ -13,7 +13,7 @@ const USER_ID = "default";
 /**
  * TerraConnection — UI card for managing the Terra wearable integration.
  *
- * Replaces the Strava connection card.  Uses token-based auth: the user
+ * Terra wearable connection card.  Uses token-based auth: the user
  * pastes their Terra user token and it is stored on the backend via
  * POST /terra/connect.
  *

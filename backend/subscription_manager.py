@@ -80,7 +80,6 @@ PROTECTED_ROUTES = [
     "/api/coach/analyze",
     "/api/coach/workout-analysis",
     "/api/coach/detailed-analysis",
-    "/api/strava/sync",
     "/api/rag/",
     "/api/workouts",  # Workout list
 ]
@@ -90,9 +89,6 @@ PUBLIC_ROUTES = [
     "/api/health",
     "/api/subscription/",
     "/api/premium/",
-    "/api/strava/authorize",
-    "/api/strava/callback",
-    "/api/strava/status",
     "/api/user/",
     "/api/dashboard/insight",  # Basic insight
 ]

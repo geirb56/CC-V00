@@ -15,14 +15,14 @@ export const Layout = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [lastSync, setLastSync] = useState(null);
   
-  // Auto-sync Strava data on startup
+  // Auto-sync Terra data on startup
   useAutoSync();
 
   // Get last sync time
   useEffect(() => {
     const checkSync = async () => {
       try {
-        const res = await axios.get(`${API}/strava/status?user_id=default`);
+        const res = await axios.get(`${API}/terra/status?user_id=default`);
         if (res.data.last_sync) {
           const syncDate = new Date(res.data.last_sync);
           const now = new Date();

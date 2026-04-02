@@ -1,7 +1,7 @@
 """
 CardioCoach Analysis Engine
 100% Backend, Deterministic, No LLM Dependencies
-Strava API Compliant - No data leaves the infrastructure
+Privacy-first - No data leaves the infrastructure
 
 DATA PRIORITY RULE (MANDATORY)
 1. IF heart rate data available: Physiological analysis PRIORITY

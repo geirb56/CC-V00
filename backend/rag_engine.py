@@ -944,7 +944,7 @@ def generate_workout_analysis_rag(
     all_workouts: List[Dict] = None,
     user_goal: Dict = None
 ) -> Dict:
-    """Generates a RAG-enriched workout analysis with detailed Strava data"""
+    """Generates a RAG-enriched workout analysis with detailed metrics"""
     
     # Basic workout data
     km_total = workout.get("distance_km", 0)
@@ -970,7 +970,7 @@ def generate_workout_analysis_rag(
     cadence_moy = workout.get("avg_cadence_spm", 0)
     zones = workout.get("effort_zone_distribution", {})
     
-    # === RAG ENRICHED: Detailed Strava data ===
+    # === RAG ENRICHED: Detailed workout data ===
     splits = workout.get("splits", [])
     split_analysis = workout.get("split_analysis", {})
     km_splits = workout.get("km_splits", [])

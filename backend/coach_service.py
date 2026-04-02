@@ -346,56 +346,39 @@ async def generate_dynamic_training_plan(db, user_id: str, sessions_override: in
     six_weeks_ago = today - timedelta(days=42)
     twenty_eight_days_ago = today - timedelta(days=28)
 
-    # Try Strava activities first (with or without user_id as some are global)
-    workouts_7 = await db.strava_activities.find({
+    # Retrieve workouts
+    workouts_7 = await db.workouts.find({
         "$or": [
             {"user_id": user_id},
             {"user_id": None},
             {"user_id": {"$exists": False}}
         ],
-        "start_date_local": {"$gte": seven_days_ago.isoformat()}
+        "date": {"$gte": seven_days_ago.isoformat()}
     }).to_list(100)
     
-    workouts_28 = await db.strava_activities.find({
+    workouts_28 = await db.workouts.find({
         "$or": [
             {"user_id": user_id},
             {"user_id": None},
             {"user_id": {"$exists": False}}
         ],
-        "start_date_local": {"$gte": twenty_eight_days_ago.isoformat()}
+        "date": {"$gte": twenty_eight_days_ago.isoformat()}
     }).to_list(300)
 
     # 6-week data for VMA calculation
-    workouts_6w = await db.strava_activities.find({
+    workouts_6w = await db.workouts.find({
         "$or": [
             {"user_id": user_id},
             {"user_id": None},
             {"user_id": {"$exists": False}}
         ],
-        "start_date_local": {"$gte": six_weeks_ago.isoformat()}
+        "date": {"$gte": six_weeks_ago.isoformat()}
     }).to_list(500)
-
-    # Fallback to local workouts if no Strava data
-    if not workouts_28:
-        workouts_7 = await db.workouts.find({
-            "date": {"$gte": seven_days_ago.isoformat()}
-        }).to_list(100)
-        
-        workouts_28 = await db.workouts.find({
-            "date": {"$gte": twenty_eight_days_ago.isoformat()}
-        }).to_list(300)
-        
-        workouts_6w = await db.workouts.find({
-            "date": {"$gte": six_weeks_ago.isoformat()}
-        }).to_list(500)
 
     # 3. Calculate base metrics
     def get_distance_km(w):
-        """Extracts distance in km (Strava = meters, workouts = km)"""
-        dist = w.get("distance", 0)
-        if dist > 1000:  # Strava returns meters
-            return dist / 1000
-        return w.get("distance_km", dist) or 0
+        """Extracts distance in km"""
+        return w.get("distance_km", 0) or 0
     
     def get_duration_min(w):
         """Extracts duration in minutes"""
