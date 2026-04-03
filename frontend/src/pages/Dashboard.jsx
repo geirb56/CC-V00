@@ -2,13 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useLanguage } from "@/context/LanguageContext";
-import { 
+import {
   TrendingUp,
   ChevronRight,
   Bike,
   Zap,
   Flame,
-  Play,
   RefreshCw,
   Loader2,
   Heart,
@@ -494,9 +493,6 @@ export default function Dashboard() {
               <div className="today-details">
                 <span>{todaySession.details}</span>
               </div>
-              <div className="play-button">
-                <Play className="w-5 h-5" fill="white" />
-              </div>
             </>
           )
         ) : (
@@ -508,9 +504,6 @@ export default function Dashboard() {
             <p className="today-meta" style={{ opacity: 0.7 }}>
               {t("dashboard.todayNoSessionSubtitle")}
             </p>
-            <Link to="/plan" className="play-button" style={{ textDecoration: "none" }}>
-              <ChevronRight className="w-5 h-5" />
-            </Link>
           </>
         )}
       </div>
@@ -684,7 +677,6 @@ export default function Dashboard() {
                       {cardioData?.next_workout?.label || "—"}
                     </p>
                   </div>
-                  <Play size={20} style={{ color: recStyle.accent }} />
                 </div>
 
                 {/* Metric widgets */}
