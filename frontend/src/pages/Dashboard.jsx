@@ -73,6 +73,114 @@ const REC_STYLES = {
   },
 };
 
+// Couleurs pour les séances (même style que TrainingPlan)
+const SESSION_STYLES = {
+  repos: {
+    bg: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
+    border: "#6366f1",
+    text: "#c7d2fe",
+    badge: "#4f46e5",
+    badgeText: "#ffffff"
+  },
+  endurance: {
+    bg: "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)",
+    border: "#34d399",
+    text: "#065f46",
+    badge: "#10b981",
+    badgeText: "#ffffff"
+  },
+  seuil: {
+    bg: "linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)",
+    border: "#f97316",
+    text: "#9a3412",
+    badge: "#f97316",
+    badgeText: "#ffffff"
+  },
+  recuperation: {
+    bg: "linear-gradient(135deg, #fef9c3 0%, #fef08a 100%)",
+    border: "#facc15",
+    text: "#854d0e",
+    badge: "#eab308",
+    badgeText: "#ffffff"
+  },
+  sortie_longue: {
+    bg: "linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)",
+    border: "#ec4899",
+    text: "#9d174d",
+    badge: "#ec4899",
+    badgeText: "#ffffff"
+  },
+  fractionne: {
+    bg: "linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)",
+    border: "#8b5cf6",
+    text: "#5b21b6",
+    badge: "#8b5cf6",
+    badgeText: "#ffffff"
+  },
+};
+
+const getSessionStyleKey = (type, intensity) => {
+  const typeLower = (type && typeof type === "string" ? type : "").toLowerCase();
+  
+  if (typeLower.includes("repos") || typeLower === "rest") return "repos";
+  if (typeLower.includes("endurance") || typeLower === "easy" || typeLower === "short_easy" || typeLower === "easy_run") return "endurance";
+  if (typeLower.includes("seuil") || typeLower.includes("threshold") || typeLower === "tempo") return "seuil";
+  if (typeLower.includes("récup") || typeLower.includes("recup") || typeLower === "recovery" || typeLower === "activation") return "recuperation";
+  if (typeLower.includes("sortie longue") || typeLower === "long_run" || typeLower.includes("long")) return "sortie_longue";
+  if (typeLower.includes("fractionn") || typeLower.includes("interval") || typeLower === "fartlek" || typeLower === "speed_reminder" || typeLower === "race") return "fractionne";
+  
+  return intensity || "endurance";
+};
+
+// SessionCard component for displaying a session with colors
+function SessionCard({ session, isGrayed = false, fatigueColor = null }) {
+  if (!session) return null;
+
+  const styleKey = getSessionStyleKey(session.type, session.intensity);
+  const style = SESSION_STYLES[styleKey] || SESSION_STYLES.endurance;
+  const isRest = styleKey === "repos";
+
+  const borderColor = fatigueColor
+    ? (fatigueColor === "green" ? "#10b981" : fatigueColor === "yellow" ? "#f59e0b" : "#ef4444")
+    : style.border;
+
+  return (
+    <div
+      className={`flex items-center gap-2 p-3 rounded-lg ${isGrayed ? "opacity-50" : ""}`}
+      style={{
+        background: style.bg,
+        border: `2px solid ${borderColor}`
+      }}
+    >
+      <div
+        className="w-1 h-10 rounded-full shrink-0"
+        style={{ background: borderColor }}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-sm font-bold" style={{ color: style.text }}>
+            {session.type}
+          </span>
+          <span className="text-xs" style={{ color: style.text, opacity: 0.8 }}>
+            {session.duration}
+          </span>
+        </div>
+        {!isRest && session.details && (
+          <span className="text-xs block" style={{ color: style.text, opacity: 0.7 }}>
+            {session.details}
+          </span>
+        )}
+      </div>
+      <span
+        className="px-2 py-1 rounded-full text-xs font-bold shrink-0"
+        style={{ background: style.badge, color: style.badgeText }}
+      >
+        {session.estimated_tss || 0} TSS
+      </span>
+    </div>
+  );
+}
+
 function StatusIcon({ status, size = 16 }) {
   if (status === "green") return <CheckCircle size={size} color="#22c55e" />;
   if (status === "yellow") return <AlertTriangle size={size} color="#f59e0b" />;
@@ -497,7 +605,7 @@ export default function Dashboard() {
         }} 
         data-testid="today-workout-card"
       >
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-3">
           <p className="today-label">{t("dashboard.todayLabel")}</p>
           {todaySession?.fatigue && (
             <span
@@ -530,51 +638,31 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Session display */}
-            {(() => {
-              const session = todaySession.adaptation_applied ? todaySession.adaptive_session : todaySession.planned_session;
-              const isRest = session?.type?.toLowerCase().includes("repos") || session?.type?.toLowerCase() === "rest";
-              
-              if (isRest) {
-                return (
-                  <>
-                    <h3 className="today-title" style={{ color: "var(--text-secondary)" }}>
-                      {t("dashboard.todayRestTitle")}
-                    </h3>
-                    <p className="today-meta" style={{ opacity: 0.7 }}>
-                      {session?.details || t("dashboard.todayRestDescription")}
-                    </p>
-                    <div className="today-details">
-                      <span style={{ color: "var(--accent-teal)" }}>
-                        {t("dashboard.todayRestTagline")}
-                      </span>
-                    </div>
-                  </>
-                );
-              }
-              
-              return (
-                <>
-                  <h3 className="today-title">{session?.type}</h3>
-                  <p className="today-meta">
-                    {session?.duration && session.duration !== "0min" && `${session.duration}`}
-                    {session?.distance_km > 0 && ` • ${formatDistance(session.distance_km, { unitSystem })}`}
-                  </p>
-                  <div className="today-details">
-                    <span>{session?.details}</span>
+            {/* Display with SessionCard */}
+            {todaySession.adaptation_applied ? (
+              <div className="space-y-3">
+                {/* Original Session (grayed out) */}
+                <div>
+                  <div className="text-[10px] font-mono uppercase mb-1" style={{ color: "var(--text-tertiary)" }}>
+                    {t("trainingPlanExtended.originalSession") || "Séance originale"}
                   </div>
-                  
-                  {/* Show original session if adapted */}
-                  {todaySession.adaptation_applied && todaySession.planned_session && (
-                    <div className="mt-2 pt-2" style={{ borderTop: "1px solid var(--border-color)", opacity: 0.5 }}>
-                      <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
-                        {t("trainingPlanExtended.originalSession") || "Séance originale"}: {todaySession.planned_session.type} {todaySession.planned_session.duration}
-                      </p>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
+                  <SessionCard session={todaySession.planned_session} isGrayed={true} />
+                </div>
+
+                {/* Adaptive Session (highlighted) */}
+                <div>
+                  <div className="text-[10px] font-mono uppercase mb-1" style={{ color: "var(--text-secondary)" }}>
+                    {t("trainingPlanExtended.adaptiveSession") || "Séance adaptative"}
+                  </div>
+                  <SessionCard
+                    session={todaySession.adaptive_session}
+                    fatigueColor={todaySession.fatigue?.recommendation_color}
+                  />
+                </div>
+              </div>
+            ) : (
+              <SessionCard session={todaySession.planned_session} />
+            )}
 
             {/* Feedback Buttons */}
             <div className="flex gap-2 mt-3">
