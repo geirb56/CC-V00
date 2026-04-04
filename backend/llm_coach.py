@@ -229,6 +229,9 @@ async def generate_cycle_week(
 ) -> Tuple[Optional[Dict], bool, Dict]:
     """
     Generates a structured weekly training plan with personalized paces.
+    
+    Sessions are generated DETERMINISTICALLY by the code (not by LLM).
+    LLM is only used for weekly advice/focus text.
 
     Args:
         context: Fitness data (CTL, ATL, TSB, ACWR, weekly_km, vma, vo2max, paces)
@@ -237,295 +240,224 @@ async def generate_cycle_week(
         goal: Goal (5K, 10K, SEMI, MARATHON, ULTRA)
         user_id: User ID
         sessions_per_week: Number of sessions per week (3, 4, 5, 6)
-        personalized_paces: Personalized paces based on VO2max (z1, z2, z3, z4, z5, marathon, half)
+        personalized_paces: Personalized paces based on VO2max
 
     Returns:
         (plan_dict, success, metadata)
     """
-    # Athlete's current volume (based on last 4 weeks)
-    current_weekly_km = context.get('weekly_km', 30)
-
-    # Race distance by goal (in km)
-    race_distances = {
-        "5K": 5,
-        "10K": 10,
-        "SEMI": 21.1,
-        "MARATHON": 42.2,
-        "ULTRA": 60,
-    }
-    race_km = race_distances.get(goal, 21.1)
-
-    # RECOMMENDED minimum volumes (based on real training data)
-    # Source: coaching recommendations to finish without struggling
-    goal_configs = {
-        "5K": {"min": 15, "max": 45, "sessions": 3, "long_min": 8, "long_max": 10},
-        "10K": {"min": 20, "max": 60, "sessions": 3, "long_min": 10, "long_max": 14},
-        "SEMI": {"min": 30, "max": 80, "sessions": 3, "long_min": 16, "long_max": 18},
-        "MARATHON": {"min": 40, "max": 120, "sessions": 4, "long_min": 28, "long_max": 32},
-        "ULTRA": {"min": 50, "max": 150, "sessions": 5, "long_min": 35, "long_max": 45},
-    }
-
-    config = goal_configs.get(goal, goal_configs["SEMI"])
-
-    # Number of sessions (user or default)
-    target_sessions = sessions_per_week if sessions_per_week in [3, 4, 5, 6] else config["sessions"]
-    num_rest_days = 7 - target_sessions
-
-    # Minimum volume = max(current volume, minimum recommended for goal)
-    volume_min = max(current_weekly_km, config["min"])
-    volume_max = config["max"]
-
-    # Target volume calculation: +7% progressive, limited between min and max
-    progression_factor = 1.07
-    target_km_raw = current_weekly_km * progression_factor
-    target_km = max(volume_min, min(volume_max, round(target_km_raw)))
-
-    # Long run = proportional to volume, between long_min and long_max
-    long_ratio = (target_km - config["min"]) / (config["max"] - config["min"]) if config["max"] > config["min"] else 0.5
-    target_long_run = round(config["long_min"] + long_ratio * (config["long_max"] - config["long_min"]))
-    target_long_run = max(config["long_min"], min(config["long_max"], target_long_run))
-
-    # Generate rest and run days according to number of sessions
-    if target_sessions == 3:
-        rest_days = ["Monday", "Wednesday", "Friday", "Saturday"]
-        run_days_config = [
-            ("Tuesday", "Endurance", "easy"),
-            ("Thursday", "Threshold", "hard"),
-            ("Sunday", "Long run", "moderate")
-        ]
-    elif target_sessions == 4:
-        rest_days = ["Monday", "Wednesday", "Friday"]
-        run_days_config = [
-            ("Tuesday", "Endurance", "easy"),
-            ("Thursday", "Threshold", "hard"),
-            ("Saturday", "Tempo", "moderate"),
-            ("Sunday", "Long run", "moderate")
-        ]
-    elif target_sessions == 5:
-        rest_days = ["Monday", "Friday"]
-        run_days_config = [
-            ("Tuesday", "Endurance", "easy"),
-            ("Wednesday", "Threshold", "hard"),
-            ("Thursday", "Recovery", "easy"),
-            ("Saturday", "Tempo", "moderate"),
-            ("Sunday", "Long run", "moderate")
-        ]
-    else:  # 6 sessions
-        rest_days = ["Friday"]
-        run_days_config = [
-            ("Monday", "Recovery", "easy"),
-            ("Tuesday", "Endurance", "easy"),
-            ("Wednesday", "Threshold", "hard"),
-            ("Thursday", "Recovery", "easy"),
-            ("Saturday", "Tempo", "moderate"),
-            ("Sunday", "Long run", "moderate")
-        ]
-
-    # Use personalized paces or default values
-    paces = personalized_paces or context.get('paces', {})
-    z1_pace = paces.get('z1', '6:30-7:00')
-    z2_pace = paces.get('z2', '5:45-6:15')
-    z3_pace = paces.get('z3', '5:15-5:30')
-    z4_pace = paces.get('z4', '4:45-5:00')
-    z5_pace = paces.get('z5', '4:15-4:30')
-    semi_pace = paces.get('semi', '5:00-5:15')
-    marathon_pace = paces.get('marathon', '5:15-5:30')
-
-    # Helper function to calculate distance from duration and pace
-    def calc_distance_from_duration(duration_min: int, pace_range: str) -> float:
-        """
-        Calculate distance (km) from duration (min) and pace range (e.g., '6:30-7:00').
-        Uses the slower pace (second value) for conservative estimate.
-        """
-        try:
-            # Extract the slower pace (second value in range)
-            pace_str = pace_range.split('-')[-1].strip()
-            parts = pace_str.replace('/km', '').split(':')
-            pace_min = int(parts[0]) + int(parts[1]) / 60
-            distance = duration_min / pace_min
-            return round(distance, 1)
-        except (ValueError, IndexError, TypeError):
-            # Fallback: assume 6:00/km pace
-            return round(duration_min / 6.0, 1)
-
-    # Pre-calculate distances based on durations and paces
-    recovery_30min_dist = calc_distance_from_duration(30, z1_pace)
-    endurance_50min_dist = calc_distance_from_duration(50, z2_pace)
-    threshold_40min_dist = calc_distance_from_duration(40, z3_pace)  # Mix of paces, use z3 average
-    tempo_45min_dist = calc_distance_from_duration(45, z3_pace)
-
-    # Athlete's VO2max and VO2MAX
-    vma = context.get('vma', 'Not calculated')
-    vo2max = context.get('vo2max', 'Not calculated')
-
-    prompt = f"""You are an elite running coach.
-
-Goal: {goal} ({race_km} km)
-Phase: {phase}
-Target load: {target_load}
-
-Athlete data:
-CTL: {context.get('ctl', 40)}
-ATL: {context.get('atl', 45)}
-TSB: {context.get('tsb', -5)}
-ACWR: {round(context.get('acwr', 1.0), 2)}
-CURRENT weekly volume: {current_weekly_km} km
-Estimated VO2max: {vma} km/h
-VO2MAX: {vo2max}
-
-PLAN PARAMETERS:
-- Requested number of sessions: {target_sessions} runs + {num_rest_days} rest
-- Target volume: {target_km} km
-- Long run: {target_long_run} km
-- Rest days: {', '.join(rest_days)}
-
-RULES:
-1. 2 rest days (Monday and Friday recommended)
-2. {target_sessions} running sessions
-3. weekly_km = {target_km} km
-4. Long run Sunday: {target_long_run} km
-5. Details: distance • pace • target HR
-6. CRITICAL: distance_km MUST be calculated from duration and pace: distance = duration / pace
-   Example: 30min at 7:00/km pace = 30/7 = 4.3 km (NOT 5 km!)
-
-PERSONALIZED PACE ZONES (based on athlete's VO2max):
-- Z1 (recovery): {z1_pace}/km, HR 120-135
-- Z2 (endurance): {z2_pace}/km, HR 135-150
-- Z3 (tempo): {z3_pace}/km, HR 150-165
-- Z4 (threshold): {z4_pace}/km, HR 165-175
-- Z5 (VO2max): {z5_pace}/km, HR 175-185
-- Marathon pace: {marathon_pace}/km
-- Half marathon pace: {semi_pace}/km
-
-IMPORTANT: MUST use the personalized paces above in session details.
-
-JSON only:
-
-{{
-  "focus": "{phase}",
-  "planned_load": {target_load},
-  "weekly_km": {target_km},
-  "sessions": [
-    {{"day": "Monday", "type": "Rest", "duration": "0min", "details": "Complete recovery", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
-    {{"day": "Tuesday", "type": "Endurance", "duration": "50min", "details": "{endurance_50min_dist} km • {z2_pace}/km • HR 135-150 bpm • Zone 2", "intensity": "easy", "estimated_tss": 50, "distance_km": {endurance_50min_dist}}},
-    {{"day": "Wednesday", "type": "Threshold", "duration": "40min", "details": "{threshold_40min_dist} km including 20min at {z4_pace}/km • HR 165-175 bpm", "intensity": "hard", "estimated_tss": 55, "distance_km": {threshold_40min_dist}}},
-    {{"day": "Thursday", "type": "Recovery", "duration": "30min", "details": "{recovery_30min_dist} km • {z1_pace}/km • HR 120-135 bpm", "intensity": "easy", "estimated_tss": 25, "distance_km": {recovery_30min_dist}}},
-    {{"day": "Friday", "type": "Rest", "duration": "0min", "details": "Recovery", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
-    {{"day": "Saturday", "type": "Tempo", "duration": "45min", "details": "{tempo_45min_dist} km including 25min at {semi_pace}/km • HR 150-165 bpm", "intensity": "moderate", "estimated_tss": 60, "distance_km": {tempo_45min_dist}}},
-    {{"day": "Sunday", "type": "Long run", "duration": "90min", "details": "{target_long_run} km progressive • {z2_pace}→{z3_pace}/km • HR 135-165 bpm", "intensity": "moderate", "estimated_tss": 100, "distance_km": {target_long_run}}}
-  ],
-  "total_tss": 290,
-  "advice": "Volume: {current_weekly_km} km → {target_km} km. Recommended min for {goal}: {config['min']} km. Long run: {target_long_run} km."
-}}"""
-
     start_time = time.time()
     metadata = {
-        "model": LLM_MODEL,
-        "provider": LLM_PROVIDER,
+        "model": "deterministic",
+        "provider": "code",
         "context_type": "cycle_week",
         "duration_sec": 0,
         "success": False
     }
     
-    if not EMERGENT_LLM_KEY or not EMERGENT_LLM_KEY.startswith("sk-emergent"):
-        logger.warning("[LLM] Emergent LLM Key not configured")
-        return None, False, metadata
+    # Athlete's current volume (based on last 4 weeks)
+    current_weekly_km = context.get('weekly_km', 30)
 
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+    # Goal configurations
+    goal_configs = {
+        "5K": {"min": 15, "max": 45, "sessions": 3, "long_min": 8, "long_max": 10},
+        "10K": {"min": 20, "max": 60, "sessions": 3, "long_min": 10, "long_max": 14},
+        "SEMI": {"min": 30, "max": 80, "sessions": 4, "long_min": 16, "long_max": 18},
+        "MARATHON": {"min": 40, "max": 120, "sessions": 4, "long_min": 28, "long_max": 32},
+        "ULTRA": {"min": 50, "max": 150, "sessions": 5, "long_min": 35, "long_max": 45},
+    }
+    config = goal_configs.get(goal, goal_configs["SEMI"])
 
-        session_id = f"cardiocoach_plan_{user_id}_{int(time.time())}"
+    # Number of sessions
+    target_sessions = sessions_per_week if sessions_per_week in [3, 4, 5, 6] else config["sessions"]
 
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=session_id,
-            system_message=SYSTEM_PROMPT_PLAN
-        ).with_model(LLM_PROVIDER, LLM_MODEL)
+    # Target volume: +7% progressive
+    progression_factor = 1.07 if phase != "deload" else 0.75
+    target_km = max(config["min"], min(config["max"], round(current_weekly_km * progression_factor)))
 
-        response = await asyncio.wait_for(
-            chat.send_message(UserMessage(text=prompt)),
-            timeout=LLM_TIMEOUT
-        )
+    # Long run distance
+    long_ratio = (target_km - config["min"]) / (config["max"] - config["min"]) if config["max"] > config["min"] else 0.5
+    target_long_run = round(config["long_min"] + long_ratio * (config["long_max"] - config["long_min"]))
 
-        elapsed = time.time() - start_time
-        metadata["duration_sec"] = round(elapsed, 2)
-
-        # Parse JSON
-        response_text = str(response).strip()
-
-        # Clean if markdown
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.startswith("```"):
-            response_text = response_text[3:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
-        response_text = response_text.strip()
-
-        plan = json.loads(response_text)
-
-        # Post-process: Fix pace in details to match duration/distance
-        def fix_session_details(session):
-            """Recalculate pace from duration and distance, update details if needed."""
-            duration_str = session.get("duration", "0min")
-            distance = session.get("distance_km", 0)
-            details = session.get("details", "")
-            
-            if distance > 0 and "min" in duration_str:
-                try:
-                    duration = int(duration_str.replace("min", ""))
-                    if duration > 0:
-                        # Calculate actual pace
-                        pace_min = duration / distance
-                        pace_mins = int(pace_min)
-                        pace_secs = int((pace_min % 1) * 60)
-                        actual_pace = f"{pace_mins}:{pace_secs:02d}/km"
-                        
-                        # Replace first pace pattern (X:XX-X:XX/km or X:XX/km) with actual pace
-                        import re
-                        pace_pattern = r'\d+:\d+-\d+:\d+/km|\d+:\d+/km'
-                        if re.search(pace_pattern, details):
-                            # Only replace if the calculated pace differs significantly
-                            details = re.sub(pace_pattern, actual_pace, details, count=1)
-                            session["details"] = details
-                except (ValueError, ZeroDivisionError):
-                    pass
-            return session
-
-        # Apply fix to all sessions
-        if "sessions" in plan:
-            plan["sessions"] = [fix_session_details(s) for s in plan["sessions"]]
-
-        # Calculate total TSS volume
-        total_tss = sum(s.get("estimated_tss", 0) for s in plan.get("sessions", []))
-        plan["total_tss"] = total_tss
-
-        # Calculate total KM volume (LLM correction)
-        total_km = sum(s.get("distance_km", 0) or 0 for s in plan.get("sessions", []))
-        plan["weekly_km"] = round(total_km, 1)
-
-        metadata["success"] = True
-        logger.info(f"[LLM] ✅ Weekly plan generated in {elapsed:.2f}s (TSS: {total_tss}, KM: {total_km})")
-
-        return plan, True, metadata
-
-    except json.JSONDecodeError as e:
-        elapsed = time.time() - start_time
-        metadata["duration_sec"] = round(elapsed, 2)
-        logger.error(f"[LLM] ❌ JSON parsing error: {e}")
-        return None, False, metadata
-
-    except asyncio.TimeoutError:
-        elapsed = time.time() - start_time
-        metadata["duration_sec"] = round(elapsed, 2)
-        logger.warning(f"[LLM] ⏱️ Plan timeout after {elapsed:.2f}s")
-        return None, False, metadata
-
-    except Exception as e:
-        elapsed = time.time() - start_time
-        metadata["duration_sec"] = round(elapsed, 2)
-        logger.error(f"[LLM] ❌ Plan error: {e}")
-        return None, False, metadata
+    # Use personalized paces or defaults
+    paces = personalized_paces or context.get('paces', {})
+    
+    # Helper: parse pace string to minutes (e.g., "6:30-7:00" -> 7.0)
+    def parse_pace(pace_range: str) -> float:
+        """Extract slower pace (second value) as float minutes."""
+        try:
+            pace_str = pace_range.split('-')[-1].strip().replace('/km', '')
+            parts = pace_str.split(':')
+            return int(parts[0]) + int(parts[1]) / 60
+        except (ValueError, IndexError, TypeError):
+            return 6.0
+    
+    # Helper: format pace as string
+    def format_pace(pace_min: float) -> str:
+        """Format pace float to MM:SS/km string."""
+        mins = int(pace_min)
+        secs = int((pace_min % 1) * 60)
+        return f"{mins}:{secs:02d}/km"
+    
+    # Pace zones as floats (min/km)
+    pace_z1 = parse_pace(paces.get('z1', '7:00-7:30'))
+    pace_z2 = parse_pace(paces.get('z2', '6:00-6:30'))
+    pace_z3 = parse_pace(paces.get('z3', '5:30-5:45'))
+    pace_z4 = parse_pace(paces.get('z4', '5:00-5:15'))
+    
+    # Session templates: (type, duration_min, pace_zone, intensity, tss_per_km)
+    session_templates = {
+        "Rest": (0, None, "rest", 0),
+        "Recovery": (30, pace_z1, "easy", 4),
+        "Endurance": (50, pace_z2, "easy", 5),
+        "Tempo": (45, pace_z3, "moderate", 7),
+        "Threshold": (40, pace_z4, "hard", 8),
+        "Fartlek": (45, pace_z3, "moderate", 7),
+    }
+    
+    # Build sessions based on number of sessions per week
+    def build_session(day: str, session_type: str, custom_duration: int = None, custom_distance: float = None) -> dict:
+        """Build a single session with calculated values."""
+        if session_type == "Rest":
+            return {
+                "day": day,
+                "type": "Rest",
+                "duration": "0min",
+                "details": "Complete recovery",
+                "intensity": "rest",
+                "estimated_tss": 0,
+                "distance_km": 0
+            }
+        
+        if session_type == "Long run":
+            # Long run: distance is primary, duration is calculated
+            distance = custom_distance or target_long_run
+            pace = pace_z2  # Long runs at Z2
+            duration = round(distance * pace)
+            return {
+                "day": day,
+                "type": "Long run",
+                "duration": f"{duration}min",
+                "details": f"{distance} km • {format_pace(pace)} • HR 135-150 bpm • Progressive",
+                "intensity": "moderate",
+                "estimated_tss": round(distance * 6),
+                "distance_km": distance
+            }
+        
+        # Standard sessions: duration is primary, distance is calculated
+        template = session_templates.get(session_type, session_templates["Endurance"])
+        duration = custom_duration or template[0]
+        pace = template[1]
+        intensity = template[2]
+        tss_per_km = template[3]
+        
+        distance = round(duration / pace, 1)
+        tss = round(distance * tss_per_km)
+        
+        # Build details string
+        if session_type == "Threshold":
+            details = f"{distance} km incl. 20min at {format_pace(pace)} • HR 165-175 bpm"
+        elif session_type == "Tempo":
+            details = f"{distance} km incl. 25min at {format_pace(pace)} • HR 150-165 bpm"
+        elif session_type == "Fartlek":
+            details = f"{distance} km • varied pace • HR 140-170 bpm"
+        else:
+            hr_range = "120-135" if session_type == "Recovery" else "135-150"
+            zone = "Zone 1" if session_type == "Recovery" else "Zone 2"
+            details = f"{distance} km • {format_pace(pace)} • HR {hr_range} bpm • {zone}"
+        
+        return {
+            "day": day,
+            "type": session_type,
+            "duration": f"{duration}min",
+            "details": details,
+            "intensity": intensity,
+            "estimated_tss": tss,
+            "distance_km": distance
+        }
+    
+    # Define weekly structure based on sessions per week
+    if target_sessions == 3:
+        week_structure = [
+            ("Monday", "Rest"),
+            ("Tuesday", "Endurance"),
+            ("Wednesday", "Rest"),
+            ("Thursday", "Threshold"),
+            ("Friday", "Rest"),
+            ("Saturday", "Rest"),
+            ("Sunday", "Long run"),
+        ]
+    elif target_sessions == 4:
+        week_structure = [
+            ("Monday", "Rest"),
+            ("Tuesday", "Endurance"),
+            ("Wednesday", "Rest"),
+            ("Thursday", "Threshold"),
+            ("Friday", "Rest"),
+            ("Saturday", "Tempo"),
+            ("Sunday", "Long run"),
+        ]
+    elif target_sessions == 5:
+        week_structure = [
+            ("Monday", "Rest"),
+            ("Tuesday", "Endurance"),
+            ("Wednesday", "Threshold"),
+            ("Thursday", "Recovery"),
+            ("Friday", "Rest"),
+            ("Saturday", "Tempo"),
+            ("Sunday", "Long run"),
+        ]
+    else:  # 6 sessions
+        week_structure = [
+            ("Monday", "Recovery"),
+            ("Tuesday", "Endurance"),
+            ("Wednesday", "Threshold"),
+            ("Thursday", "Recovery"),
+            ("Friday", "Rest"),
+            ("Saturday", "Tempo"),
+            ("Sunday", "Long run"),
+        ]
+    
+    # Adjust for phase
+    if phase == "deload":
+        # Reduce all durations by 30%
+        week_structure = [(d, "Recovery" if t not in ["Rest", "Long run"] else t) for d, t in week_structure]
+    elif phase == "taper":
+        # Keep intensity, reduce volume
+        week_structure = [(d, "Recovery" if t == "Endurance" else t) for d, t in week_structure]
+    
+    # Build all sessions
+    sessions = [build_session(day, session_type) for day, session_type in week_structure]
+    
+    # Calculate totals
+    total_km = round(sum(s["distance_km"] for s in sessions), 1)
+    total_tss = sum(s["estimated_tss"] for s in sessions)
+    
+    # Generate focus text based on phase
+    focus_texts = {
+        "build": "Volume en endurance fondamentale (Z1-Z2)",
+        "deload": "Récupération active - réduction du volume",
+        "intensification": "Travail spécifique - seuil et tempo",
+        "taper": "Affûtage - maintien intensité, réduction volume",
+        "race": "Semaine de course - fraîcheur maximale"
+    }
+    
+    # Build plan
+    plan = {
+        "focus": focus_texts.get(phase, "Construction aérobie"),
+        "planned_load": target_load,
+        "weekly_km": total_km,
+        "sessions": sessions,
+        "total_tss": total_tss,
+        "advice": f"Volume actuel: {current_weekly_km} km → cible: {target_km} km. Sortie longue: {target_long_run} km."
+    }
+    
+    elapsed = time.time() - start_time
+    metadata["duration_sec"] = round(elapsed, 2)
+    metadata["success"] = True
+    
+    logger.info(f"[Coach] ✅ Plan generated deterministically in {elapsed:.3f}s (TSS: {total_tss}, KM: {total_km})")
+    
+    return plan, True, metadata
 
 
 # ============================================================
