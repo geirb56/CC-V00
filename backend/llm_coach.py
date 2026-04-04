@@ -331,6 +331,29 @@ async def generate_cycle_week(
     semi_pace = paces.get('semi', '5:00-5:15')
     marathon_pace = paces.get('marathon', '5:15-5:30')
 
+    # Helper function to calculate distance from duration and pace
+    def calc_distance_from_duration(duration_min: int, pace_range: str) -> float:
+        """
+        Calculate distance (km) from duration (min) and pace range (e.g., '6:30-7:00').
+        Uses the slower pace (second value) for conservative estimate.
+        """
+        try:
+            # Extract the slower pace (second value in range)
+            pace_str = pace_range.split('-')[-1].strip()
+            parts = pace_str.replace('/km', '').split(':')
+            pace_min = int(parts[0]) + int(parts[1]) / 60
+            distance = duration_min / pace_min
+            return round(distance, 1)
+        except (ValueError, IndexError, TypeError):
+            # Fallback: assume 6:00/km pace
+            return round(duration_min / 6.0, 1)
+
+    # Pre-calculate distances based on durations and paces
+    recovery_30min_dist = calc_distance_from_duration(30, z1_pace)
+    endurance_50min_dist = calc_distance_from_duration(50, z2_pace)
+    threshold_40min_dist = calc_distance_from_duration(40, z3_pace)  # Mix of paces, use z3 average
+    tempo_45min_dist = calc_distance_from_duration(45, z3_pace)
+
     # Athlete's VO2max and VO2MAX
     vma = context.get('vma', 'Not calculated')
     vo2max = context.get('vo2max', 'Not calculated')
@@ -362,6 +385,8 @@ RULES:
 3. weekly_km = {target_km} km
 4. Long run Sunday: {target_long_run} km
 5. Details: distance • pace • target HR
+6. CRITICAL: distance_km MUST be calculated from duration and pace: distance = duration / pace
+   Example: 30min at 7:00/km pace = 30/7 = 4.3 km (NOT 5 km!)
 
 PERSONALIZED PACE ZONES (based on athlete's VO2max):
 - Z1 (recovery): {z1_pace}/km, HR 120-135
@@ -382,11 +407,11 @@ JSON only:
   "weekly_km": {target_km},
   "sessions": [
     {{"day": "Monday", "type": "Rest", "duration": "0min", "details": "Complete recovery", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
-    {{"day": "Tuesday", "type": "Endurance", "duration": "50min", "details": "8 km • {z2_pace}/km • HR 135-150 bpm • Zone 2", "intensity": "easy", "estimated_tss": 50, "distance_km": 8}},
-    {{"day": "Wednesday", "type": "Threshold", "duration": "40min", "details": "7 km including 20min at {z4_pace}/km • HR 165-175 bpm", "intensity": "hard", "estimated_tss": 55, "distance_km": 7}},
-    {{"day": "Thursday", "type": "Recovery", "duration": "30min", "details": "5 km • {z1_pace}/km • HR <135 bpm", "intensity": "easy", "estimated_tss": 25, "distance_km": 5}},
+    {{"day": "Tuesday", "type": "Endurance", "duration": "50min", "details": "{endurance_50min_dist} km • {z2_pace}/km • HR 135-150 bpm • Zone 2", "intensity": "easy", "estimated_tss": 50, "distance_km": {endurance_50min_dist}}},
+    {{"day": "Wednesday", "type": "Threshold", "duration": "40min", "details": "{threshold_40min_dist} km including 20min at {z4_pace}/km • HR 165-175 bpm", "intensity": "hard", "estimated_tss": 55, "distance_km": {threshold_40min_dist}}},
+    {{"day": "Thursday", "type": "Recovery", "duration": "30min", "details": "{recovery_30min_dist} km • {z1_pace}/km • HR 120-135 bpm", "intensity": "easy", "estimated_tss": 25, "distance_km": {recovery_30min_dist}}},
     {{"day": "Friday", "type": "Rest", "duration": "0min", "details": "Recovery", "intensity": "rest", "estimated_tss": 0, "distance_km": 0}},
-    {{"day": "Saturday", "type": "Tempo", "duration": "45min", "details": "8 km including 25min at {semi_pace}/km • HR 150-165 bpm", "intensity": "moderate", "estimated_tss": 60, "distance_km": 8}},
+    {{"day": "Saturday", "type": "Tempo", "duration": "45min", "details": "{tempo_45min_dist} km including 25min at {semi_pace}/km • HR 150-165 bpm", "intensity": "moderate", "estimated_tss": 60, "distance_km": {tempo_45min_dist}}},
     {{"day": "Sunday", "type": "Long run", "duration": "90min", "details": "{target_long_run} km progressive • {z2_pace}→{z3_pace}/km • HR 135-165 bpm", "intensity": "moderate", "estimated_tss": 100, "distance_km": {target_long_run}}}
   ],
   "total_tss": 290,
@@ -438,6 +463,38 @@ JSON only:
         response_text = response_text.strip()
 
         plan = json.loads(response_text)
+
+        # Post-process: Fix pace in details to match duration/distance
+        def fix_session_details(session):
+            """Recalculate pace from duration and distance, update details if needed."""
+            duration_str = session.get("duration", "0min")
+            distance = session.get("distance_km", 0)
+            details = session.get("details", "")
+            
+            if distance > 0 and "min" in duration_str:
+                try:
+                    duration = int(duration_str.replace("min", ""))
+                    if duration > 0:
+                        # Calculate actual pace
+                        pace_min = duration / distance
+                        pace_mins = int(pace_min)
+                        pace_secs = int((pace_min % 1) * 60)
+                        actual_pace = f"{pace_mins}:{pace_secs:02d}/km"
+                        
+                        # Replace first pace pattern (X:XX-X:XX/km or X:XX/km) with actual pace
+                        import re
+                        pace_pattern = r'\d+:\d+-\d+:\d+/km|\d+:\d+/km'
+                        if re.search(pace_pattern, details):
+                            # Only replace if the calculated pace differs significantly
+                            details = re.sub(pace_pattern, actual_pace, details, count=1)
+                            session["details"] = details
+                except (ValueError, ZeroDivisionError):
+                    pass
+            return session
+
+        # Apply fix to all sessions
+        if "sessions" in plan:
+            plan["sessions"] = [fix_session_details(s) for s in plan["sessions"]]
 
         # Calculate total TSS volume
         total_tss = sum(s.get("estimated_tss", 0) for s in plan.get("sessions", []))
