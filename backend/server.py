@@ -3438,6 +3438,189 @@ async def get_available_goals():
     }
 
 
+@api_router.post("/training/feedback")
+async def submit_training_feedback(
+    date: str,
+    workout_id: str,
+    status: str,
+    user: dict = Depends(auth_user)
+):
+    """
+    Store user feedback for a training session.
+
+    Args:
+        date: ISO date string (YYYY-MM-DD)
+        workout_id: Unique identifier for the workout/session
+        status: 'done' or 'missed'
+    """
+    if status not in ["done", "missed"]:
+        raise HTTPException(status_code=400, detail="Status must be 'done' or 'missed'")
+
+    feedback_doc = {
+        "user_id": user["id"],
+        "date": date,
+        "workout_id": workout_id,
+        "status": status,
+        "created_at": datetime.now(timezone.utc)
+    }
+
+    # Upsert to avoid duplicates
+    await db.training_feedback.update_one(
+        {"user_id": user["id"], "date": date, "workout_id": workout_id},
+        {"$set": feedback_doc},
+        upsert=True
+    )
+
+    logger.info(f"[Training] Feedback saved for user {user['id']}: {date} - {workout_id} - {status}")
+
+    return {
+        "status": "success",
+        "feedback": feedback_doc
+    }
+
+
+@api_router.get("/training/today")
+async def get_today_adaptive_session(user: dict = Depends(auth_user)):
+    """
+    Returns today's adaptive training session.
+
+    Combines:
+    - Planned session from LLM-generated plan
+    - Current fatigue level from /api/cardio-coach
+    - Historical feedback
+
+    Adaptation logic:
+    - Green (fatigue_ratio <= 1.2): Keep session as planned
+    - Orange (1.2 < fatigue_ratio <= 1.5): Reduce intensity/duration -20%, convert intervals to easy
+    - Red (fatigue_ratio > 1.5): Convert to recovery/Z1, reduce duration -40 to -50%
+    """
+    from datetime import date as date_class
+
+    # Get today's date
+    today = datetime.now(timezone.utc).date()
+    today_iso = today.isoformat()
+    day_name = today.strftime("%A")
+
+    # 1. Get the planned session for this week
+    plan = await generate_dynamic_training_plan(db, user["id"])
+    sessions = plan.get("plan", {}).get("sessions", [])
+
+    # Find today's session by day name
+    planned_session = None
+    for session in sessions:
+        if session.get("day", "").lower() == day_name.lower():
+            planned_session = session
+            break
+
+    if not planned_session:
+        return {
+            "status": "no_session",
+            "message": "No session planned for today",
+            "date": today_iso,
+            "day": day_name
+        }
+
+    # 2. Get current fatigue level from cardio-coach
+    # Use a direct call without auth to avoid circular dependency
+    cardio_coach_data = await get_cardio_coach(user_id=user["id"])
+
+    fatigue_ratio = cardio_coach_data.get("metrics", {}).get("fatigue_ratio", 1.0)
+    fatigue_status = cardio_coach_data.get("metrics", {}).get("fatigue_status", "green")
+    recommendation = cardio_coach_data.get("recommendation", "RUN HARD")
+    recommendation_color = cardio_coach_data.get("recommendation_color", "green")
+
+    # 3. Get historical feedback for this user
+    feedback_cursor = db.training_feedback.find(
+        {"user_id": user["id"]},
+        {"_id": 0}
+    ).sort("date", -1).limit(10)
+    recent_feedback = await feedback_cursor.to_list(10)
+
+    # 4. Apply adaptation logic
+    adaptive_session = planned_session.copy()
+    adaptation_applied = False
+    adaptation_reason = ""
+
+    if fatigue_ratio > 1.5 or fatigue_status == "red":
+        # RED: Convert to recovery
+        adaptation_applied = True
+        adaptation_reason = "High fatigue detected - session converted to active recovery"
+
+        # Reduce duration by 40-50%
+        original_duration = planned_session.get("duration", "0min")
+        duration_match = __import__("re").match(r"(\d+)", original_duration)
+        if duration_match:
+            original_mins = int(duration_match.group(1))
+            new_mins = int(original_mins * 0.5)
+            adaptive_session["duration"] = f"{new_mins}min"
+
+        # Convert to recovery
+        adaptive_session["type"] = "Recovery"
+        adaptive_session["intensity"] = "recovery"
+
+        # Update details to Z1
+        original_distance = planned_session.get("distance_km", 0)
+        new_distance = original_distance * 0.5 if original_distance else 0
+        adaptive_session["distance_km"] = round(new_distance, 1)
+        adaptive_session["details"] = f"{new_distance:.1f} km • Very easy pace • HR < 130 bpm • Zone 1 recovery"
+
+        # Reduce TSS
+        original_tss = planned_session.get("estimated_tss", 0)
+        adaptive_session["estimated_tss"] = int(original_tss * 0.4)
+
+    elif fatigue_ratio > 1.2 or fatigue_status == "yellow":
+        # ORANGE: Reduce intensity and duration
+        adaptation_applied = True
+        adaptation_reason = "Moderate fatigue detected - intensity and duration reduced"
+
+        # Reduce duration by 20%
+        original_duration = planned_session.get("duration", "0min")
+        duration_match = __import__("re").match(r"(\d+)", original_duration)
+        if duration_match:
+            original_mins = int(duration_match.group(1))
+            new_mins = int(original_mins * 0.8)
+            adaptive_session["duration"] = f"{new_mins}min"
+
+        # Convert intervals/threshold to endurance
+        session_type = planned_session.get("type", "").lower()
+        if any(x in session_type for x in ["interval", "threshold", "tempo", "fractionn"]):
+            adaptive_session["type"] = "Endurance"
+            adaptive_session["intensity"] = "easy"
+
+            # Update details
+            original_distance = planned_session.get("distance_km", 0)
+            new_distance = original_distance * 0.8 if original_distance else 0
+            adaptive_session["distance_km"] = round(new_distance, 1)
+            adaptive_session["details"] = f"{new_distance:.1f} km • Easy pace • HR 130-145 bpm • Zone 2"
+        else:
+            # Just reduce distance/duration for easy runs
+            original_distance = planned_session.get("distance_km", 0)
+            new_distance = original_distance * 0.8 if original_distance else 0
+            adaptive_session["distance_km"] = round(new_distance, 1)
+
+        # Reduce TSS
+        original_tss = planned_session.get("estimated_tss", 0)
+        adaptive_session["estimated_tss"] = int(original_tss * 0.7)
+
+    # 5. Return both original and adaptive sessions
+    return {
+        "status": "success",
+        "date": today_iso,
+        "day": day_name,
+        "planned_session": planned_session,
+        "adaptive_session": adaptive_session if adaptation_applied else None,
+        "adaptation_applied": adaptation_applied,
+        "adaptation_reason": adaptation_reason,
+        "fatigue": {
+            "fatigue_ratio": round(fatigue_ratio, 2),
+            "fatigue_status": fatigue_status,
+            "recommendation": recommendation,
+            "recommendation_color": recommendation_color
+        },
+        "recent_feedback": recent_feedback
+    }
+
+
 @api_router.get("/training/metrics")
 async def get_training_metrics(user: dict = Depends(auth_user)):
     """
