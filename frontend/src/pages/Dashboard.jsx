@@ -855,28 +855,6 @@ export default function Dashboard() {
                   </ul>
                 </div>
 
-                {/* Next workout card */}
-                <div
-                  className="rounded-2xl p-4 flex items-center gap-4"
-                  style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)" }}
-                  data-testid="next-workout-card"
-                >
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: `${recStyle.accent}20`, color: recStyle.accent }}
-                  >
-                    <Activity size={24} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs uppercase tracking-wider mb-0.5" style={{ color: "var(--text-tertiary)" }}>
-                      {t("dashboard.nextWorkout")}
-                    </p>
-                    <p className="font-bold text-base truncate" style={{ color: "var(--text-primary)" }}>
-                      {cardioData?.next_workout?.label || "—"}
-                    </p>
-                  </div>
-                </div>
-
                 {/* Metric widgets */}
                 <div>
                   <h2 className="text-xs uppercase tracking-widest mb-3 font-semibold" style={{ color: "var(--text-tertiary)" }}>
