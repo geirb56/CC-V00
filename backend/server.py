@@ -3522,12 +3522,34 @@ async def get_today_adaptive_session(user: dict = Depends(auth_user)):
 
     # 2. Get current fatigue level from cardio-coach
     # Use a direct call without auth to avoid circular dependency
-    cardio_coach_data = await get_cardio_coach(user_id=user["id"])
-
-    fatigue_ratio = cardio_coach_data.get("metrics", {}).get("fatigue_ratio", 1.0)
-    fatigue_status = cardio_coach_data.get("metrics", {}).get("fatigue_status", "green")
-    recommendation = cardio_coach_data.get("recommendation", "RUN HARD")
-    recommendation_color = cardio_coach_data.get("recommendation_color", "green")
+    # Falls back to mock_runner data if cardio-coach fails (e.g., no Terra data)
+    fatigue_data_source = "terra"
+    try:
+        cardio_coach_data = await get_cardio_coach(user_id=user["id"])
+        fatigue_ratio = cardio_coach_data.get("metrics", {}).get("fatigue_ratio")
+        fatigue_status = cardio_coach_data.get("metrics", {}).get("fatigue_status")
+        recommendation = cardio_coach_data.get("recommendation")
+        recommendation_color = cardio_coach_data.get("recommendation_color")
+        
+        # Check if any critical value is None (would cause float() error downstream)
+        if fatigue_ratio is None or fatigue_status is None:
+            raise ValueError("Missing fatigue metrics from cardio-coach")
+            
+    except Exception as e:
+        # Fallback to mock_runner data
+        logger.warning(f"[TrainingToday] cardio-coach failed, using mock_runner fallback: {e}")
+        fatigue_data_source = "mock"
+        
+        # Import and call mock_runner to get realistic fallback data
+        from api.mock_runner import _build_full_profile
+        mock_profile = _build_full_profile()
+        mock_today = mock_profile.get("today", {})
+        mock_metrics = mock_today.get("metrics", {})
+        
+        fatigue_ratio = mock_metrics.get("fatigue_ratio", 1.0)
+        fatigue_status = mock_metrics.get("fatigue_status", "green")
+        recommendation = mock_today.get("recommendation", "RUN HARD")
+        recommendation_color = mock_today.get("recommendation_color", "green")
 
     # 3. Get historical feedback for this user
     feedback_cursor = db.training_feedback.find(
@@ -3615,7 +3637,8 @@ async def get_today_adaptive_session(user: dict = Depends(auth_user)):
             "fatigue_ratio": round(fatigue_ratio, 2),
             "fatigue_status": fatigue_status,
             "recommendation": recommendation,
-            "recommendation_color": recommendation_color
+            "recommendation_color": recommendation_color,
+            "data_source": fatigue_data_source
         },
         "recent_feedback": recent_feedback
     }

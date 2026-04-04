@@ -61,6 +61,9 @@ CardioCoach is a full-stack AI-powered sports coaching app for endurance athlete
 
 # Changelog
 
+## 2025-04-04
+- **Fixed /api/training/today endpoint**: Added mock_runner fallback when cardio-coach fails (no Terra data). Interactive training plan now displays correctly with fatigue-based recommendations.
+
 ## 2025-04-02
 - **Fixed Dashboard translations**: Added 16 new i18n keys for metrics section (todaysMetrics, hrvDeviation, restingHR, etc.) in EN/FR/ES
 - **Fixed Coach LLM chat**: Added missing `EMERGENT_LLM_KEY` to backend .env - chat now works with GPT-4.1-mini
