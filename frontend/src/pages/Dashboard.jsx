@@ -18,6 +18,8 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
+  Check,
+  X,
 } from "lucide-react";
 import {
   BarChart,
@@ -32,6 +34,8 @@ import {
 } from "recharts";
 import { useUnitSystem } from "@/context/UnitContext";
 import { formatDistance, formatPace as formatPaceUnits } from "@/utils/units";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 import { API_BASE_URL } from "@/config";
 const API = API_BASE_URL;
@@ -238,20 +242,12 @@ export default function Dashboard() {
   const [cardioLoading, setCardioLoading] = useState(true);
   const [cardioError, setCardioError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [sessionFeedback, setSessionFeedback] = useState({});
   const { t, lang } = useLanguage();
   const { unitSystem } = useUnitSystem();
   const fetchedRef = useRef(false);
   const lastLangRef = useRef(lang);
-
-  // Mapping des jours vers index selon la langue
-  // The merged object covers all three languages so the lookup works regardless
-  // of whether the backend returns English (fallback plan), French (LLM) or Spanish day names.
-  const dayMappings = {
-    fr: { "Lundi": 1, "Mardi": 2, "Mercredi": 3, "Jeudi": 4, "Vendredi": 5, "Samedi": 6, "Dimanche": 0 },
-    en: { "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6, "Sunday": 0 },
-    es: { "Lunes": 1, "Martes": 2, "Miércoles": 3, "Jueves": 4, "Viernes": 5, "Sábado": 6, "Domingo": 0 },
-  };
-  const dayMapping = { ...dayMappings.fr, ...dayMappings.en, ...dayMappings.es };
 
   useEffect(() => {
     if (fetchedRef.current && lastLangRef.current === lang) {
@@ -265,11 +261,11 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [insightRes, workoutsRes, ragRes, planRes, metricsRes] = await Promise.all([
+      const [insightRes, workoutsRes, ragRes, todayRes, metricsRes] = await Promise.all([
         axios.get(`${API}/dashboard/insight?language=${lang}`),
         axios.get(`${API}/workouts`),
         axios.get(`${API}/rag/dashboard`).catch(() => ({ data: null })),
-        axios.get(`${API}/training/plan`, { headers: { "X-User-Id": "default" } }).catch(() => ({ data: null })),
+        axios.get(`${API}/training/today`, { headers: { "X-User-Id": "default" } }).catch(() => ({ data: null })),
         axios.get(`${API}/training/metrics`, { headers: { "X-User-Id": "default" } }).catch(() => ({ data: null }))
       ]);
       setInsight(insightRes.data);
@@ -281,17 +277,43 @@ export default function Dashboard() {
         setTrainingMetrics(metricsRes.data);
       }
       
-      // Trouver la séance du jour
-      if (planRes.data?.plan?.sessions) {
-        const todayIndex = new Date().getDay(); // 0=Dimanche, 1=Lundi...
-        const sessions = planRes.data.plan.sessions;
-        const todayPlan = sessions.find(s => dayMapping[s.day] === todayIndex);
-        setTodaySession(todayPlan);
+      // Utiliser la réponse de /api/training/today (avec adaptation)
+      if (todayRes.data?.status === "success") {
+        setTodaySession(todayRes.data);
       }
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFeedback = async (day, status) => {
+    setFeedbackSubmitting(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      await axios.post(
+        `${API}/training/feedback`,
+        null,
+        {
+          params: { date: today, workout_id: day, status },
+          headers: { "X-User-Id": "default" }
+        }
+      );
+
+      setSessionFeedback(prev => ({ ...prev, [day]: status }));
+      toast.success(t("trainingPlanExtended.feedbackSaved") || "Feedback enregistré");
+      
+      // Refresh today's session
+      const todayRes = await axios.get(`${API}/training/today`, { headers: { "X-User-Id": "default" } });
+      if (todayRes.data?.status === "success") {
+        setTodaySession(todayRes.data);
+      }
+    } catch (err) {
+      console.error("Error submitting feedback:", err);
+      toast.error(t("common.error") || "Erreur");
+    } finally {
+      setFeedbackSubmitting(false);
     }
   };
 
@@ -463,40 +485,128 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* TODAY'S WORKOUT */}
-      <div className="today-workout-card animate-in" style={{ animationDelay: "150ms" }} data-testid="today-workout-card">
-        <p className="today-label">{t("dashboard.todayLabel")}</p>
-        {todaySession ? (
-          todaySession.type?.toLowerCase().includes("repos") || todaySession.type?.toLowerCase() === "rest" ? (
-            <>
-              <h3 className="today-title" style={{ color: "var(--text-secondary)" }}>
-                {t("dashboard.todayRestTitle")}
-              </h3>
-              <p className="today-meta" style={{ opacity: 0.7 }}>
-                {todaySession.details || t("dashboard.todayRestDescription")}
-              </p>
-              <div className="today-details">
-                <span style={{ color: "var(--accent-teal)" }}>
-                  {t("dashboard.todayRestTagline")}
-                </span>
+      {/* TODAY'S SESSION - Interactive with Adaptation */}
+      <div 
+        className="today-workout-card animate-in" 
+        style={{ 
+          animationDelay: "150ms",
+          border: todaySession?.fatigue ? `2px solid ${
+            todaySession.fatigue.fatigue_status === "green" ? "#10b981" :
+            todaySession.fatigue.fatigue_status === "yellow" ? "#f59e0b" : "#ef4444"
+          }` : undefined
+        }} 
+        data-testid="today-workout-card"
+      >
+        <div className="flex items-center justify-between mb-2">
+          <p className="today-label">{t("dashboard.todayLabel")}</p>
+          {todaySession?.fatigue && (
+            <span
+              className="px-3 py-1 rounded-full text-xs font-bold"
+              style={{
+                background: todaySession.fatigue.fatigue_status === "green" ? "#10b98120" :
+                           todaySession.fatigue.fatigue_status === "yellow" ? "#f59e0b20" : "#ef444420",
+                color: todaySession.fatigue.fatigue_status === "green" ? "#10b981" :
+                       todaySession.fatigue.fatigue_status === "yellow" ? "#f59e0b" : "#ef4444"
+              }}
+            >
+              {todaySession.fatigue.recommendation || "RUN HARD"}
+            </span>
+          )}
+        </div>
+
+        {todaySession?.status === "success" ? (
+          <>
+            {/* Adaptation notice */}
+            {todaySession.adaptation_applied && (
+              <div
+                className="p-2 rounded-lg text-xs mb-3"
+                style={{
+                  background: "rgba(249, 115, 22, 0.1)",
+                  border: "1px solid rgba(249, 115, 22, 0.3)",
+                  color: "#fb923c"
+                }}
+              >
+                <strong>{t("trainingPlanExtended.adaptedBecause") || "Adapté :"}</strong> {todaySession.adaptation_reason}
               </div>
-            </>
-          ) : (
-            <>
-              <h3 className="today-title">{todaySession.type}</h3>
-              <p className="today-meta">
-                {todaySession.duration && todaySession.duration !== "0min" && `${todaySession.duration}`}
-                {todaySession.distance_km > 0 &&
-                  ` • ${formatDistance(todaySession.distance_km, { unitSystem })}`}
-                {todaySession.target_pace && ` • ${t("dashboard.targetLabel")}: ${todaySession.target_pace}`}
-              </p>
-              <div className="today-details">
-                <span>{todaySession.details}</span>
-              </div>
-            </>
-          )
+            )}
+
+            {/* Session display */}
+            {(() => {
+              const session = todaySession.adaptation_applied ? todaySession.adaptive_session : todaySession.planned_session;
+              const isRest = session?.type?.toLowerCase().includes("repos") || session?.type?.toLowerCase() === "rest";
+              
+              if (isRest) {
+                return (
+                  <>
+                    <h3 className="today-title" style={{ color: "var(--text-secondary)" }}>
+                      {t("dashboard.todayRestTitle")}
+                    </h3>
+                    <p className="today-meta" style={{ opacity: 0.7 }}>
+                      {session?.details || t("dashboard.todayRestDescription")}
+                    </p>
+                    <div className="today-details">
+                      <span style={{ color: "var(--accent-teal)" }}>
+                        {t("dashboard.todayRestTagline")}
+                      </span>
+                    </div>
+                  </>
+                );
+              }
+              
+              return (
+                <>
+                  <h3 className="today-title">{session?.type}</h3>
+                  <p className="today-meta">
+                    {session?.duration && session.duration !== "0min" && `${session.duration}`}
+                    {session?.distance_km > 0 && ` • ${formatDistance(session.distance_km, { unitSystem })}`}
+                  </p>
+                  <div className="today-details">
+                    <span>{session?.details}</span>
+                  </div>
+                  
+                  {/* Show original session if adapted */}
+                  {todaySession.adaptation_applied && todaySession.planned_session && (
+                    <div className="mt-2 pt-2" style={{ borderTop: "1px solid var(--border-color)", opacity: 0.5 }}>
+                      <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                        {t("trainingPlanExtended.originalSession") || "Séance originale"}: {todaySession.planned_session.type} {todaySession.planned_session.duration}
+                      </p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {/* Feedback Buttons */}
+            <div className="flex gap-2 mt-3">
+              <Button
+                size="sm"
+                onClick={() => handleFeedback(todaySession.day, "done")}
+                disabled={feedbackSubmitting || sessionFeedback[todaySession.day] === "done"}
+                className={`flex-1 ${
+                  sessionFeedback[todaySession.day] === "done"
+                    ? "bg-green-600 text-white"
+                    : "bg-slate-700 text-slate-200 hover:bg-green-600"
+                }`}
+              >
+                <Check className="w-4 h-4 mr-1" />
+                {t("trainingPlanExtended.feedbackDone") || "Réalisé"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleFeedback(todaySession.day, "missed")}
+                disabled={feedbackSubmitting || sessionFeedback[todaySession.day] === "missed"}
+                className={`flex-1 ${
+                  sessionFeedback[todaySession.day] === "missed"
+                    ? "bg-red-600 text-white"
+                    : "bg-slate-700 text-slate-200 hover:bg-red-600"
+                }`}
+              >
+                <X className="w-4 h-4 mr-1" />
+                {t("trainingPlanExtended.feedbackMissed") || "Manqué"}
+              </Button>
+            </div>
+          </>
         ) : (
-          // Aucun plan disponible
           <>
             <h3 className="today-title" style={{ color: "var(--text-secondary)" }}>
               {t("dashboard.todayNoSessionTitle")}
