@@ -3558,17 +3558,21 @@ async def get_today_adaptive_session(user: dict = Depends(auth_user)):
     ).sort("date", -1).limit(10)
     recent_feedback = await feedback_cursor.to_list(10)
 
-    # 4. Apply adaptation logic
+    # 4. Apply adaptation logic based on RECOMMENDATION (not fatigue_ratio alone)
+    # This ensures consistency between what's displayed and what's applied
     adaptive_session = planned_session.copy()
     adaptation_applied = False
     adaptation_reason = ""
 
-    if fatigue_ratio > 1.5 or fatigue_status == "red":
-        # RED: Convert to recovery
+    # Normalize recommendation
+    rec_upper = (recommendation or "").upper().replace(" ", "")
+    
+    if rec_upper == "REST" or recommendation_color == "red":
+        # REST: Convert to recovery or rest day
         adaptation_applied = True
-        adaptation_reason = "High fatigue detected - session converted to active recovery"
+        adaptation_reason = "Repos recommandé - séance convertie en récupération active"
 
-        # Reduce duration by 40-50%
+        # Reduce duration by 50%
         original_duration = planned_session.get("duration", "0min")
         duration_match = __import__("re").match(r"(\d+)", original_duration)
         if duration_match:
@@ -3582,47 +3586,46 @@ async def get_today_adaptive_session(user: dict = Depends(auth_user)):
 
         # Update details to Z1
         original_distance = planned_session.get("distance_km", 0)
-        new_distance = original_distance * 0.5 if original_distance else 0
-        adaptive_session["distance_km"] = round(new_distance, 1)
-        adaptive_session["details"] = f"{new_distance:.1f} km • Very easy pace • HR < 130 bpm • Zone 1 recovery"
+        new_distance = round(original_distance * 0.5, 1) if original_distance else 0
+        adaptive_session["distance_km"] = new_distance
+        adaptive_session["details"] = f"{new_distance} km • Allure très facile • HR < 130 bpm • Zone 1"
 
         # Reduce TSS
         original_tss = planned_session.get("estimated_tss", 0)
         adaptive_session["estimated_tss"] = int(original_tss * 0.4)
 
-    elif fatigue_ratio > 1.2 or fatigue_status == "yellow":
-        # ORANGE: Reduce intensity and duration
-        adaptation_applied = True
-        adaptation_reason = "Moderate fatigue detected - intensity and duration reduced"
-
-        # Reduce duration by 20%
-        original_duration = planned_session.get("duration", "0min")
-        duration_match = __import__("re").match(r"(\d+)", original_duration)
-        if duration_match:
-            original_mins = int(duration_match.group(1))
-            new_mins = int(original_mins * 0.8)
-            adaptive_session["duration"] = f"{new_mins}min"
-
-        # Convert intervals/threshold to endurance
+    elif rec_upper in ["EASYRUN", "EASY"] or recommendation_color == "yellow":
+        # EASY RUN: Reduce intensity, convert hard sessions to easy
         session_type = planned_session.get("type", "").lower()
-        if any(x in session_type for x in ["interval", "threshold", "tempo", "fractionn"]):
+        
+        # Only adapt if it's a hard/moderate session
+        if any(x in session_type for x in ["interval", "threshold", "tempo", "fartlek", "fractionn"]):
+            adaptation_applied = True
+            adaptation_reason = "Easy run recommandé - intensité réduite"
+
+            # Reduce duration by 20%
+            original_duration = planned_session.get("duration", "0min")
+            duration_match = __import__("re").match(r"(\d+)", original_duration)
+            if duration_match:
+                original_mins = int(duration_match.group(1))
+                new_mins = int(original_mins * 0.8)
+                adaptive_session["duration"] = f"{new_mins}min"
+
+            # Convert to endurance
             adaptive_session["type"] = "Endurance"
             adaptive_session["intensity"] = "easy"
 
-            # Update details
+            # Update distance and details
             original_distance = planned_session.get("distance_km", 0)
-            new_distance = original_distance * 0.8 if original_distance else 0
-            adaptive_session["distance_km"] = round(new_distance, 1)
-            adaptive_session["details"] = f"{new_distance:.1f} km • Easy pace • HR 130-145 bpm • Zone 2"
-        else:
-            # Just reduce distance/duration for easy runs
-            original_distance = planned_session.get("distance_km", 0)
-            new_distance = original_distance * 0.8 if original_distance else 0
-            adaptive_session["distance_km"] = round(new_distance, 1)
+            new_distance = round(original_distance * 0.8, 1) if original_distance else 0
+            adaptive_session["distance_km"] = new_distance
+            adaptive_session["details"] = f"{new_distance} km • Allure facile • HR 130-145 bpm • Zone 2"
 
-        # Reduce TSS
-        original_tss = planned_session.get("estimated_tss", 0)
-        adaptive_session["estimated_tss"] = int(original_tss * 0.7)
+            # Reduce TSS
+            original_tss = planned_session.get("estimated_tss", 0)
+            adaptive_session["estimated_tss"] = int(original_tss * 0.7)
+    
+    # RUN HARD (green): No adaptation needed, keep planned session
 
     # 5. Return both original and adaptive sessions
     return {

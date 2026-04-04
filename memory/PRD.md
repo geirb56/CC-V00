@@ -62,6 +62,7 @@ CardioCoach is a full-stack AI-powered sports coaching app for endurance athlete
 # Changelog
 
 ## 2025-04-04
+- **Fixed session adaptation logic**: Now uses `recommendation` (RUN HARD/EASY RUN/REST) instead of `fatigue_ratio` alone. Ensures consistency between displayed recommendation and applied adaptation (e.g., EASY RUN now correctly converts Tempo → Endurance).
 - **Refactored training plan generation**: Removed LLM dependency for session generation. Plans are now generated **deterministically** by code with mathematically consistent duration/distance/pace values. LLM removed from this flow = faster, cheaper, always accurate.
 - **Fixed /api/training/today endpoint**: Added mock_runner fallback when cardio-coach fails (no Terra data). Interactive training plan now displays correctly with fatigue-based recommendations.
 
