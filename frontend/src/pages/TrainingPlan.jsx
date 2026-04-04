@@ -3,10 +3,10 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  TrendingUp, RefreshCw, CheckCircle2, 
+import {
+  TrendingUp, RefreshCw, CheckCircle2,
   Zap, Clock, Activity, ChevronDown, ChevronUp, Play,
-  Trophy, Mountain, Calendar
+  Trophy, Mountain, Calendar, Check, X
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -84,6 +84,56 @@ const getSessionStyleKey = (type, intensity) => {
   return intensity || "endurance";
 };
 
+// SessionCard component for displaying a single session
+function SessionCard({ session, isGrayed = false, fatigueColor = null }) {
+  if (!session) return null;
+
+  const styleKey = getSessionStyleKey(session.type, session.intensity);
+  const style = SESSION_STYLES[styleKey] || SESSION_STYLES.endurance;
+  const isRest = styleKey === "repos";
+
+  // Override border color based on fatigue if provided
+  const borderColor = fatigueColor
+    ? (fatigueColor === "green" ? "#10b981" : fatigueColor === "yellow" ? "#f59e0b" : "#ef4444")
+    : style.border;
+
+  return (
+    <div
+      className={`flex items-center gap-2 p-3 rounded-lg ${isGrayed ? "opacity-50" : ""}`}
+      style={{
+        background: style.bg,
+        border: `2px solid ${borderColor}`
+      }}
+    >
+      <div
+        className="w-1 h-10 rounded-full shrink-0"
+        style={{ background: borderColor }}
+      />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-sm font-bold" style={{ color: style.text }}>
+            {session.type}
+          </span>
+          <span className="text-xs" style={{ color: style.text, opacity: 0.8 }}>
+            {session.duration}
+          </span>
+        </div>
+        {!isRest && session.details && (
+          <span className="text-xs block" style={{ color: style.text, opacity: 0.7 }}>
+            {session.details}
+          </span>
+        )}
+      </div>
+      <span
+        className="px-2 py-1 rounded-full text-xs font-bold shrink-0"
+        style={{ background: style.badge, color: style.badgeText }}
+      >
+        {session.estimated_tss || 0} TSS
+      </span>
+    </div>
+  );
+}
+
 export default function TrainingPlan() {
   const { t, lang } = useLanguage();
   const { isFree, loading: subLoading, trialDaysRemaining, isTrial } = useSubscription();
@@ -95,6 +145,12 @@ export default function TrainingPlan() {
   const [expandedWeek, setExpandedWeek] = useState(null);
   const [showAllWeeks, setShowAllWeeks] = useState(true);
   const [apiError, setApiError] = useState(null);
+
+  // New state for interactive features
+  const [todaySession, setTodaySession] = useState(null);
+  const [loadingToday, setLoadingToday] = useState(false);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [sessionFeedback, setSessionFeedback] = useState({});
 
   const fetchData = async () => {
     try {
@@ -125,8 +181,55 @@ export default function TrainingPlan() {
     }
   };
 
+  const fetchTodaySession = async () => {
+    setLoadingToday(true);
+    try {
+      const response = await axios.get(`${API}/training/today`, {
+        headers: { "X-User-Id": USER_ID }
+      });
+      setTodaySession(response.data);
+    } catch (err) {
+      console.error("Error fetching today's session:", err);
+      // Silently fail - not critical
+    } finally {
+      setLoadingToday(false);
+    }
+  };
+
+  const handleFeedback = async (workoutId, status) => {
+    setFeedbackSubmitting(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      await axios.post(
+        `${API}/training/feedback`,
+        null,
+        {
+          params: { date: today, workout_id: workoutId, status },
+          headers: { "X-User-Id": USER_ID }
+        }
+      );
+
+      // Update local state
+      setSessionFeedback(prev => ({
+        ...prev,
+        [workoutId]: status
+      }));
+
+      toast.success(t("trainingPlanExtended.feedbackSaved"));
+
+      // Refresh today's session to reflect feedback
+      await fetchTodaySession();
+    } catch (err) {
+      console.error("Error submitting feedback:", err);
+      toast.error(t("common.error"));
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchTodaySession();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleRefresh = async (newSessionCount = sessionsPerWeek) => {
@@ -241,9 +344,9 @@ export default function TrainingPlan() {
           </span>
         </div>
         <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--bg-secondary)" }}>
-          <div 
+          <div
             className="h-full rounded-full transition-all duration-500"
-            style={{ 
+            style={{
               width: `${(currentWeek / totalWeeks) * 100}%`,
               background: "linear-gradient(90deg, #8b5cf6 0%, #ec4899 100%)"
             }}
@@ -254,6 +357,111 @@ export default function TrainingPlan() {
           <span>{fullCycle?.goal || "SEMI"}</span>
         </div>
       </div>
+
+      {/* TODAY'S SESSION - Interactive Adaptive Section */}
+      {todaySession && todaySession.status === "success" && (
+        <div
+          className="card-modern p-4"
+          style={{
+            background: "var(--bg-card)",
+            border: `2px solid ${
+              todaySession.fatigue?.fatigue_status === "green" ? "#10b981" :
+              todaySession.fatigue?.fatigue_status === "yellow" ? "#f59e0b" : "#ef4444"
+            }`,
+            borderRadius: "16px"
+          }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5" style={{ color: "var(--text-secondary)" }} />
+              <span className="text-sm font-mono uppercase font-bold text-white">
+                {t("trainingPlanExtended.todayLabel")}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className="px-3 py-1 rounded-full text-xs font-bold"
+                style={{
+                  background: todaySession.fatigue?.fatigue_status === "green" ? "#10b98120" :
+                             todaySession.fatigue?.fatigue_status === "yellow" ? "#f59e0b20" : "#ef444420",
+                  color: todaySession.fatigue?.fatigue_status === "green" ? "#10b981" :
+                         todaySession.fatigue?.fatigue_status === "yellow" ? "#f59e0b" : "#ef4444"
+                }}
+              >
+                {todaySession.fatigue?.recommendation || "RUN HARD"}
+              </span>
+            </div>
+          </div>
+
+          {/* Adaptive Session Display */}
+          {todaySession.adaptation_applied ? (
+            <div className="space-y-3">
+              {/* Adaptation Reason */}
+              <div
+                className="p-2 rounded-lg text-xs"
+                style={{
+                  background: "rgba(249, 115, 22, 0.1)",
+                  border: "1px solid rgba(249, 115, 22, 0.3)",
+                  color: "#fb923c"
+                }}
+              >
+                <strong>{t("trainingPlanExtended.adaptedBecause")}</strong> {todaySession.adaptation_reason}
+              </div>
+
+              {/* Original Session (grayed out) */}
+              <div className="opacity-50">
+                <div className="text-[10px] font-mono uppercase mb-1" style={{ color: "var(--text-tertiary)" }}>
+                  {t("trainingPlanExtended.originalSession")}
+                </div>
+                <SessionCard session={todaySession.planned_session} isGrayed={true} />
+              </div>
+
+              {/* Adaptive Session (highlighted) */}
+              <div>
+                <div className="text-[10px] font-mono uppercase mb-1" style={{ color: "var(--text-secondary)" }}>
+                  {t("trainingPlanExtended.adaptiveSession")}
+                </div>
+                <SessionCard
+                  session={todaySession.adaptive_session}
+                  fatigueColor={todaySession.fatigue?.recommendation_color}
+                />
+              </div>
+            </div>
+          ) : (
+            <SessionCard session={todaySession.planned_session} />
+          )}
+
+          {/* Feedback Buttons */}
+          <div className="flex gap-2 mt-3">
+            <Button
+              size="sm"
+              onClick={() => handleFeedback(todaySession.day, "done")}
+              disabled={feedbackSubmitting || sessionFeedback[todaySession.day] === "done"}
+              className={`flex-1 ${
+                sessionFeedback[todaySession.day] === "done"
+                  ? "bg-green-600 text-white"
+                  : "bg-slate-700 text-slate-200 hover:bg-green-600"
+              }`}
+            >
+              <Check className="w-4 h-4 mr-1" />
+              {t("trainingPlanExtended.feedbackDone")}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => handleFeedback(todaySession.day, "missed")}
+              disabled={feedbackSubmitting || sessionFeedback[todaySession.day] === "missed"}
+              className={`flex-1 ${
+                sessionFeedback[todaySession.day] === "missed"
+                  ? "bg-red-600 text-white"
+                  : "bg-slate-700 text-slate-200 hover:bg-red-600"
+              }`}
+            >
+              <X className="w-4 h-4 mr-1" />
+              {t("trainingPlanExtended.feedbackMissed")}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* TOUTES LES SEMAINES DU CYCLE */}
       <div className="card-modern p-4" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)", borderRadius: "16px" }}>
