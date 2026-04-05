@@ -6,15 +6,39 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   TrendingUp, RefreshCw, CheckCircle2,
   Zap, Clock, Activity, ChevronDown, ChevronUp,
-  Trophy, Mountain, Calendar
+  Trophy, Mountain, Calendar, Heart
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import Paywall from "@/components/Paywall";
 
+import { useUnitSystem } from "@/context/UnitContext";
+import { formatDistance } from "@/utils/units";
+
 import { API_BASE_URL } from "@/config";
 const API = API_BASE_URL;
 const USER_ID = "default";
+
+// Helper functions for ACWR/TSB colors
+const getAcwrColor = (status) => {
+  switch(status) {
+    case "low": return "#3b82f6";
+    case "optimal": return "#22c55e";
+    case "warning": return "#f59e0b";
+    case "danger": return "#ef4444";
+    default: return "#6b7280";
+  }
+};
+
+const getTsbColor = (status) => {
+  switch(status) {
+    case "fresh": return "#22c55e";
+    case "ready": return "#3b82f6";
+    case "training": return "#f59e0b";
+    case "fatigued": return "#ef4444";
+    default: return "#6b7280";
+  }
+};
 
 // Couleurs par phase
 const PHASE_COLORS = {
@@ -136,9 +160,11 @@ function SessionCard({ session, isGrayed = false, fatigueColor = null }) {
 
 export default function TrainingPlan() {
   const { t, lang } = useLanguage();
+  const { unitSystem } = useUnitSystem();
   const { isFree, loading: subLoading, trialDaysRemaining, isTrial } = useSubscription();
   const [plan, setPlan] = useState(null);
   const [fullCycle, setFullCycle] = useState(null);
+  const [trainingMetrics, setTrainingMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sessionsPerWeek, setSessionsPerWeek] = useState(null);
@@ -148,12 +174,16 @@ export default function TrainingPlan() {
 
   const fetchData = async () => {
     try {
-      const [planRes, cycleRes] = await Promise.all([
+      const [planRes, cycleRes, metricsRes] = await Promise.all([
         axios.get(`${API}/training/plan`, { headers: { "X-User-Id": USER_ID } }),
-        axios.get(`${API}/training/full-cycle`, { params: { lang }, headers: { "X-User-Id": USER_ID } })
+        axios.get(`${API}/training/full-cycle`, { params: { lang }, headers: { "X-User-Id": USER_ID } }),
+        axios.get(`${API}/training/metrics`, { headers: { "X-User-Id": USER_ID } }).catch(() => ({ data: null }))
       ]);
       setPlan(planRes.data);
       setFullCycle(cycleRes.data);
+      if (metricsRes.data) {
+        setTrainingMetrics(metricsRes.data);
+      }
       setApiError(null);
       if (planRes.data?.sessions_per_week) {
         setSessionsPerWeek(planRes.data.sessions_per_week);
@@ -302,6 +332,121 @@ export default function TrainingPlan() {
         <div className="flex justify-between mt-2 text-xs" style={{ color: "var(--text-tertiary)" }}>
           <span>{t("trainingPlanExtended.startLabel")}</span>
           <span>{fullCycle?.goal || "SEMI"}</span>
+        </div>
+      </div>
+
+      {/* METRICS ROW - Cette semaine & Charge 28j */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Cette semaine */}
+        <div 
+          className="p-4 rounded-2xl animate-in"
+          style={{ 
+            background: "var(--bg-card)", 
+            border: "1px solid var(--border-color)",
+            animationDelay: "50ms" 
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-4 h-4" style={{ color: "var(--accent-violet)" }} />
+            <span className="text-xs uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
+              {t("dashboard.thisWeek")}
+            </span>
+          </div>
+          <div className="flex items-baseline">
+            <span className="text-2xl font-bold text-white">
+              {formatDistance(trainingMetrics?.load_7 || 0, { unitSystem })}
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden mt-2" style={{ background: "var(--bg-secondary)" }}>
+            <div 
+              className="h-full rounded-full"
+              style={{ 
+                width: `${Math.min(100, ((trainingMetrics?.load_7 || 0) / (trainingMetrics?.weekly_target || 40)) * 100)}%`,
+                background: "var(--accent-violet)"
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Charge 28j */}
+        <div 
+          className="p-4 rounded-2xl animate-in"
+          style={{ 
+            background: "var(--bg-card)", 
+            border: "1px solid var(--border-color)",
+            animationDelay: "100ms" 
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="w-4 h-4" style={{ color: "var(--accent-pink)" }} />
+            <span className="text-xs uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
+              {t("dashboard.load28Label")}
+            </span>
+          </div>
+          <div className="flex items-baseline">
+            <span className="text-2xl font-bold text-white">
+              {formatDistance(trainingMetrics?.load_28 || 0, { unitSystem })}
+            </span>
+          </div>
+          <p className="text-xs mt-1" style={{ color: "var(--text-tertiary)" }}>
+            {t("dashboard.load28Subtitle")}
+          </p>
+        </div>
+      </div>
+
+      {/* ACWR & TSB ROW */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* ACWR */}
+        <div 
+          className="p-4 rounded-2xl animate-in"
+          style={{ 
+            background: "var(--bg-card)", 
+            border: "1px solid var(--border-color)",
+            animationDelay: "120ms" 
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Activity className="w-4 h-4" style={{ color: getAcwrColor(trainingMetrics?.acwr_status) }} />
+            <span className="text-xs uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
+              ACWR
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold" style={{ color: getAcwrColor(trainingMetrics?.acwr_status) }}>
+              {trainingMetrics?.acwr?.toFixed(2) || "1.00"}
+            </span>
+            {trainingMetrics?.acwr_status === "optimal" && (
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#22c55e20", color: "#22c55e" }}>✓</span>
+            )}
+          </div>
+          <p className="text-xs mt-1" style={{ color: getAcwrColor(trainingMetrics?.acwr_status) }}>
+            {trainingMetrics?.acwr_status ? t(`dashboard.acwr_status.${trainingMetrics.acwr_status}`) : t("dashboard.acwr_status.optimal")}
+          </p>
+        </div>
+
+        {/* TSB */}
+        <div 
+          className="p-4 rounded-2xl animate-in"
+          style={{ 
+            background: "var(--bg-card)", 
+            border: "1px solid var(--border-color)",
+            animationDelay: "140ms" 
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Heart className="w-4 h-4" style={{ color: getTsbColor(trainingMetrics?.tsb_status) }} />
+            <span className="text-xs uppercase tracking-wider" style={{ color: "var(--text-tertiary)" }}>
+              TSB
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold" style={{ color: getTsbColor(trainingMetrics?.tsb_status) }}>
+              {trainingMetrics?.tsb?.toFixed(1) || "0.0"}
+            </span>
+          </div>
+          <p className="text-xs mt-1" style={{ color: getTsbColor(trainingMetrics?.tsb_status) }}>
+            {trainingMetrics?.tsb_label || t("dashboard.tsb_status.training")}
+          </p>
         </div>
       </div>
 
