@@ -800,6 +800,11 @@ export default function Dashboard() {
             const m = cardioData?.metrics || {};
             const recStyle = REC_STYLES[cardioData?.recommendation_color] || REC_STYLES.green;
             const history = cardioData?.history || [];
+            
+            // Calculate Run Readiness Score from fatigue_ratio
+            const fatigueRatio = m.fatigue_ratio ?? 1.0;
+            const runReadinessScore = Math.max(20, Math.min(100, Math.round(120 - (fatigueRatio * 25))));
+            
             return (
               <>
                 <div
@@ -819,12 +824,29 @@ export default function Dashboard() {
                       <RefreshCw size={14} style={{ color: recStyle.accent }} />
                     </button>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-4xl">{cardioData?.recommendation_emoji}</span>
-                    <span className="text-3xl font-black tracking-tight" style={{ color: recStyle.accent }}>
-                      {cardioData?.recommendation || "—"}
-                    </span>
+                  
+                  {/* Run Readiness Score - Big Display */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-center">
+                      <span 
+                        className="text-6xl font-black"
+                        style={{ color: recStyle.accent }}
+                      >
+                        {runReadinessScore}
+                      </span>
+                      <span className="text-xs uppercase tracking-wider mt-1" style={{ color: "var(--text-tertiary)" }}>
+                        {t("dashboard.readinessScore") || "Run Readiness"}
+                      </span>
+                    </div>
+                    <div className="h-16 w-px" style={{ background: `${recStyle.accent}40` }} />
+                    <div className="flex items-center gap-2">
+                      <span className="text-3xl">{cardioData?.recommendation_emoji}</span>
+                      <span className="text-2xl font-black tracking-tight" style={{ color: recStyle.accent }}>
+                        {cardioData?.recommendation || "—"}
+                      </span>
+                    </div>
                   </div>
+                  
                   <ul className="space-y-1">
                     {(cardioData?.reasons || []).map((r, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs" style={{ color: "var(--text-secondary)" }}>
