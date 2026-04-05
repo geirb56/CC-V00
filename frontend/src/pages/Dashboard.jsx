@@ -497,26 +497,6 @@ export default function Dashboard() {
   return (
     <div className="p-4 pb-24 space-y-4" style={{ background: "var(--bg-primary)" }}>
       
-      {/* FORME ACTUELLE - Form Score Card */}
-      <div className="form-score-card p-4 animate-in">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-wider mb-2" style={{ color: "var(--text-tertiary)" }}>
-              {t("dashboard.currentForm")}
-            </p>
-            <div className="flex items-baseline">
-              <span className="form-score-value">{recovery?.score || 75}</span>
-              <span className="form-score-unit">pts</span>
-            </div>
-            <p className="form-score-change mt-1">
-              ↑ +3 {t("dashboard.thisWeekCompact")}
-            </p>
-          </div>
-          <CircularGauge value={recovery?.score || 75} />
-        </div>
-        <MiniLineChart data={chartData} />
-      </div>
-
       {/* METRICS ROW - Cette semaine & ACWR/TSB */}
       <div className="grid grid-cols-2 gap-3">
         {/* Cette semaine */}
@@ -865,6 +845,14 @@ export default function Dashboard() {
                     style={{ scrollbarWidth: "none" }}
                     data-testid="metrics-scroll"
                   >
+                    <MetricWidget
+                      icon={TrendingUp}
+                      label={t("dashboard.currentForm")}
+                      value={recovery?.score || 75}
+                      unit="pts"
+                      status={recovery?.score >= 75 ? "green" : recovery?.score >= 50 ? "yellow" : "red"}
+                      detail={recovery?.status === "ready" ? t("dashboard.formReady") || "Prêt" : recovery?.status === "ok" ? t("dashboard.formOk") || "OK" : t("dashboard.formTired") || "Fatigué"}
+                    />
                     <MetricWidget
                       icon={Heart}
                       label={t("dashboard.hrvDeviation")}
