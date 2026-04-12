@@ -61,6 +61,9 @@ CardioCoach is a full-stack AI-powered sports coaching app for endurance athlete
 
 # Changelog
 
+## 2025-04-12
+- **Dashboard layout reordered**: Components now appear in user-requested order: 1) Recommandation du jour (score + RUN HARD/EASY/REST), 2) Métriques du jour (6 widgets), 3) Séance du jour, 4) Séances récentes. Animation delays updated accordingly.
+
 ## 2025-04-04
 - **Moved "Today's Session" card to Dashboard**: The interactive session card with adaptation, recommendation badge, and feedback buttons is now on the Dashboard instead of Training Plan page.
 - **Fixed session adaptation logic**: Now uses `recommendation` (RUN HARD/EASY RUN/REST) instead of `fatigue_ratio` alone. Ensures consistency between displayed recommendation and applied adaptation (e.g., EASY RUN now correctly converts Tempo → Endurance).
@@ -91,11 +94,13 @@ CardioCoach is a full-stack AI-powered sports coaching app for endurance athlete
 - ✅ VMA/Race Predictions display in Progress tab
 - ✅ Demo mode with mock data
 - ✅ Multilingual support (EN/FR/ES)
+- ✅ Dashboard layout reordering: Recommandation → Métriques → Séance du jour → Séances récentes
 
 ## P1 (High Priority) - Backlog
 - Real Terra API integration (requires user API key)
 - Stripe payment integration (requires API key)
 - User authentication system
+- Refactoring Dashboard.jsx into smaller components (SessionCard, MetricWidgets, etc.)
 
 ## P2 (Nice to Have)
 - Custom training plan editor

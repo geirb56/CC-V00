@@ -497,197 +497,6 @@ export default function Dashboard() {
   return (
     <div className="p-4 pb-24 space-y-4" style={{ background: "var(--bg-primary)" }}>
 
-      {/* TODAY'S SESSION - Interactive with Adaptation */}
-      <div 
-        className="today-workout-card animate-in" 
-        style={{ 
-          animationDelay: "150ms",
-          border: todaySession?.fatigue ? `2px solid ${
-            todaySession.fatigue.fatigue_status === "green" ? "#10b981" :
-            todaySession.fatigue.fatigue_status === "yellow" ? "#f59e0b" : "#ef4444"
-          }` : undefined
-        }} 
-        data-testid="today-workout-card"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <p className="today-label">{t("dashboard.todayLabel")}</p>
-          {todaySession?.fatigue && (
-            <span
-              className="px-3 py-1 rounded-full text-xs font-bold"
-              style={{
-                background: todaySession.fatigue.fatigue_status === "green" ? "#10b98120" :
-                           todaySession.fatigue.fatigue_status === "yellow" ? "#f59e0b20" : "#ef444420",
-                color: todaySession.fatigue.fatigue_status === "green" ? "#10b981" :
-                       todaySession.fatigue.fatigue_status === "yellow" ? "#f59e0b" : "#ef4444"
-              }}
-            >
-              {todaySession.fatigue.recommendation || "RUN HARD"}
-            </span>
-          )}
-        </div>
-
-        {todaySession?.status === "success" ? (
-          <>
-            {/* Adaptation notice */}
-            {todaySession.adaptation_applied && (
-              <div
-                className="p-2 rounded-lg text-xs mb-3"
-                style={{
-                  background: "rgba(249, 115, 22, 0.1)",
-                  border: "1px solid rgba(249, 115, 22, 0.3)",
-                  color: "#fb923c"
-                }}
-              >
-                <strong>{t("trainingPlanExtended.adaptedBecause") || "Adapté :"}</strong> {todaySession.adaptation_reason}
-              </div>
-            )}
-
-            {/* Display with SessionCard */}
-            {todaySession.adaptation_applied ? (
-              <div className="space-y-3">
-                {/* Original Session (grayed out) */}
-                <div>
-                  <div className="text-[10px] font-mono uppercase mb-1" style={{ color: "var(--text-tertiary)" }}>
-                    {t("trainingPlanExtended.originalSession") || "Séance originale"}
-                  </div>
-                  <SessionCard session={todaySession.planned_session} isGrayed={true} />
-                </div>
-
-                {/* Adaptive Session (highlighted) */}
-                <div>
-                  <div className="text-[10px] font-mono uppercase mb-1" style={{ color: "var(--text-secondary)" }}>
-                    {t("trainingPlanExtended.adaptiveSession") || "Séance adaptative"}
-                  </div>
-                  <SessionCard
-                    session={todaySession.adaptive_session}
-                    fatigueColor={todaySession.fatigue?.recommendation_color}
-                  />
-                </div>
-              </div>
-            ) : (
-              <SessionCard session={todaySession.planned_session} />
-            )}
-
-            {/* Feedback Buttons */}
-            <div className="flex gap-2 mt-3">
-              <Button
-                size="sm"
-                onClick={() => handleFeedback(todaySession.day, "done")}
-                disabled={feedbackSubmitting || sessionFeedback[todaySession.day] === "done"}
-                className={`flex-1 ${
-                  sessionFeedback[todaySession.day] === "done"
-                    ? "bg-green-600 text-white"
-                    : "bg-slate-700 text-slate-200 hover:bg-green-600"
-                }`}
-              >
-                <Check className="w-4 h-4 mr-1" />
-                {t("trainingPlanExtended.feedbackDone") || "Réalisé"}
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleFeedback(todaySession.day, "missed")}
-                disabled={feedbackSubmitting || sessionFeedback[todaySession.day] === "missed"}
-                className={`flex-1 ${
-                  sessionFeedback[todaySession.day] === "missed"
-                    ? "bg-red-600 text-white"
-                    : "bg-slate-700 text-slate-200 hover:bg-red-600"
-                }`}
-              >
-                <X className="w-4 h-4 mr-1" />
-                {t("trainingPlanExtended.feedbackMissed") || "Manqué"}
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <h3 className="today-title" style={{ color: "var(--text-secondary)" }}>
-              {t("dashboard.todayNoSessionTitle")}
-            </h3>
-            <p className="today-meta" style={{ opacity: 0.7 }}>
-              {t("dashboard.todayNoSessionSubtitle")}
-            </p>
-          </>
-        )}
-      </div>
-
-      {/* DERNIÈRES SORTIES */}
-      <div className="animate-in" style={{ animationDelay: "200ms" }}>
-        <h2 className="section-header">
-          {t("dashboard.recentWorkouts")}
-        </h2>
-        
-        <div className="space-y-2">
-          {workouts.slice(0, 5).map((workout, index) => {
-            // Better workout type detection
-            const workoutName = workout.name?.toLowerCase() || "";
-            const notes = workout.notes?.toLowerCase() || "";
-            const avgHR = workout.avg_heart_rate || 0;
-            
-            let workoutType = "endurance"; // default
-            
-            if (workoutName.includes("interval") || notes.includes("interval") || workoutName.includes("fractionn")) {
-              workoutType = "fractionne";
-            } else if (workoutName.includes("recup") || notes.includes("recup") || workoutName.includes("easy") || workoutName.includes("recovery")) {
-              workoutType = "recuperation";
-            } else if (avgHR > 165 || workoutName.includes("tempo") || workoutName.includes("seuil") || workoutName.includes("threshold")) {
-              workoutType = "seuil";
-            } else if (workout.type === "cycle") {
-              workoutType = "cycle";
-            }
-            
-            const typeConfig = WORKOUT_TYPES[workoutType] || WORKOUT_TYPES.endurance;
-            const TypeIcon = typeConfig.icon;
-            
-            return (
-              <Link
-                key={workout.id}
-                to={`/workout/${workout.id}`}
-                className="workout-list-item animate-in"
-                style={{ animationDelay: `${250 + index * 50}ms` }}
-              >
-                <div 
-                  className="workout-icon"
-                  style={{ 
-                    background: `${typeConfig.color}20`,
-                    color: typeConfig.color
-                  }}
-                >
-                  <TypeIcon className="w-5 h-5" />
-                </div>
-                
-                <div className="workout-info">
-                  <p className="workout-type-name">{t(`workoutTypes.${workoutType}`)}</p>
-                  <div className="workout-stats">
-                    <span>
-                      {formatDistance(workout.distance_km || 0, { unitSystem })}
-                    </span>
-                    <span className="dot" />
-                    <span>
-                      {formatPaceUnits(
-                        (workout.avg_pace_min_km || 0) * 60,
-                        { unitSystem }
-                      )}
-                    </span>
-                    {workout.avg_heart_rate && (
-                      <>
-                        <span className="dot" />
-                        <span>{t("dashboard.hrLabel")} {workout.avg_heart_rate}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                
-                <span className="workout-date">
-                  {getRelativeDate(workout.date, t, lang === "fr" ? "fr-FR" : "en-US")}
-                </span>
-                
-                <ChevronRight className="workout-arrow w-4 h-4" />
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
       {/* ── RUN RECOMMENDATION SECTION ────────────────────────────────────── */}
       <div className="animate-in" style={{ animationDelay: "300ms" }}>
         <h2 className="section-header">{t("dashboard.runReadiness")}</h2>
@@ -852,6 +661,198 @@ export default function Dashboard() {
           })()}
         </>
       )}
+
+      {/* TODAY'S SESSION - Interactive with Adaptation */}
+      <div 
+        className="today-workout-card animate-in" 
+        style={{ 
+          animationDelay: "200ms",
+          border: todaySession?.fatigue ? `2px solid ${
+            todaySession.fatigue.fatigue_status === "green" ? "#10b981" :
+            todaySession.fatigue.fatigue_status === "yellow" ? "#f59e0b" : "#ef4444"
+          }` : undefined
+        }} 
+        data-testid="today-workout-card"
+      >
+        <div className="flex items-center justify-between mb-3">
+          <p className="today-label">{t("dashboard.todayLabel")}</p>
+          {todaySession?.fatigue && (
+            <span
+              className="px-3 py-1 rounded-full text-xs font-bold"
+              style={{
+                background: todaySession.fatigue.fatigue_status === "green" ? "#10b98120" :
+                           todaySession.fatigue.fatigue_status === "yellow" ? "#f59e0b20" : "#ef444420",
+                color: todaySession.fatigue.fatigue_status === "green" ? "#10b981" :
+                       todaySession.fatigue.fatigue_status === "yellow" ? "#f59e0b" : "#ef4444"
+              }}
+            >
+              {todaySession.fatigue.recommendation || "RUN HARD"}
+            </span>
+          )}
+        </div>
+
+        {todaySession?.status === "success" ? (
+          <>
+            {/* Adaptation notice */}
+            {todaySession.adaptation_applied && (
+              <div
+                className="p-2 rounded-lg text-xs mb-3"
+                style={{
+                  background: "rgba(249, 115, 22, 0.1)",
+                  border: "1px solid rgba(249, 115, 22, 0.3)",
+                  color: "#fb923c"
+                }}
+              >
+                <strong>{t("trainingPlanExtended.adaptedBecause") || "Adapté :"}</strong> {todaySession.adaptation_reason}
+              </div>
+            )}
+
+            {/* Display with SessionCard */}
+            {todaySession.adaptation_applied ? (
+              <div className="space-y-3">
+                {/* Original Session (grayed out) */}
+                <div>
+                  <div className="text-[10px] font-mono uppercase mb-1" style={{ color: "var(--text-tertiary)" }}>
+                    {t("trainingPlanExtended.originalSession") || "Séance originale"}
+                  </div>
+                  <SessionCard session={todaySession.planned_session} isGrayed={true} />
+                </div>
+
+                {/* Adaptive Session (highlighted) */}
+                <div>
+                  <div className="text-[10px] font-mono uppercase mb-1" style={{ color: "var(--text-secondary)" }}>
+                    {t("trainingPlanExtended.adaptiveSession") || "Séance adaptative"}
+                  </div>
+                  <SessionCard
+                    session={todaySession.adaptive_session}
+                    fatigueColor={todaySession.fatigue?.recommendation_color}
+                  />
+                </div>
+              </div>
+            ) : (
+              <SessionCard session={todaySession.planned_session} />
+            )}
+
+            {/* Feedback Buttons */}
+            <div className="flex gap-2 mt-3">
+              <Button
+                size="sm"
+                onClick={() => handleFeedback(todaySession.day, "done")}
+                disabled={feedbackSubmitting || sessionFeedback[todaySession.day] === "done"}
+                className={`flex-1 ${
+                  sessionFeedback[todaySession.day] === "done"
+                    ? "bg-green-600 text-white"
+                    : "bg-slate-700 text-slate-200 hover:bg-green-600"
+                }`}
+              >
+                <Check className="w-4 h-4 mr-1" />
+                {t("trainingPlanExtended.feedbackDone") || "Réalisé"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleFeedback(todaySession.day, "missed")}
+                disabled={feedbackSubmitting || sessionFeedback[todaySession.day] === "missed"}
+                className={`flex-1 ${
+                  sessionFeedback[todaySession.day] === "missed"
+                    ? "bg-red-600 text-white"
+                    : "bg-slate-700 text-slate-200 hover:bg-red-600"
+                }`}
+              >
+                <X className="w-4 h-4 mr-1" />
+                {t("trainingPlanExtended.feedbackMissed") || "Manqué"}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="today-title" style={{ color: "var(--text-secondary)" }}>
+              {t("dashboard.todayNoSessionTitle")}
+            </h3>
+            <p className="today-meta" style={{ opacity: 0.7 }}>
+              {t("dashboard.todayNoSessionSubtitle")}
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* DERNIÈRES SORTIES */}
+      <div className="animate-in" style={{ animationDelay: "300ms" }}>
+        <h2 className="section-header">
+          {t("dashboard.recentWorkouts")}
+        </h2>
+        
+        <div className="space-y-2">
+          {workouts.slice(0, 5).map((workout, index) => {
+            // Better workout type detection
+            const workoutName = workout.name?.toLowerCase() || "";
+            const notes = workout.notes?.toLowerCase() || "";
+            const avgHR = workout.avg_heart_rate || 0;
+            
+            let workoutType = "endurance"; // default
+            
+            if (workoutName.includes("interval") || notes.includes("interval") || workoutName.includes("fractionn")) {
+              workoutType = "fractionne";
+            } else if (workoutName.includes("recup") || notes.includes("recup") || workoutName.includes("easy") || workoutName.includes("recovery")) {
+              workoutType = "recuperation";
+            } else if (avgHR > 165 || workoutName.includes("tempo") || workoutName.includes("seuil") || workoutName.includes("threshold")) {
+              workoutType = "seuil";
+            } else if (workout.type === "cycle") {
+              workoutType = "cycle";
+            }
+            
+            const typeConfig = WORKOUT_TYPES[workoutType] || WORKOUT_TYPES.endurance;
+            const TypeIcon = typeConfig.icon;
+            
+            return (
+              <Link
+                key={workout.id}
+                to={`/workout/${workout.id}`}
+                className="workout-list-item animate-in"
+                style={{ animationDelay: `${250 + index * 50}ms` }}
+              >
+                <div 
+                  className="workout-icon"
+                  style={{ 
+                    background: `${typeConfig.color}20`,
+                    color: typeConfig.color
+                  }}
+                >
+                  <TypeIcon className="w-5 h-5" />
+                </div>
+                
+                <div className="workout-info">
+                  <p className="workout-type-name">{t(`workoutTypes.${workoutType}`)}</p>
+                  <div className="workout-stats">
+                    <span>
+                      {formatDistance(workout.distance_km || 0, { unitSystem })}
+                    </span>
+                    <span className="dot" />
+                    <span>
+                      {formatPaceUnits(
+                        (workout.avg_pace_min_km || 0) * 60,
+                        { unitSystem }
+                      )}
+                    </span>
+                    {workout.avg_heart_rate && (
+                      <>
+                        <span className="dot" />
+                        <span>{t("dashboard.hrLabel")} {workout.avg_heart_rate}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                <span className="workout-date">
+                  {getRelativeDate(workout.date, t, lang === "fr" ? "fr-FR" : "en-US")}
+                </span>
+                
+                <ChevronRight className="workout-arrow w-4 h-4" />
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
     </div>
   );
 }
