@@ -842,35 +842,62 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* 7-Day Trend Graph */}
+                {/* 7-Day Readiness History */}
                 <div
                   className="rounded-2xl p-4"
                   style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)" }}
                   data-testid="trend-graph"
                 >
                   <h2 className="text-xs uppercase tracking-widest mb-4 font-semibold" style={{ color: "var(--text-tertiary)" }}>
-                    {t("dashboard.sevenDayTrend")}
+                    {t("dashboard.weeklyReadiness") || "Forme sur 7 jours"}
                   </h2>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={history} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barCategoryGap="20%">
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" vertical={false} />
-                      <XAxis dataKey="day" tick={{ fill: "var(--text-tertiary)", fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <YAxis yAxisId="left" tick={{ fill: "var(--text-tertiary)", fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, "auto"]} />
-                      <YAxis yAxisId="right" orientation="right" tick={{ fill: "var(--text-tertiary)", fontSize: 10 }} axisLine={false} tickLine={false} domain={[0, "auto"]} />
-                      <Tooltip content={<TrendTooltip />} />
-                      <Legend iconType="circle" iconSize={8} formatter={(v) => (<span style={{ color: "var(--text-secondary)", fontSize: 10 }}>{v}</span>)} />
-                      <Bar yAxisId="left" dataKey="training_load" name={t("dashboard.trainingLoadAcwr")} fill="#8b5cf680" radius={[4, 4, 0, 0]} maxBarSize={24} />
-                      <Line yAxisId="right" type="monotone" dataKey="fatigue_ratio" name={t("dashboard.fatigueRatio")} stroke="#ec4899" strokeWidth={2} dot={{ r: 3, fill: "#ec4899" }} activeDot={{ r: 5 }} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="flex gap-4 mt-2 justify-center">
+                  
+                  {/* Simple bar chart showing readiness score per day */}
+                  <div className="flex items-end justify-between gap-2 h-32">
+                    {(history || []).slice(-7).map((day, i) => {
+                      // Calculate readiness score from fatigue_ratio
+                      const fatigueRatio = day.fatigue_ratio ?? 1.0;
+                      const readinessScore = Math.max(20, Math.min(100, Math.round(120 - (fatigueRatio * 25))));
+                      const barHeight = (readinessScore / 100) * 100;
+                      
+                      // Color based on score
+                      const barColor = readinessScore >= 80 ? "#22c55e" : 
+                                       readinessScore >= 60 ? "#f59e0b" : "#ef4444";
+                      
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                          <span className="text-xs font-bold" style={{ color: barColor }}>
+                            {readinessScore}
+                          </span>
+                          <div 
+                            className="w-full rounded-t-md transition-all duration-300"
+                            style={{ 
+                              height: `${barHeight}%`,
+                              background: `linear-gradient(180deg, ${barColor} 0%, ${barColor}60 100%)`,
+                              minHeight: "20%"
+                            }}
+                          />
+                          <span className="text-[10px]" style={{ color: "var(--text-tertiary)" }}>
+                            {day.day?.slice(0, 3) || `J${i + 1}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="flex gap-4 mt-3 justify-center">
                     <div className="flex items-center gap-1 text-[10px]" style={{ color: "var(--text-tertiary)" }}>
-                      <div className="w-2 h-2 rounded-full" style={{ background: "#ec4899" }} />
-                      <span>{t("dashboard.fatigueRest")} &gt;{FATIGUE_REST_THRESHOLD} → {t("dashboard.rest")}</span>
+                      <div className="w-2 h-2 rounded-full" style={{ background: "#22c55e" }} />
+                      <span>≥80 {t("dashboard.formReady") || "Prêt"}</span>
                     </div>
                     <div className="flex items-center gap-1 text-[10px]" style={{ color: "var(--text-tertiary)" }}>
                       <div className="w-2 h-2 rounded-full" style={{ background: "#f59e0b" }} />
-                      <span>&gt;{FATIGUE_EASY_THRESHOLD} → {t("dashboard.easy")}</span>
+                      <span>60-79 {t("dashboard.formOk") || "OK"}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px]" style={{ color: "var(--text-tertiary)" }}>
+                      <div className="w-2 h-2 rounded-full" style={{ background: "#ef4444" }} />
+                      <span>&lt;60 {t("dashboard.formTired") || "Fatigué"}</span>
                     </div>
                   </div>
                 </div>
