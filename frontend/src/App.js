@@ -14,6 +14,7 @@ import Settings from "@/pages/Settings";
 import Subscription from "@/pages/Subscription";
 import TrainingPlan from "@/pages/TrainingPlan";
 import Coach from "@/pages/Coach";
+import Onboarding from "@/pages/Onboarding";
 import Layout from "@/components/Layout";
 import IOSPWAHint from "@/components/IOSPWAHint";
 
@@ -35,6 +36,7 @@ function App() {
                   <Route path="guidance" element={<Guidance />} />
                   <Route path="digest" element={<Digest />} />
                   <Route path="training" element={<TrainingPlan />} />
+                  <Route path="onboarding" element={<Onboarding />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="subscription" element={<Subscription />} />
                 </Route>

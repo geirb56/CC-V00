@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,7 @@ export default function Settings() {
     refreshSubscription 
   } = useSubscription();
   const { unitSystem, setUnitSystem } = useUnitSystem();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Premium state
@@ -587,6 +588,14 @@ export default function Settings() {
                 <p className="font-mono text-xs text-muted-foreground mb-4">
                   {t("settingsExtended.trainingPlanDesc")}
                 </p>
+                <Button
+                  variant="outline"
+                  className="mb-4 uppercase text-xs tracking-wider"
+                  onClick={() => navigate("/onboarding")}
+                  data-testid="start-onboarding"
+                >
+                  Start onboarding
+                </Button>
                 
                 {loadingTrainingPlan ? (
                   <div className="flex items-center gap-2 text-muted-foreground">
