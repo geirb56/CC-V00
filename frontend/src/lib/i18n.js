@@ -1180,8 +1180,27 @@ export const getAppLanguage = () => {
     } catch {
       // Ignore storage errors
     }
-    // 2) No stored preference: default to English (no browser detection)
+    // 2) Device language (phone/browser settings)
+    try {
+      const candidates = [];
+      if (Array.isArray(window.navigator.languages)) {
+        candidates.push(...window.navigator.languages);
+      }
+      candidates.push(window.navigator.language, window.navigator.userLanguage);
+
+      for (const rawLocale of candidates) {
+        if (!rawLocale || typeof rawLocale !== "string") continue;
+        const locale = rawLocale.toLowerCase().replace("_", "-");
+        const base = locale.split("-")[0];
+        if (translations[base]) {
+          return base;
+        }
+      }
+    } catch {
+      // Ignore detection errors
+    }
   }
+  // 3) Safe fallback
   return "en";
 };
 

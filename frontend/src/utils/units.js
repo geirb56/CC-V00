@@ -14,13 +14,30 @@ export const detectDeviceUnitSystem = () => {
   }
 
   try {
-    const locale =
-      (window.navigator.language ||
-        window.navigator.userLanguage ||
-        "").toLowerCase();
+    const candidates = [];
+    if (Array.isArray(window.navigator.languages)) {
+      candidates.push(...window.navigator.languages);
+    }
+    candidates.push(window.navigator.language, window.navigator.userLanguage);
 
-    // US or UK -> imperial
-    if (locale.startsWith("en-us") || locale.startsWith("en-gb") || locale.endsWith("-us") || locale.endsWith("-gb")) {
+    // Imperial countries
+    const imperialRegions = new Set(["US", "GB", "LR", "MM"]);
+
+    for (const rawLocale of candidates) {
+      if (!rawLocale || typeof rawLocale !== "string") continue;
+      const locale = rawLocale.replace("_", "-");
+      const parts = locale.split("-");
+      const region = parts.length > 1 ? parts[parts.length - 1].toUpperCase() : "";
+      if (imperialRegions.has(region)) {
+        return "imperial";
+      }
+    }
+
+    // Fallback if locale parsing failed: use Intl
+    const intlLocale = Intl.DateTimeFormat().resolvedOptions().locale || "";
+    const intlParts = intlLocale.replace("_", "-").split("-");
+    const intlRegion = intlParts.length > 1 ? intlParts[intlParts.length - 1].toUpperCase() : "";
+    if (imperialRegions.has(intlRegion)) {
       return "imperial";
     }
   } catch {
@@ -146,4 +163,3 @@ export const formatElevation = (meters, options = {}) => {
   const unit = unitSystem === "imperial" ? "ft" : "m";
   return `${rounded} ${unit}`;
 };
-
