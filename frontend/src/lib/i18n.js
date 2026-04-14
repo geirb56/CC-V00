@@ -1189,7 +1189,8 @@ export const getAppLanguage = () => {
       candidates.push(window.navigator.language, window.navigator.userLanguage);
 
       for (const rawLocale of candidates) {
-        if (!rawLocale || typeof rawLocale !== "string") continue;
+        if (!rawLocale) continue;
+        if (typeof rawLocale !== "string") continue;
         const locale = rawLocale.toLowerCase().replace(/_/g, "-");
         const base = locale.split("-")[0];
         if (translations[base]) {

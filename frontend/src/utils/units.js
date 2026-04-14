@@ -29,6 +29,7 @@ export const detectDeviceUnitSystem = () => {
     candidates.push(window.navigator.language, window.navigator.userLanguage);
 
     for (const rawLocale of candidates) {
+      if (!rawLocale) continue;
       const region = getRegionFromLocale(rawLocale);
       if (IMPERIAL_REGIONS.has(region)) {
         return "imperial";
