@@ -6,6 +6,7 @@
 // Conversions are done only for display.
 
 export const UNIT_SYSTEM_KEY = "cardiocoach_unit_system";
+const IMPERIAL_REGIONS = new Set(["US", "GB", "LR", "MM"]);
 
 // Detect device region and return a default unit system ("metric" | "imperial")
 export const detectDeviceUnitSystem = () => {
@@ -20,24 +21,21 @@ export const detectDeviceUnitSystem = () => {
     }
     candidates.push(window.navigator.language, window.navigator.userLanguage);
 
-    // Imperial countries
-    const imperialRegions = new Set(["US", "GB", "LR", "MM"]);
-
     for (const rawLocale of candidates) {
       if (!rawLocale || typeof rawLocale !== "string") continue;
-      const locale = rawLocale.replace("_", "-");
+      const locale = rawLocale.replace(/_/g, "-");
       const parts = locale.split("-");
       const region = parts.length > 1 ? parts[parts.length - 1].toUpperCase() : "";
-      if (imperialRegions.has(region)) {
+      if (IMPERIAL_REGIONS.has(region)) {
         return "imperial";
       }
     }
 
     // Fallback if locale parsing failed: use Intl
     const intlLocale = Intl.DateTimeFormat().resolvedOptions().locale || "";
-    const intlParts = intlLocale.replace("_", "-").split("-");
+    const intlParts = intlLocale.replace(/_/g, "-").split("-");
     const intlRegion = intlParts.length > 1 ? intlParts[intlParts.length - 1].toUpperCase() : "";
-    if (imperialRegions.has(intlRegion)) {
+    if (IMPERIAL_REGIONS.has(intlRegion)) {
       return "imperial";
     }
   } catch {

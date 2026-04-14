@@ -1190,7 +1190,7 @@ export const getAppLanguage = () => {
 
       for (const rawLocale of candidates) {
         if (!rawLocale || typeof rawLocale !== "string") continue;
-        const locale = rawLocale.toLowerCase().replace("_", "-");
+        const locale = rawLocale.toLowerCase().replace(/_/g, "-");
         const base = locale.split("-")[0];
         if (translations[base]) {
           return base;
