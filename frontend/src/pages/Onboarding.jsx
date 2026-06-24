@@ -63,6 +63,12 @@ export default function Onboarding() {
   const [loadingPhysio, setLoadingPhysio] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Garmin connect UI states (sensitive data cleared after send)
+  const [garminUsername, setGarminUsername] = useState("");
+  const [garminPassword, setGarminPassword] = useState("");
+  const [connectingGarmin, setConnectingGarmin] = useState(false);
+  const [showGarminForm, setShowGarminForm] = useState(false);
+
   useEffect(() => {
     const loadPhysio = async () => {
       setLoadingPhysio(true);
@@ -200,7 +206,79 @@ export default function Onboarding() {
           {stepKey === "device" && (
             <div className="space-y-3">
               <h2 className="text-lg font-semibold">Connect your device</h2>
-              <OptionGrid options={DEVICE_OPTIONS} value={device} onSelect={setDevice} testIdPrefix="device-option" />
+              <OptionGrid
+                options={DEVICE_OPTIONS}
+                value={device}
+                onSelect={(d) => {
+                  setDevice(d);
+                  if (d === "Garmin") {
+                    setShowGarminForm(true);
+                  } else {
+                    setShowGarminForm(false);
+                  }
+                }}
+                testIdPrefix="device-option"
+              />
+
+              {showGarminForm && (
+                <div className="mt-4 p-4 border rounded bg-muted/20">
+                  <p className="text-sm mb-2">Connect your Garmin account (secure).</p>
+                  <input
+                    type="text"
+                    placeholder="Garmin username"
+                    value={garminUsername}
+                    onChange={(e) => setGarminUsername(e.target.value)}
+                    className="w-full p-2 mb-2 rounded border"
+                    data-testid="garmin-username"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Garmin password"
+                    value={garminPassword}
+                    onChange={(e) => setGarminPassword(e.target.value)}
+                    className="w-full p-2 mb-3 rounded border"
+                    data-testid="garmin-password"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      className="px-3 py-2 bg-primary text-white rounded"
+                      disabled={connectingGarmin || !garminUsername || !garminPassword}
+                      onClick={async () => {
+                        try {
+                          setConnectingGarmin(true);
+                          await axios.post(`${API}/auth/garmin/connect`, {
+                            user_id: USER_ID,
+                            garmin_username: garminUsername,
+                            garmin_password: garminPassword,
+                          });
+                          toast.success("Garmin connection scheduled");
+                          setShowGarminForm(false);
+                          setStepIndex((s) => s + 1);
+                        } catch (err) {
+                          toast.error("Unable to connect to Garmin (check credentials)");
+                        } finally {
+                          // clear sensitive data immediately
+                          setGarminPassword("");
+                          setConnectingGarmin(false);
+                        }
+                      }}
+                      data-testid="connect-garmin-btn"
+                    >
+                      {connectingGarmin ? "Connecting…" : "Connect Garmin"}
+                    </button>
+
+                    <button
+                      className="px-3 py-2 border rounded"
+                      onClick={() => {
+                        setShowGarminForm(false);
+                        setGarminPassword("");
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
